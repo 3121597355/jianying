@@ -97,15 +97,29 @@ function updateButtons(){
   $('customPrompt').disabled=quick||state.busy;$('processingMode').disabled=state.busy;
   for(const b of document.querySelectorAll('[data-prompt]'))b.disabled=quick||state.busy;
   $('quality').disabled=quick||state.busy;$('resolution').disabled=quick||state.busy;
-  $('downloadButton').disabled=!hasImage||state.busy;$('downloadButton').textContent=state.result?'↓ 下载照片':'↓ 下载原图裁切';$('printButton').disabled=!hasImage||state.busy||['original','square'].includes(state.sizeId);$('replacePhoto').disabled=state.busy;$('uploadButton').disabled=state.busy;$('settingsButton').disabled=state.busy;$('bannerSettings').disabled=state.busy;$('viewResult').disabled=!state.result;$('viewCompare').disabled=!state.result;
+  $('downloadButton').disabled=!hasImage||state.busy;$('downloadButton').textContent=state.result?'↓ 下载照片':'↓ 下载原图裁切';$('printButton').disabled=!hasImage||state.busy||['original','square'].includes(state.sizeId);$('replacePhoto').disabled=state.busy;$('removePhoto').disabled=state.busy;$('uploadButton').disabled=state.busy;$('settingsButton').disabled=state.busy;$('bannerSettings').disabled=state.busy;$('viewResult').disabled=!state.result;$('viewCompare').disabled=!state.result;
 }
 async function openSettings(){if(state.busy||state.config?.publicMode)return;const c=state.config;$('baseUrl').value=c?.baseUrl||'';$('modelName').value=c?.model||'image2.5sub';$('apiKey').value='';$('keyStatus').textContent=c?.hasKey?'已保存':'';$('requestMode').value=c?.mode||'multipart';$('imageField').value=c?.imageField||'image[]';$('connectionMessage').hidden=true;renderModelChoices([]);$('modelStatus').textContent='填写连接后读取模型';$('settingsDialog').showModal();if(c?.baseUrl&&c?.hasKey)void loadModels();}
 async function saveSettings(check=false){if(!$('settingsForm').reportValidity())return;if(check)return loadModels({check:true});const controls=[$('checkConnection'),$('settingsForm').querySelector('[type=submit]')];controls.forEach(b=>b.disabled=true);const result=$('connectionMessage');modelListVersion++;try{result.hidden=true;state.config=await api('/api/config',{method:'PATCH',body:connectionDraft()});$('apiKey').value='';$('keyStatus').textContent=state.config.hasKey?'已保存':'';updateConfigUI();$('settingsDialog').close();toast('已保存');}catch(e){result.hidden=false;result.textContent=e.message;}finally{controls.forEach(b=>b.disabled=false);$('refreshModels').disabled=false;}}
 async function readImage(src){const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('图片无法读取，请换一张照片。'));img.src=src;});if(!img.naturalWidth||img.naturalWidth*img.naturalHeight>40_000_000)throw new Error('照片分辨率过高，请使用不超过 4000 万像素的图片。');return img;}
 function fileDataURL(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('照片读取失败。'));reader.readAsDataURL(file);});}
 async function upload(file){if(!file||state.busy)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)){toast('请选择 JPG、PNG 或 WebP 格式的照片');return;}if(file.size>12*1024*1024){toast('照片不能超过 12 MB');return;}try{const data=await fileDataURL(file);const img=await readImage(data);state.original={data,img,name:file.name||'粘贴的照片'};state.result=null;state.view='original';resetCrop();message('');renderImage();renderCrop();updateButtons();}catch(e){toast(e.message);}finally{$('fileInput').value='';}}
+async function removePhoto(){
+  if(state.busy||(!state.original&&!state.result))return;
+  // Invalidate image conversions started by an earlier save before clearing the draft.
+  draftVersion++;
+  const urls=new Set([state.result?.url,...state.history.map(item=>item.url)].filter(Boolean));
+  state.original=null;state.result=null;state.history=[];state.view='original';state.pendingQuick=false;
+  for(const url of urls)URL.revokeObjectURL(url);
+  $('fileInput').value='';$('compareRange').value='50';resetCrop();
+  $('edgeTrim').value='0';$('decontam').value='0';paintEdges();
+  $('cropCanvas').getContext('2d').clearRect(0,0,$('cropCanvas').width,$('cropCanvas').height);
+  message('');renderImage();renderCrop();renderHistory();updateButtons();$('uploadButton').focus();
+  if(await persistPhotoDraft({force:true}))toast('照片已移除');
+  else message('照片已移除，但本机保存失败；请检查浏览器存储权限，刷新后可能恢复旧照片。',true);
+}
 function imageSource(){return state.result?.img||state.original?.img;}
-function renderImage(){const source=state.view==='original'?state.original?.img:state.result?.img||state.original?.img;const exists=!!source;$('uploadEmpty').hidden=exists;$('imageArea').hidden=!exists;$('replacePhoto').hidden=!exists;$('photoInfo').hidden=exists;$('previewCaption').textContent=exists?`${source.naturalWidth} × ${source.naturalHeight} px`:'';for(const key of ['Original','Result','Compare'])$('view'+key).classList.toggle('active',state.view===key.toLowerCase());if(!source)return;const compare=state.view==='compare'&&!!state.result;$('resultImage').src=source.src;$('originalImage').src=state.original.img.src;$('originalOverlay').hidden=!compare;$('compareLine').hidden=!compare;$('originalLabel').hidden=state.view==='result';$('resultLabel').hidden=state.view==='original';$('compareControls').hidden=!compare;fitImage();renderCompare();}
+function renderImage(){const source=state.view==='original'?state.original?.img:state.result?.img||state.original?.img;const exists=!!source;$('uploadEmpty').hidden=exists;$('imageArea').hidden=!exists;$('photoActions').hidden=!exists;$('photoInfo').hidden=exists;$('previewCaption').textContent=exists?`${source.naturalWidth} × ${source.naturalHeight} px`:'';for(const key of ['Original','Result','Compare'])$('view'+key).classList.toggle('active',state.view===key.toLowerCase());const compare=state.view==='compare'&&!!state.result;$('compareControls').hidden=!compare;if(!source){$('resultImage').removeAttribute('src');$('originalImage').removeAttribute('src');return;}$('resultImage').src=source.src;$('originalImage').src=state.original.img.src;$('originalOverlay').hidden=!compare;$('compareLine').hidden=!compare;$('originalLabel').hidden=state.view==='result';$('resultLabel').hidden=state.view==='original';fitImage();renderCompare();}
 function fitImage(){const source=state.view==='original'?state.original?.img:state.result?.img||state.original?.img;if(!source)return;const area=$('imageArea');const maxWidth=area.clientWidth-32,maxHeight=area.clientHeight-32;const ratio=source.naturalWidth/source.naturalHeight;const h=Math.min(maxHeight,maxWidth/ratio);$('imageFrame').style.width=`${h*ratio}px`;$('imageFrame').style.height=`${h}px`;}
 function renderCompare(){const value=Number($('compareRange').value);$('originalOverlay').style.clipPath=`inset(0 ${100-value}% 0 0)`;$('compareLine').style.left=value+'%';}
 function resetCrop(){state.crop={zoom:1,x:.5,y:.4};$('zoomRange').value='1';$('horizontalRange').value='50';$('verticalRange').value='40';}
@@ -136,9 +150,9 @@ $('modelSelect').onchange=()=>{const manual=$('modelSelect').value===manualModel
 $('baseUrl').addEventListener('input',invalidateModels);$('apiKey').addEventListener('input',invalidateModels);
 $('settingsDialog').addEventListener('close',()=>{modelListVersion++;$('refreshModels').disabled=false;});
 $('enableTextMode').onclick=()=>{$('processingMode').value='cloud';updateButtons();$('customPrompt').focus();};
-$('uploadButton').onclick=$('replacePhoto').onclick=()=>$('fileInput').click();$('fileInput').onchange=e=>upload(e.target.files[0]);
+$('removePhoto').onclick=removePhoto;$('uploadButton').onclick=$('replacePhoto').onclick=()=>$('fileInput').click();$('fileInput').onchange=e=>upload(e.target.files[0]);
 const sampleButton=document.createElement('button');sampleButton.type='button';sampleButton.className='text-button sample-photo';sampleButton.textContent='试用示例照片';sampleButton.title='用示意人像体验本地换底与构图';$('uploadEmpty').append(sampleButton);
-sampleButton.onclick=async()=>{try{const response=await fetch('/assets/img/man.png');if(!response.ok)throw new Error();const file=new File([await response.blob()],'示例人像.png',{type:'image/png'});await upload(file);}catch{toast('示例照片未能载入，请上传照片。');}};
+sampleButton.onclick=async()=>{try{const response=await fetch('/assets/img/landing/portrait-demo.webp');if(!response.ok)throw new Error();const file=new File([await response.blob()],'示例人像.webp',{type:'image/webp'});await upload(file);}catch{toast('示例照片未能载入，请上传照片。');}};
 for(const event of ['dragenter','dragover'])$('dropzone').addEventListener(event,e=>{e.preventDefault();$('dropzone').classList.add('dragover');});for(const event of ['dragleave','drop'])$('dropzone').addEventListener(event,e=>{e.preventDefault();$('dropzone').classList.remove('dragover');if(event==='drop')upload(e.dataTransfer.files[0]);});
 document.addEventListener('paste',e=>{if($('settingsDialog').open||['INPUT','TEXTAREA'].includes(document.activeElement?.tagName))return;const file=[...(e.clipboardData?.items||[])].find(item=>item.type.startsWith('image/'))?.getAsFile();if(file){e.preventDefault();upload(file);}});
 $('customPrompt').oninput=refreshPrompt;$('colorPicker').oninput=()=>{$('colorHex').value=$('colorPicker').value.toUpperCase();refreshPrompt();};$('colorHex').onchange=()=>{if(/^#[\da-f]{6}$/i.test($('colorHex').value)){$('colorPicker').value=$('colorHex').value;refreshPrompt();}else{$('colorHex').value=$('colorPicker').value.toUpperCase();toast('请输入 #RRGGBB 格式的颜色');}};
@@ -164,7 +178,7 @@ document.querySelector('main').addEventListener('click',schedulePhotoSave);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')void persistPhotoDraft();});
 const returnLinks=[...document.querySelectorAll('[data-return]')];
 const returnToPage=createReturnNavigation({
-  save:()=>state.original?persistPhotoDraft():true,
+  save:()=>persistPhotoDraft(),
   navigate:destination=>location.assign(destination),
   isBusy:()=>state.busy,
   onBusy:()=>toast('请等待处理完成，或先停止等待。'),
@@ -203,13 +217,13 @@ async function draftRecord(value){
   const db=await openDraftDatabase();return new Promise((resolve,reject)=>{const transaction=db.transaction('draft',value===undefined?'readonly':'readwrite');const store=transaction.objectStore('draft');const request=value===undefined?store.get('current'):store.put(value,'current');let result;request.onsuccess=()=>{result=request.result;};transaction.oncomplete=()=>resolve(result);transaction.onerror=transaction.onabort=()=>reject(transaction.error);});
 }
 function imageBlob(img){if(imageBlobCache.has(img))return imageBlobCache.get(img);const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext('2d').drawImage(img,0,0);const pending=new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('保存图像失败')),'image/png'));imageBlobCache.set(img,pending);return pending;}
-async function persistPhotoDraft(){
+async function persistPhotoDraft({force=false}={}){
   if(!draftReady)return true;
   clearTimeout(draftTimer);const version=++draftVersion;
   const original=state.original,result=state.result,preferences=photoPreferences();
   try{
     localStorage.setItem('qmj-clone:portrait-ui',JSON.stringify(preferences));
-    if(original===savedDraftSource&&result===savedDraftResult){draftStatus('照片与构图已自动保存到本机','saved');return true;}
+    if(!force&&original===savedDraftSource&&result===savedDraftResult){draftStatus('照片与构图已自动保存到本机','saved');return true;}
     draftStatus('正在保存照片与构图…','saving');
     const record={preferences,original:original?{data:original.data,name:original.name,cutout:original.cutout?await imageBlob(original.cutout):null,cutoutVersion:original.cutoutVersion}:null,result:result?{blob:await imageBlob(result.img),id:result.id,name:result.name,presetId:result.presetId,options:result.options,engine:result.engine,warning:result.warning}:null};
     if(version!==draftVersion)return true;
@@ -232,7 +246,7 @@ async function restorePhotoDraft(){
     for(const [id,key] of [['processingMode','mode'],['exportFormat','format'],['quality','quality'],['resolution','resolution']]){if([...$(id).options].some(o=>o.value===preferences[key]))$(id).value=preferences[key];}
     if(state.config?.publicMode)$('processingMode').value='auto';
     $('edgeTrim').value=Math.max(-20,Math.min(20,Number(preferences.edge)||0));$('decontam').value=Math.max(0,Math.min(100,Number(preferences.decontam)||0));paintEdges();
-    renderCategories();renderPresets();renderSizes();refreshPrompt();renderImage();renderCrop();renderHistory();updateButtons();savedDraftSource=state.original;savedDraftResult=state.result;draftStatus('已恢复上次照片与构图','saved');
+    renderCategories();renderPresets();renderSizes();refreshPrompt();renderImage();renderCrop();renderHistory();updateButtons();savedDraftSource=state.original;savedDraftResult=state.result;draftStatus(state.original?'已恢复上次照片与构图':'照片设置已恢复，可上传新照片','saved');
   }catch{draftStatus('上次照片未能恢复，可重新上传','error');}
 }
 async function applyResumePhoto(){

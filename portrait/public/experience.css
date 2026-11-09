@@ -8,6 +8,12 @@ body { background:var(--ui-canvas); }
 dialog[open] { animation:portrait-dialog-in 180ms cubic-bezier(.22,1,.36,1); }
 dialog::backdrop { backdrop-filter:blur(4px); }
 .preview-stage { border-radius:10px; }
+.photo-actions { display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.photo-actions .remove-photo { display:grid; place-items:center; width:32px; height:32px; padding:0; border:1px solid var(--ui-line); border-radius:8px; background:var(--ui-soft); color:var(--ui-muted); cursor:pointer; }
+.remove-photo svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; }
+.photo-actions .remove-photo:hover:not(:disabled) { color:var(--ui-text); border-color:var(--ui-accent-line); background:var(--ui-accent-soft); }
+.remove-photo:focus-visible { outline:2px solid var(--ui-accent); outline-offset:3px; }
+.remove-photo:disabled { opacity:.45; cursor:not-allowed; }
 .return-label { font-size:11px; color:var(--ui-muted); }
 .preset-grid { animation:portrait-dialog-in 180ms ease-out; }
 @keyframes portrait-dialog-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
