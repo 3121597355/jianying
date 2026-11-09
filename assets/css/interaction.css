@@ -1,0 +1,34 @@
+@media screen {
+  /* 面板的开关由点击、悬停和键盘共同管理，关闭后不再被旧 hover 规则打开。 */
+  .edit_resume .edit_header .edit_header_main .set_list > li:not(.show_set) > .set_box[data-v-236d5b80] {
+    height: 0 !important; padding: 0 !important; overflow: hidden !important;
+    visibility: hidden; opacity: 0; pointer-events: none;
+  }
+  .edit_resume .edit_header .edit_header_main .set_list > li.show_set > .set_box[data-v-236d5b80] {
+    visibility: visible; opacity: 1; pointer-events: auto; animation: resume-popover-in 140ms ease-out;
+  }
+  .edit_header :is(.set_btn, .click_btn, .theme-toggle, .home-button),
+  #resumeEditorPanel :is(.el-button, .input, .input_time, .edit_tab > li),
+  .workspace-views button, .qm-modal :is(.el-button, input, select, textarea) {
+    transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+  }
+  .edit_header :is([role="button"], a, button):focus-visible,
+  #resumeEditorPanel :is([role="button"], button):focus-visible,
+  .workspace-views button:focus-visible, .qm-modal button:focus-visible {
+    outline: 2px solid var(--ui-accent); outline-offset: -3px;
+  }
+  .save-status { white-space: nowrap; }
+  .save-status::before { background: currentColor; flex-shrink: 0; }
+  .save-status[data-state="saving"] { color: #a56c12; }
+  .save-status[data-state="error"] { color: #c84141; }
+  :root[data-theme="dark"] .save-status { color: var(--ui-accent); }
+  :root[data-theme="dark"] .save-status[data-state="saving"] { color: #e8bd6b; }
+  :root[data-theme="dark"] .save-status[data-state="error"] { color: #ff9797; }
+  .qm-modal { animation: resume-popover-in 140ms ease-out; }
+  @keyframes resume-popover-in { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="soft"]) :is(.edit_header *, #resumeEditorPanel *, .workspace-views *, .qm-modal, .qm-modal *) {
+      animation: none !important; transition: none !important; scroll-behavior: auto !important;
+    }
+  }
+}

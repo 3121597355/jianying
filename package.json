@@ -1,0 +1,23 @@
+{
+  "name": "jianying",
+  "version": "2.0.0-beta.1",
+  "private": true,
+  "type": "module",
+  "description": "简影：开源、简洁的简历与证件照工作台",
+  "scripts": {
+    "start": "node serve.mjs 8099",
+    "start:public": "node serve.mjs 8099 --public",
+    "test": "node --test portrait/test/*.test.mjs test/*.test.mjs",
+    "setup-model": "node portrait/setup-model.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "onnxruntime-node": "^1.24.3",
+    "sharp": "^0.35.5"
+  },
+  "overrides": {
+    "adm-zip": "0.6.1"
+  }
+}

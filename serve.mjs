@@ -1,0 +1,63 @@
+// 简历与证件照共用一个本机服务：node serve.mjs [port]
+import http from 'node:http';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { createApp } from './portrait/server.mjs';
+
+const ROOT = import.meta.dirname;
+const MIME = {
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+  '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.ico': 'image/x-icon',
+};
+
+export async function createResumeServer({ portraitOptions = {} } = {}) {
+  let server;
+  const portrait = await createApp({
+    ...portraitOptions,
+    configPath: portraitOptions.configPath || path.join(ROOT, 'private', 'portrait-config.json'),
+    basePath: '/portrait', hostPort: () => server?.address()?.port,
+  });
+  const handlePortrait = portrait.listeners('request')[0];
+  server = http.createServer(async (req, res) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    try {
+      const pathname = decodeURIComponent(new URL(req.url, 'http://127.0.0.1').pathname);
+      if (pathname === '/portrait') {
+        if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }).end(); return; }
+        res.writeHead(308, { Location: '/portrait/', 'Cache-Control': 'no-store' }).end(); return;
+      }
+      if (pathname.startsWith('/portrait/')) { await handlePortrait(req, res); return; }
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { Allow: 'GET, HEAD' }).end(); return; }
+      // 仅开放页面和静态资源，私有配置、模型、依赖与服务代码均不通过 HTTP 暴露。
+      if (pathname === '/resume') {
+        res.writeHead(308, { Location: '/resume/', 'Cache-Control': 'no-store' }).end(); return;
+      }
+      const page = ({ '/': 'index.html', '/index.html': 'index.html', '/resume/': 'resume.html', '/resume.html': 'resume.html' })[pathname];
+      const isIndex = Boolean(page);
+      const assets = path.join(ROOT, 'assets');
+      const file = isIndex ? path.join(ROOT, page) : path.resolve(ROOT, '.' + pathname);
+      if (!isIndex && (!pathname.startsWith('/assets/') || !file.startsWith(assets + path.sep) || !MIME[path.extname(file).toLowerCase()])) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('未找到此内容。'); return;
+      }
+      const body = await fs.readFile(file);
+      res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()], 'Cache-Control': 'no-cache' });
+      res.end(req.method === 'HEAD' ? undefined : body);
+    } catch (error) {
+      res.writeHead(error instanceof URIError ? 400 : 404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('未找到此内容。');
+    }
+  });
+  server.requestTimeout = 60_000;
+  server.on('close', () => portrait.emit('close'));
+  return server;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  if(process.argv.includes('--public'))process.env.PUBLIC_MODE='1';
+  const port = Number(process.argv[2] || 8099);
+  const server = await createResumeServer();
+  const publicMode=process.env.PUBLIC_MODE==='1',host=publicMode?(process.env.BIND_HOST||'127.0.0.1'):'127.0.0.1';
+  server.listen(port, host, () => console.log(`简影${publicMode?'（公开免费模式，云端已关闭）':''}已启动：http://${host}:${port}/`));
+}

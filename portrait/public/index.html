@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN" data-page="portrait">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff"><title>证件照 · 简影</title><link rel="icon" href="/assets/img/brand/mark-mono.svg"><link rel="stylesheet" href="/assets/css/palette.css"><link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./integration.css"><link rel="stylesheet" href="./experience.css"><script type="module" src="./app.js"></script><link rel="stylesheet" href="/assets/css/interface.css"></head>
+<body>
+  <header class="topbar"><a class="brand" data-return href="/" aria-label="返回首页"><img src="/assets/img/brand/mark-mono.svg" alt="" width="34" height="34"><strong>简影</strong></a><nav class="site-nav" aria-label="工作台导航"><a data-return href="/resume/">个人简介</a><a data-return href="/resume/?settings=1">简历设置</a><a data-return href="/resume/?templates=1">更换模板</a><a href="/portrait/" aria-current="page">证件照</a></nav><div class="top-actions"><button id="themeButton" class="theme-button" type="button" aria-label="切换主题"></button><button id="settingsButton" class="button subtle" aria-label="照片设置"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-.5 2-2 .9-1.9-.5-2 3.4L4 10.3v2.4l-1.4 1.5 2 3.4 1.9-.5 2 .9.5 2h4l.5-2 2-.9 1.9.5 2-3.4-1.4-1.5v-2.4l1.4-1.5-2-3.4-1.9.5-2-.9L13 3z"/><circle cx="11" cy="11.5" r="3"/></svg><span class="action-label">设置</span><span id="connectionDot" class="dot"></span></button></div></header>
+  <main>
+    <div id="configBanner" class="config-banner" hidden><span><b>AI 精修尚未连接</b><span id="bannerText"> · 快速换底不受影响，可免费使用。</span></span><button id="bannerSettings" class="text-button">连接 AI 精修 <span aria-hidden="true">↗</span></button></div>
+    <div class="workspace">
+      <section class="editor panel" aria-label="照片预览">
+        <div class="panel-title"><div><h2>照片</h2></div><button id="replacePhoto" class="text-button" hidden>↥ 更换照片</button><span id="photoInfo" class="muted">JPG / PNG / WebP</span></div>
+        <div class="preview-stage" id="dropzone">
+          <div id="uploadEmpty" class="upload-empty"><div class="portrait-illustration" aria-hidden="true"><div class="mini-card card-back"></div><div class="mini-card card-front"><svg viewBox="0 0 120 152" fill="none"><path d="M23 140v-20c0-23 74-23 74 0v20" fill="#c0cce6"/><path d="M46 83v19c4 8 24 8 28 0V83" fill="#e0e7f3"/><ellipse cx="60" cy="64" rx="27" ry="34" fill="#e6ebf5"/><path d="M32 60c-3-31 15-39 30-37 23 0 31 16 26 37-10-4-17-14-19-18-6 12-18 18-37 18Z" fill="#8495b7"/><path d="M23 140h74" stroke="#fff" stroke-opacity=".5"/></svg><span class="sparkle">✦</span></div><span class="color-chip c1"></span><span class="color-chip c2"></span><span class="color-chip c3"></span></div><p>拖拽或粘贴照片</p><button id="uploadButton" class="button primary upload-button"><span aria-hidden="true">＋</span> 上传照片</button><span class="upload-tip">JPG / PNG / WebP · 12 MB</span></div>
+          <div id="imageArea" class="image-area" hidden><div id="imageFrame" class="image-frame checker"><img id="resultImage" alt="处理后的照片预览"><div id="originalOverlay" class="original-overlay"><img id="originalImage" alt="上传的原照片"></div><div id="compareLine" class="compare-line"><span>‹ ›</span></div><div class="image-label left" id="originalLabel">原图</div><div class="image-label right" id="resultLabel">生成结果</div></div></div>
+          <div id="processingOverlay" class="processing-overlay" hidden><div class="spinner"></div><h3 id="processingTitle">正在本机提取人像</h3><p id="processingTime">已等待 0 秒 · 请稍候</p><p class="muted" id="processingDetail">抠图完成后，切换背景无需再次等待</p><button id="cancelButton" class="button secondary">停止等待</button><small id="cancelNote">照片不离开本机 · 不消耗 API 额度</small></div>
+        </div>
+        <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+        <div class="preview-tools"><div class="segmented" aria-label="预览模式"><button id="viewOriginal" class="active">原图</button><button id="viewResult" disabled>效果图</button><button id="viewCompare" disabled>对比</button></div><div class="preview-caption" id="previewCaption"></div></div>
+        <div class="compare-controls" id="compareControls" hidden><label for="compareRange">滑动查看前后变化</label><input type="range" id="compareRange" min="0" max="100" value="50" aria-label="前后对比位置"></div>
+        <div id="cropControls" class="crop-controls" hidden><div class="crop-preview checker"><canvas id="cropCanvas" width="180" height="240" aria-label="裁切预览"></canvas><span>导出预览</span></div><div class="crop-sliders"><label>缩放 <input id="zoomRange" type="range" min="1" max="2.5" step="0.01" value="1"></label><label>左右位置 <input id="horizontalRange" type="range" min="0" max="100" value="50"></label><label>上下位置 <input id="verticalRange" type="range" min="0" max="100" value="40"></label><button id="resetCrop" class="text-button">重置构图</button></div></div>
+        <div class="result-message" id="resultMessage" role="status" hidden></div>
+      </section>
+      <aside class="controls panel" aria-label="背景设置"><div class="panel-title"><div><h2>背景</h2></div></div><div class="mode-card"><label for="processingMode">处理方式</label><select id="processingMode"><option value="auto">快速换底</option><option value="cloud">AI 精修 · 可选扩展</option></select><p id="modeDescription">纯色和渐变在本机处理，无 API 费用。</p></div><div id="categoryTabs" class="category-tabs" role="tablist" aria-label="背景分类"></div><div id="presetGrid" class="preset-grid"></div>
+        <div id="customColorRow" class="custom-color" hidden><label for="colorPicker">选择底色</label><input id="colorPicker" type="color" value="#438edb"><input id="colorHex" type="text" value="#438EDB" maxlength="7" aria-label="十六进制底色"></div>
+        <details id="edgeSettings" class="edge-settings"><summary>边缘微调<span>⌄</span></summary><div class="edge-fields"><label for="edgeTrim">边缘修整 <output id="edgeValue">默认</output></label><input id="edgeTrim" type="range" min="-20" max="20" value="0" aria-label="边缘修整"><div class="edge-scale"><span>扩展，保留细发</span><span>收缩，减少白边</span></div><label for="decontam">去底色残留 <output id="decontamValue">0%</output></label><input id="decontam" type="range" min="0" max="100" value="0" aria-label="去底色残留"><p>只调整半透明边缘。底色残留明显时逐步增加，避免发丝颜色变淡。</p><button id="resetEdges" class="text-button" type="button">恢复默认</button></div></details>
+        <button id="enableTextMode" class="text-mode-button">✦ 用文字换背景 <span>→</span></button><div class="prompt-section" id="promptSection"><div class="subheading"><h3>描述背景</h3><span class="optional">选填</span></div><p class="field-description" id="promptModeNote">当前为快速换底，文字描述不参与处理；需要文字编辑时切换 AI 精修。</p><div class="textarea-wrap"><textarea id="customPrompt" rows="4" maxlength="4000" placeholder="例如：浅灰影棚，柔和自然光"></textarea><span id="promptCount">0 / 4000</span></div><div class="prompt-chips"><button data-prompt="背景色彩均匀，无纹理、无杂物，边缘干净。">＋ 干净纯色</button><button data-prompt="背景自然柔焦，主体清晰，营造柔和景深。">＋ 自然虚化</button><button data-prompt="背景采用柔和的摄影棚光线，明暗细腻自然。">＋ 柔和棚光</button></div><div class="prompt-actions"><button id="savePrompt" class="text-button">☆ 收藏</button><button id="clearPrompt" class="text-button muted">清空</button></div><div id="savedPrompts" class="saved-prompts"></div></div>
+        <details class="advanced" id="advancedSettings"><summary>高级设置 <span>⌄</span></summary><div class="advanced-fields"><label>输出画质<select id="quality"><option value="default">使用服务默认</option><option value="auto">自动</option><option value="low">低</option><option value="medium">中</option><option value="high">高</option></select></label><label>生成分辨率<select id="resolution"><option value="default">使用服务默认</option><option value="auto">自动</option><option value="1024x1536">1024 × 1536</option><option value="1024x1024">1024 × 1024</option><option value="1536x1024">1536 × 1024</option></select></label></div><pre id="fullPrompt"></pre><button id="copyPrompt" class="text-button">复制完整提示词</button><p class="fineprint">不同服务支持的参数可能不同。保真约束不能保证像素级不变，生成后请对比检查。</p></details>
+        <div class="generate-footer"><button id="generateButton" class="button primary generate-button" disabled><span aria-hidden="true">✦</span> 生成新背景 <span aria-hidden="true">→</span></button><span id="generateHint">先上传一张照片，再开始创作</span></div>
+      </aside>
+      <section class="export-section panel" aria-label="照片规格与下载">
+        <div class="export-specs">
+          <div class="subheading"><h3>照片规格</h3><span id="dimensionNote" class="muted">选择导出尺寸</span></div>
+          <div id="sizePresets" class="size-presets"></div>
+        </div>
+        <div class="export-download">
+          <div class="export-actions"><select id="exportFormat" aria-label="下载格式"><option value="png">PNG · 无损</option><option value="jpeg">JPG · 通用</option></select><button id="downloadButton" class="button dark" disabled>↓ 下载照片</button><button id="printButton" class="button secondary" disabled>六寸排版</button></div><button id="useResumePhoto" class="button primary use-resume" type="button" disabled>用于简历 <span aria-hidden="true">→</span></button>
+          <p class="fineprint">300 DPI · 证件规格以办理机构要求为准</p>
+        </div>
+      </section>
+    </div>
+    <div class="draft-note"><span id="draftStatus" role="status" aria-live="polite">照片与构图自动保存在本机</span></div><section id="historySection" class="history-section" hidden><div class="subheading"><h2>本次生成</h2><span class="muted">最近 8 张</span></div><div id="historyGrid" class="history-grid"></div></section>
+
+  </main>
+  <dialog id="settingsDialog"><form id="settingsForm">
+    <div class="dialog-heading"><h2>AI 精修连接</h2><p class="connection-optional-note">可选扩展，未连接也能免费快速换底。</p><button type="button" id="closeSettings" class="icon-button" aria-label="关闭设置">×</button></div>
+    <label class="form-label" for="baseUrl">服务地址</label><input id="baseUrl" type="url" placeholder="https://api.example.com/v1" autocomplete="off">
+    <label class="form-label" for="apiKey">API Key <span id="keyStatus" class="key-status"></span></label><input id="apiKey" type="password" placeholder="已保存时留空即可" autocomplete="new-password">
+    <div class="model-label-row"><label class="form-label" for="modelSelect">模型</label><button type="button" id="refreshModels" class="text-button">↻ 刷新列表</button></div>
+    <select id="modelSelect" aria-label="选择模型"></select>
+    <input id="modelName" type="text" maxlength="160" required aria-label="自定义模型 ID" placeholder="输入模型 ID" hidden>
+    <p id="modelStatus" class="field-help" role="status">读取平台模型列表</p>
+    <details class="connection-advanced"><summary>接口选项</summary><label class="form-label" for="requestMode">请求格式</label><select id="requestMode"><option value="multipart">Multipart · 文件上传</option><option value="json">JSON · images / image_url</option></select><label class="form-label" for="imageField">图片字段</label><select id="imageField"><option value="image[]">image[]</option><option value="image">image</option></select><p class="field-help">模型需支持图片编辑接口 /images/edits。</p></details>
+    <div id="connectionMessage" class="connection-message" role="status" hidden></div>
+    <div class="dialog-actions"><button type="button" id="checkConnection" class="button secondary">测试连接</button><button type="submit" class="button primary">保存</button></div>
+  </form></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body></html>

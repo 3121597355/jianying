@@ -1,0 +1,67 @@
+@media screen {
+  :root { --motion-ease:cubic-bezier(.22,1,.36,1); }
+  .edit_resume[data-v-236d5b80] { background:var(--ui-canvas); overflow:hidden; }
+  .resume-workspace { position:relative; }
+  .edit_header { border-bottom:1px solid var(--ui-line); box-shadow:none !important; }
+  .edit_resume #resumeEditorPanel[data-v-236d5b80] { border-radius:12px; container:none; }
+  .edit_resume #resumeEditorPanel .edit_box[data-v-236d5b80] {
+    position:relative; right:0; border-radius:12px; container:resume-editor / inline-size;
+    transition:none;
+    transform:translateX(0); opacity:1; visibility:visible;
+  }
+  .edit_resume #resumeEditorPanel:not(.edit_show) .edit_box[data-v-236d5b80] {
+    position:absolute; width:var(--editor-expanded-width,560px); right:0; top:0;
+    transform:none; opacity:0; visibility:hidden;
+    transition:none;
+    pointer-events:none;
+  }
+  .resume-workspace.editor-collapsed .editor-heading {
+    display:flex; position:absolute; top:16px; right:20px;
+    width:var(--editor-expanded-width,560px); opacity:0; visibility:hidden; pointer-events:none;
+  }
+  #tpl_box { transform-origin:top left; }
+  .edit_resume #resumeEditorPanel .close[data-v-236d5b80] {
+    position:absolute;
+    border:1px solid var(--ui-accent-line); background:#fff; color:var(--ui-accent); box-shadow:0 3px 12px #233d2210;
+    display:grid; place-items:center;
+    transition:background-color 180ms ease,border-color 180ms ease,box-shadow 180ms ease;
+  }
+  .edit_resume #resumeEditorPanel .close svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transition:translate 240ms var(--motion-ease),scale 150ms var(--motion-ease); }
+  .edit_resume #resumeEditorPanel .close:hover { background:var(--ui-accent-soft); }
+  @media(hover:hover) and (pointer:fine) {
+    .edit_resume #resumeEditorPanel .close:is(:hover,:focus-visible) svg { translate:2px 0; }
+    .edit_resume #resumeEditorPanel:not(.edit_show) .close:is(:hover,:focus-visible) svg { translate:-2px 0; }
+  }
+  .edit_resume #resumeEditorPanel .close:active svg { scale:.9; }
+  .edit_resume .edit_header .edit_header_main .set_list > li > :is(.click_btn,.set_btn) > i[data-v-236d5b80] { color:var(--ui-muted) !important; }
+  .edit_header .set_list i svg { width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:1.65; stroke-linecap:round; stroke-linejoin:round; }
+  .edit_header .set_list li:hover i { color:var(--ui-accent) !important; }
+  #resumeEditorPanel .edit_tab > li { border-bottom-color:transparent; }
+  #resumeEditorPanel .edit_tab > li:hover { background:var(--ui-accent-soft); color:var(--ui-accent) !important; }
+  .edit_resume #resumeEditorPanel .edit_box .edit_top .edit_tab > li.active { color:var(--ui-accent) !important; border-bottom-color:var(--ui-accent) !important; }
+  #resumeEditorPanel .input:focus { box-shadow:0 0 0 3px color-mix(in srgb, var(--ui-accent) 7%, transparent); }
+  #formHost .info_list { box-sizing:border-box; }
+  .save-status { min-width:108px; }
+  .qm-modal { animation:experience-dialog-in 270ms var(--motion-ease); }
+  @keyframes experience-dialog-in { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+  button,a,[role=button],.photo_upload { -webkit-tap-highlight-color:transparent; }
+  .edit_header button:active,.photo_upload:active,.qm-modal .el-button:active { filter:brightness(.94); }
+  :root[data-theme=dark] .edit_resume[data-v-236d5b80] { background:var(--ui-canvas); }
+  :root[data-theme=dark] .edit_header { border-color:var(--ui-line); }
+  :root[data-theme=dark] .edit_header .set_list i { color:var(--ui-muted) !important; }
+  :root[data-theme=dark] #resumeEditorPanel .close { background:var(--ui-soft); border-color:var(--ui-accent-line); color:var(--ui-accent); }
+  :root[data-theme=dark] #resumeEditorPanel .edit_tab > li:hover { background:var(--ui-accent-soft); }
+  :root[data-theme=dark] .edit_resume #resumeEditorPanel .edit_box .edit_top .edit_tab > li.active { color:var(--ui-accent) !important; border-bottom-color:var(--ui-accent) !important; }
+  @media(max-width:860px) {
+    .resume-workspace.editor-collapsed .editor-heading { display:none; }
+    .edit_resume #resumeEditorPanel .edit_box[data-v-236d5b80] { transition:none; }
+    .edit_resume #resumeEditorPanel .close[data-v-236d5b80] { display:none; }
+    .edit_resume .edit_header .edit_header_main .logo.home-button[data-v-236d5b80] { display:flex; width:32px; height:32px; grid-area:1 / 1; }
+    .edit_resume .edit_header .edit_header_main[data-v-236d5b80] { grid-template-columns:32px minmax(0,1fr) auto; gap:8px; }
+    .edit_header .brand-home span { display:none; }
+    .edit_resume .edit_header .edit_header_main .set_list[data-v-236d5b80] { grid-area:1 / 2; }
+    .edit_resume .edit_header .edit_header_main .get_list[data-v-236d5b80] { grid-area:1 / 3; }
+  }
+  :root[data-motion=reduce] *, :root[data-motion=reduce] *::before, :root[data-motion=reduce] *::after { transition:none !important; animation:none !important; scroll-behavior:auto !important; }
+  @media(prefers-reduced-motion:reduce) { :root:not([data-motion=soft]) *, :root:not([data-motion=soft]) *::before,:root:not([data-motion=soft]) *::after { transition:none !important; animation:none !important; scroll-behavior:auto !important; } }
+}

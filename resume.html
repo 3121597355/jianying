@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page="resume" data-editor-state="loading">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>简影 · 简历制作与证件照</title>
+<meta name="description" content="简影，把简历和证件照一起准备好。实时排版、自动保存、本地换底与照片裁切。">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" type="image/svg+xml" href="/assets/img/brand/mark-mono.svg">
+<script>try { document.documentElement.dataset.theme = JSON.parse(localStorage.getItem('qmj-clone:ui') || '{}').theme === 'dark' ? 'dark' : 'light'; } catch { document.documentElement.dataset.theme = 'light'; }</script>
+<!-- Keep the initial paint independent of the editor scripts and legacy styles. -->
+<style>
+  html,body { margin:0; background:var(--ui-canvas,#f5f6f8); }
+  html[data-theme=dark] { background:#15171c; }
+  html:not([data-editor-state=ready]) #editorWorkspace, html:not([data-editor-state=ready]) #editorWorkspace * { visibility:hidden !important; }
+  .editor-startup { position:fixed; inset:0; z-index:100; display:grid; place-items:center; background:var(--ui-canvas,#f5f6f8); color:var(--ui-muted,#747983); font:14px/1.8 "Segoe UI","Microsoft YaHei",sans-serif; }
+  .startup-brand { position:absolute; top:0; left:0; right:0; height:70px; display:flex; align-items:center; gap:9px; padding:0 34px; background:var(--ui-surface,#fff); border-bottom:1px solid var(--ui-line,#e8eaee); color:var(--ui-text,#1b1c20); text-decoration:none; font-size:19px; font-weight:650; }
+  .startup-brand img { width:34px; height:34px; }
+  .startup-message { text-align:center; padding:24px; }
+  .startup-error { display:none; }
+  .startup-error p { margin:0 0 16px; }
+  .startup-error a { color:var(--ui-text,#1b1c20); margin:0 12px; text-underline-offset:4px; }
+  html[data-editor-state=error] .startup-loading { display:none; }
+  html[data-editor-state=error] .startup-error { display:block; }
+  html[data-editor-state=ready] .editor-startup { display:none; }
+</style>
+<link rel="stylesheet" href="/assets/css/palette.css">
+<link rel="stylesheet" href="/assets/vendor/quill.snow.css">
+<link rel="stylesheet" href="/assets/css/editor-base.css">
+<link rel="stylesheet" href="/assets/css/tpl-standard.css">
+<link rel="stylesheet" href="/assets/css/editor.css">
+<link rel="stylesheet" href="/assets/css/workspace.css">
+<link rel="stylesheet" href="/assets/css/theme.css">
+<link rel="stylesheet" href="/assets/css/interaction.css">
+<link rel="stylesheet" href="/assets/css/settings.css">
+<link rel="stylesheet" href="/assets/css/experience.css">
+<link rel="stylesheet" href="/assets/css/interface.css">
+<link rel="preload" href="/assets/vendor/quill.js" as="script">
+<link rel="modulepreload" href="/assets/js/app.js">
+</head>
+<body>
+<div class="editor-startup" id="editorStartup">
+  <a class="startup-brand" href="/" aria-label="返回首页"><img src="/assets/img/brand/mark-mono.svg" alt=""><span>简影</span></a>
+  <div class="startup-message" role="status" aria-live="polite">
+    <span class="startup-loading">正在准备简历编辑器…</span>
+    <div class="startup-error"><p>编辑器暂时未能加载，请重试。已保存的草稿会保留。</p><a href="/resume/">重新加载</a><a href="/">返回首页</a></div>
+  </div>
+</div>
+<noscript><style>#editorStartup .startup-loading{display:none}#editorStartup .startup-error{display:block}</style><p>请开启 JavaScript 后使用简历编辑器。</p></noscript>
+<section id="editorWorkspace" class="edit_resume" data-v-236d5b80 inert aria-busy="true">
+  <h1 data-v-236d5b80>在线制作简历</h1>
+  <button type="button" class="el-tooltip privacy-trigger" data-v-236d5b80><i class="webfont webicon-yinsi" data-v-236d5b80></i>隐私模式</button>
+  <header class="edit_header" data-v-236d5b80>
+    <div class="edit_header_main" data-v-236d5b80>
+      <button type="button" class="logo home-button brand-home" aria-label="返回首页" data-v-236d5b80><img src="/assets/img/brand/mark-mono.svg" alt="" width="34" height="34"><span>简影</span></button>
+      <ul class="get_list" data-v-236d5b80><li class="active qm-download" role="button" tabindex="0" aria-label="下载 PDF" title="导出为 A4 PDF 文件" data-v-236d5b80><i class="webfont webicon-xiazai" data-v-236d5b80></i><span id="dlLabel" data-v-236d5b80>下载 PDF</span></li></ul>
+      <ul class="set_list" data-v-236d5b80><li data-set="templates" data-v-236d5b80><div class="click_btn" data-v-236d5b80><i aria-hidden="true" data-v-236d5b80></i><b data-v-236d5b80>更换模板</b></div></li></ul>
+    </div>
+  </header>
+  <main class="edit_main" data-v-236d5b80>
+    <div id="tpl_box" class="tpl_box" translate="no" data-gramm="false" data-v-236d5b80><div class="tpl_main" data-v-236d5b80><div id="resume_tpl_box" data-v-236d5b80><div id="resumeHost"></div></div></div></div>
+    <aside class="edit_all edit_show" data-v-236d5b80>
+      <div class="edit_box" data-v-236d5b80>
+        <div class="edit_top" data-v-236d5b80><ul class="edit_tab" data-v-236d5b80></ul></div>
+        <div class="edit_b" translate="no" data-gramm="false" data-v-236d5b80><div id="formHost"></div></div>
+        <div class="save_tip" data-v-236d5b80><span data-v-236d5b80>修改后自动保存在本机</span></div>
+      </div>
+      <div class="close" role="button" tabindex="0" aria-label="收起编辑区" data-v-236d5b80></div>
+    </aside>
+  </main>
+</section>
+<script>setTimeout(function () { if (document.documentElement.dataset.editorState === 'loading') document.documentElement.dataset.editorState = 'error'; }, 15000);</script>
+<script type="module" src="/assets/js/editor-entry.js" onerror="document.documentElement.dataset.editorState='error'"></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+/* Standard single-column A4 layouts; all colors here belong to the document. */
+.standard-resume .resume_box { width:820px; min-height:1160px; padding-bottom:38px; font-size:var(--standard-font); line-height:var(--standard-line); color:#272d35; background:#fff; }
+.standard-resume .basic_info_box { position:relative; min-height:166px; }
+.standard-resume .basic_info { text-align:left; padding-right:126px; }
+.standard-resume .basic_info dt { font-size:32px; line-height:1.35; font-weight:700; letter-spacing:1px; margin-bottom:8px; }
+.standard-resume .basic_info dd { line-height:1.65 !important; color:#5d6570; }
+.standard-resume .basic_info dd span { display:inline-block; margin-top:7px; margin-right:14px; overflow-wrap:anywhere; }
+.standard-resume .basic_info .yixiang_tip { color:#374151; }
+.standard-resume .basic_info .resume-heading { font-size:11px !important; letter-spacing:.6px; margin-bottom:2px; color:#757d87; }
+.standard-resume .photo_box { position:absolute; top:28px; width:90px; height:118px; background:#edf2f6; overflow:hidden; }
+.standard-resume .photo_box img { display:block; width:100%; height:100%; object-fit:cover; }
+.standard-resume .standard-photo-placeholder { display:grid; place-items:center; width:100%; height:100%; color:#8793a0; font-size:12px; border:1px dashed #c7cfd7; }
+.standard-resume .resume_content_all { position:relative; }
+.standard-resume .resume_content { position:relative; }
+.standard-resume .module_tit { font-weight:700; line-height:1.65; padding-bottom:5px; border-bottom:1px solid; margin-bottom:2px; }
+.standard-resume .list_top { display:flex; align-items:baseline; gap:24px; line-height:1.7; }
+.standard-resume .list_top .name { flex:1; min-width:0; font-weight:700; overflow-wrap:anywhere; }
+.standard-resume .list_top .name i { font-style:normal; margin:0 10px; color:#9aa2ad; font-weight:400; }
+.standard-resume .list_top .time { flex:0 0 auto; color:#68727e; font-size:.92em; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.standard-resume .ql-editor { color:#4b5563; }
+.standard-resume .ql-editor li { margin-top:3px; }
+.standard-resume .standard-skills { display:flex; flex-wrap:wrap; gap:4px 22px; margin-top:10px; color:#374151; }
+.standard-resume .standard-skills li { display:inline; }
+.standard-resume .tag_box { display:flex; flex-wrap:wrap; gap:6px 18px; }
+.standard-resume .tag_box span { border:0 !important; background:transparent !important; color:#4b5563; }
+.standard-resume .baokao_list { display:flex; flex-wrap:wrap; gap:8px 24px; }
+.standard-resume .baokao_cj { width:100%; border-collapse:collapse; }
+.standard-resume .baokao_cj td,.standard-resume .baokao_cj th { border:1px solid #ccd2da; padding:6px; text-align:center; }
+.standard-minimal .basic_info { text-align:center; }
+.standard-minimal .module_tit { border-bottom-color:#a9afb7 !important; }
+.standard-timeline .list_top { flex-direction:row-reverse; }
+.standard-timeline .list_top .time { width:145px; text-align:left; }
+.standard-timeline .content_list > .ql-editor { margin-left:169px; }
+.standard-timeline .module_tit { border-bottom-color:#c9d2d6 !important; }
+.standard-business .basic_info_box { border-top:5px solid var(--standard-accent); }
+.standard-business .basic_info dt { letter-spacing:2px; }
+.standard-business .module_tit { border-bottom-color:#d5dae1 !important; border-left:3px solid; padding-left:10px; }

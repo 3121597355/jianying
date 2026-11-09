@@ -1,0 +1,35 @@
+/* Shared interface palette. Resume skins and portrait backgrounds are content. */
+:root {
+  color-scheme:light;
+  --ui-page:#ffffff;
+  --ui-canvas:#f5f6f8;
+  --ui-surface:#ffffff;
+  --ui-text:#1b1c20;
+  --ui-muted:#747983;
+  --ui-line:#e8eaee;
+  --ui-soft:#f5f6f8;
+  --ui-accent:#526bdc;
+  --ui-accent-soft:#f0f3ff;
+  --ui-accent-line:#c8d1f4;
+  --ui-focus:rgb(82 107 220 / .12);
+  --ui-primary:#1b1c20;
+  --ui-primary-hover:#34373f;
+  --ui-on-primary:#ffffff;
+}
+:root[data-theme=dark] {
+  color-scheme:dark;
+  --ui-page:#15171c;
+  --ui-canvas:#15171c;
+  --ui-surface:#1e2128;
+  --ui-text:#eceef3;
+  --ui-muted:#9ba1ae;
+  --ui-line:#30343e;
+  --ui-soft:#20242c;
+  --ui-accent:#93a7ff;
+  --ui-accent-soft:#272e47;
+  --ui-accent-line:#49577f;
+  --ui-focus:rgb(147 167 255 / .15);
+  --ui-primary:#eceef3;
+  --ui-primary-hover:#cfd3df;
+  --ui-on-primary:#17191f;
+}

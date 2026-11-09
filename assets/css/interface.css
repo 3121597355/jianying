@@ -1,0 +1,112 @@
+/* Interface only; the resume paper, template thumbnails and photo colors keep their own palette. */
+@media screen {
+  :root[data-page=resume] {
+    --theme-bg:var(--ui-canvas); --theme-panel:var(--ui-surface);
+    --theme-input:var(--ui-soft); --theme-line:var(--ui-line);
+    --theme-text:var(--ui-text); --theme-muted:var(--ui-muted); --theme-accent:var(--ui-accent);
+  }
+  .edit_resume .edit_header .edit_header_main .logo.brand-home[data-v-236d5b80] { color:var(--ui-text) !important; background:transparent !important; border-color:transparent !important; }
+  .edit_resume .edit_header .edit_header_main .set_list li:hover :is(.set_btn,.click_btn,b,i)[data-v-236d5b80] { color:var(--ui-accent) !important; }
+  .edit_resume .edit_header .edit_header_main .set_list li .set_box .set_page li .set_one_btn[data-v-236d5b80] { background:var(--ui-primary); color:var(--ui-on-primary); }
+  .edit_resume .edit_header .edit_header_main .set_list li .set_box .set_page li .select[data-v-236d5b80]:focus { border-color:var(--ui-accent); }
+  .edit_resume .edit_header .edit_header_main .set_list li .set_box .set_page li .skin_list .active[data-v-236d5b80] { box-shadow:0 0 0 2px var(--ui-surface),0 0 0 4px var(--ui-accent); }
+  :is(.edit_header,#resumeEditorPanel,.qm-modal) .el-button--primary { background:var(--ui-primary) !important; border-color:var(--ui-primary) !important; color:var(--ui-on-primary) !important; }
+  :is(.edit_header,#resumeEditorPanel,.qm-modal) .el-button--primary:hover { background:var(--ui-primary-hover) !important; border-color:var(--ui-primary-hover) !important; }
+  :is(.edit_header,#resumeEditorPanel,.qm-modal) .el-button--default:hover { border-color:var(--ui-accent) !important; color:var(--ui-accent) !important; }
+  .edit_resume .edit_all .edit_box .edit_b .edit_b_list .input[data-v-236d5b80]:focus,
+  .edit_resume .info_list .el-input__inner:focus { border-color:var(--ui-accent) !important; }
+  .edit_resume .edit_all .edit_box .edit_b .edit_b_list .info_list li .photo_upload[data-v-236d5b80] { background:var(--ui-primary) !important; border-color:var(--ui-primary) !important; color:var(--ui-on-primary) !important; }
+  #resumeEditorPanel .photo_upload :is(span,i) { color:var(--ui-on-primary) !important; }
+  :root[data-theme=dark] #resumeEditorPanel .photo_upload { color:var(--ui-on-primary) !important; }
+  .edit_resume .edit_all .edit_box .edit_b .edit_b_list .line_box .btn_more[data-v-236d5b80]:hover { color:var(--ui-accent); border-color:var(--ui-accent); }
+  #resumeEditorPanel :is(.jingli_nav_list li.active,.jingli_nav_list li:hover) { border-color:var(--ui-accent); }
+  #resumeEditorPanel .jingli_nav_ops i:hover { color:var(--ui-accent); }
+  .edit_resume .get_list li.qm-download,
+  .edit_resume .get_list li.qm-download :is(i,span) { background:var(--ui-primary); color:var(--ui-on-primary) !important; }
+  .edit_resume .get_list li.qm-download { box-shadow:none; }
+  .edit_resume .get_list li.qm-download:hover { background:var(--ui-primary-hover); }
+  .edit_resume .get_list li.qm-download :is(i,span) { background:transparent; }
+  .edit_resume .edit_header .edit_header_main .get_list li.qm-download[data-v-236d5b80] { background:var(--ui-primary) !important; box-shadow:none !important; }
+  .edit_resume .edit_header .edit_header_main .get_list li.qm-download[data-v-236d5b80]:hover { background:var(--ui-primary-hover) !important; }
+  .edit_resume .edit_all .edit_box .edit_top .edit_tab li.active b[data-v-236d5b80] { color:var(--ui-accent) !important; }
+  .edit_resume .edit_all .edit_box .edit_top .edit_tab li :is(.btn_prev,.btn_next)[data-v-236d5b80] { color:var(--ui-muted); }
+  .edit_resume .edit_all .edit_box .edit_b .edit_b_list .info_tip :is(i,span)[data-v-236d5b80] { color:var(--ui-muted); }
+  .personal-dialog-actions button:last-child { background:var(--ui-primary); border-color:var(--ui-primary); color:var(--ui-on-primary); }
+  :is(.settings-range,.skill_row) input[type=range],.el-switch.is-checked .el-switch__core,
+  #formHost .module-help .help-switch { accent-color:var(--ui-accent); }
+  .edit_header .el-slider__bar { background:var(--ui-accent) !important; }
+  .edit_header .el-slider__button { border-color:var(--ui-accent) !important; }
+  :is(#resumeEditorPanel,.qm-modal) .el-checkbox__input.is-checked .el-checkbox__inner { background:var(--ui-accent) !important; border-color:var(--ui-accent) !important; }
+  .workspace-views button[aria-pressed=true] { background:var(--ui-primary) !important; border-color:var(--ui-primary); color:var(--ui-on-primary) !important; }
+  .live-indicator { color:var(--ui-muted); }
+  .preview-heading .privacy-trigger :is(i,span) { color:var(--ui-muted) !important; }
+  .preview-heading .privacy-trigger.active :is(i,span) { color:var(--ui-accent) !important; }
+  :root[data-theme=dark] .save-status:not([data-state=saving]):not([data-state=error]) { color:var(--ui-muted); }
+  .save-status:not([data-state=saving]):not([data-state=error]) { color:var(--ui-muted); }
+  :root[data-theme=dark] :is(.brand img,.brand-home img) { outline:1px solid var(--ui-line); }
+}
+:root[data-page=portrait] { --blue:var(--ui-accent); --text:var(--ui-text); --muted:var(--ui-muted); --line:var(--ui-line); background:var(--ui-canvas); }
+:root[data-page=portrait] body { background:var(--ui-canvas); color:var(--ui-text); }
+:root[data-page=portrait] :is(.brand,.brand strong,.page-heading h1,.panel-title h2,.subheading h3,.dialog-heading h2) { color:var(--ui-text); }
+:root[data-page=portrait] :is(.topbar,.panel,dialog) { background:var(--ui-surface); border-color:var(--ui-line); }
+:root[data-page=portrait] :is(.button.primary,.button.dark) { background:var(--ui-primary); color:var(--ui-on-primary); border-color:var(--ui-primary); box-shadow:none; }
+:root[data-page=portrait] :is(.button.primary,.button.dark):hover { background:var(--ui-primary-hover); border-color:var(--ui-primary-hover); }
+:root[data-page=portrait] :is(.button.subtle,.button.secondary,.theme-button) { background:var(--ui-surface); color:var(--ui-muted); border-color:var(--ui-line); }
+:root[data-page=portrait] :is(.button.subtle,.button.secondary,.theme-button):hover { background:var(--ui-soft); color:var(--ui-text); }
+:root[data-page=portrait] .site-nav a[aria-current] { color:var(--ui-text); background:transparent; border-bottom-color:var(--ui-text); }
+:root[data-page=portrait] :is(.segmented,.preview-stage,.mode-card select,textarea,.advanced pre,.text-mode-button,.optional,.config-banner,.connection-message,.preserve-card,.result-message) { background:var(--ui-soft); border-color:var(--ui-line); color:var(--ui-muted); }
+:root[data-page=portrait] :is(.preset-card,.size-card,.history-card,.prompt-chips button,.custom-color input,.saved-prompt,select),
+:root[data-page=portrait] input:not([type=range]):not([type=color]) { background:var(--ui-surface); border-color:var(--ui-line); color:var(--ui-text); }
+:root[data-page=portrait] :is(.preset-card.active,.size-card.active) { background:var(--ui-accent-soft); border-color:var(--ui-accent); color:var(--ui-accent); }
+:root[data-page=portrait] .size-card.active small { color:var(--ui-accent); }
+:root[data-page=portrait] .segmented button.active { background:var(--ui-surface); color:var(--ui-text); }
+:root[data-page=portrait] .text-mode-button:hover { background:var(--ui-accent-soft); border-color:var(--ui-accent-line); }
+:root[data-page=portrait] :is(.return-label,.page-heading p,.preview-caption,.preset-name,.preset-tag,.selected-description,.form-label,.field-help,.draft-note,.connection-optional-note,.config-banner b,.dialog-description,.generate-footer>span,.fineprint,.page-footer,.preserve-card b,.preserve-card p) { color:var(--ui-muted); }
+:root[data-page=portrait] .draft-note [data-state=saved] { color:var(--ui-muted); }
+:root[data-page=portrait] :is(.preset-check,.tiny-check,.edge-fields output,.shield-icon,.lock-icon,.text-button) { color:var(--ui-accent); }
+:root[data-page=portrait] .preset-check { background:var(--ui-surface); }
+:root[data-page=portrait] .history-card.active { border-color:var(--ui-accent); }
+:root[data-page=portrait] dialog :is(input,select) { background:var(--ui-soft) !important; border-color:var(--ui-line) !important; color:var(--ui-text) !important; }
+:root[data-page=portrait] :is(input,select,textarea):focus { border-color:var(--ui-accent); outline-color:var(--ui-focus); }
+:root[data-page=portrait] :is(textarea,input)::placeholder { color:var(--ui-muted); }
+:root[data-page=portrait] .processing-overlay { background:color-mix(in srgb,var(--ui-surface) 92%,transparent); color:var(--ui-text); }
+:root[data-page=portrait] .generate-footer { background:var(--ui-surface); }
+:root[data-page=portrait] .result-message.error { background:#fff7f5; border-color:#f4d7d3; color:#b26c60; }
+:root[data-page=portrait][data-theme=dark] .result-message.error { background:#45282b; border-color:#674149; color:#ff9797; }
+
+/* Match the resume toolbar: brand / workspace tools / page actions. */
+:root[data-page=portrait] .topbar { grid-template-columns:176px minmax(0,1fr) 176px; gap:0; padding:0 22px; height:70px; }
+:root[data-page=portrait] .topbar .brand { width:106px; height:42px; padding:0 6px; gap:9px; justify-content:center; }
+:root[data-page=portrait] .topbar .brand strong { font-size:19px; font-weight:650; letter-spacing:1px; }
+:root[data-page=portrait] .topbar .brand img { width:34px; height:34px; border-radius:22%; }
+:root[data-page=portrait] .site-nav { gap:0; height:70px; min-width:0; }
+:root[data-page=portrait] .site-nav a { flex:0 0 96px; min-width:0; height:70px; padding:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; border:0; color:var(--ui-muted); background:transparent; }
+:root[data-page=portrait] .site-nav a svg { display:block; width:25px; height:30px; fill:none; stroke:currentColor; stroke-width:1.65; stroke-linecap:round; stroke-linejoin:round; }
+:root[data-page=portrait] .site-nav a:last-child svg { width:28px; stroke-width:1.7; }
+:root[data-page=portrait] .site-nav a span { font-size:14px; line-height:20px; white-space:nowrap; }
+:root[data-page=portrait] .site-nav a[aria-current],:root[data-page=portrait] .site-nav a:hover { color:var(--ui-accent); background:transparent; border:0; }
+:root[data-page=portrait] .top-actions { gap:10px; }
+:root[data-page=portrait] .theme-button { width:36px; height:36px; flex-shrink:0; }
+:root[data-page=portrait] #settingsButton { height:36px; padding:0 12px; min-width:106px; font-size:14px; gap:6px; border-radius:8px; background:var(--ui-primary); border-color:var(--ui-primary); color:var(--ui-on-primary); }
+:root[data-page=portrait] #settingsButton:hover { background:var(--ui-primary-hover); }
+:root[data-page=portrait] #settingsButton svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+:root[data-page=portrait] #connectionDot { width:5px; height:5px; margin:0; }
+.edit_resume .edit_header .edit_header_main .set_list .profile-link[aria-current] :is(i,b) { color:var(--ui-accent) !important; }
+@media(max-width:860px) {
+  :root[data-page=portrait] .topbar { grid-template-columns:32px minmax(0,1fr) auto; gap:8px; padding:0 12px; }
+  :root[data-page=portrait] .topbar .brand { width:32px; height:32px; padding:0; }
+  :root[data-page=portrait] .topbar .brand img { width:32px; height:32px; }
+  :root[data-page=portrait] .topbar .brand strong { display:none; }
+  :root[data-page=portrait] .site-nav { justify-content:flex-start; overflow-x:auto; overflow-y:hidden; scrollbar-width:thin; }
+  :root[data-page=portrait] .site-nav a { flex-basis:56px; }
+  :root[data-page=portrait] .site-nav a span { font-size:12px; }
+}
+@media(max-width:420px) {
+  :root[data-page=portrait] .site-nav a { flex-basis:52px; }
+  :root[data-page=portrait] #settingsButton { min-width:36px; width:36px; padding:0; position:relative; justify-content:center; }
+  :root[data-page=portrait] #settingsButton .action-label { display:none; }
+  :root[data-page=portrait] #connectionDot { position:absolute; right:5px; top:5px; }
+  .edit_resume .edit_header .edit_header_main .set_list > li[data-v-236d5b80] { flex-basis:52px; width:52px; }
+  .edit_resume .edit_header .edit_header_main .get_list > li.qm-download[data-v-236d5b80] { width:36px; min-width:36px; padding:0; justify-content:center; }
+  .edit_resume .get_list #dlLabel { display:none; }
+}
