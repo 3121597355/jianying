@@ -14,6 +14,8 @@ import { getModuleOrder } from './module-order.js';
 import { listPersonalTemplates, savePersonalTemplate, removePersonalTemplate, templateMatches } from './personal-templates.js';
 import { captureElement, capturePaper, moveElement, movePaper, slideSidebar } from './motion.js';
 import { WORKSPACE_NAV } from './workspace-nav.js';
+import {availableTemplates} from './site-settings.js';
+import {track} from './analytics.js';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -440,7 +442,8 @@ function modal(title, bodyHtml, onMount) {
 function openTplDialog() {
   const cur = getResume().setData.tplId;
   const personal=listPersonalTemplates(),activePersonal=personal.find(t=>t.id===getUi().customTemplateId&&templateMatches(t,getResume().setData));
-  const cards = TEMPLATES.map(t => `
+  const choices = availableTemplates(TEMPLATES);
+  const cards = choices.map(t => `
     <button type="button" class="tpl_card ${!activePersonal&&t.id === Number(cur) ? 'active' : ''}" data-tpl="${t.id}" aria-label="选择${esc(t.name)}模板" aria-pressed="${!activePersonal&&t.id === Number(cur)}">
       <div class="tpl_thumb"><img src="${esc(t.thumbnail)}" alt="${esc(t.name)}模板预览" loading="lazy"></div>
       <strong>${esc(t.code)}</strong>
@@ -450,12 +453,13 @@ function openTplDialog() {
 
   const customCards=personal.map(t=>{const base=getTemplate(t.style.tplId),active=t===activePersonal;return `<article class="personal-template-card${active?' active':''}"><button type="button" class="personal-template-select" data-personal="${esc(t.id)}" aria-label="使用自定义模板${esc(t.name)}" aria-pressed="${active}"><div class="tpl_thumb"><img src="${esc(base.thumbnail)}" alt="${esc(base.name)}基础版式预览" loading="lazy"><small class="template-base-label">${esc(base.name)}</small></div><strong>${esc(t.name)}</strong><span class="personal-style-summary"><i style="background:${t.style.skin}"></i>${t.style.fontSize}px · ${t.style.lineHeight}倍行距</span></button><div class="personal-template-actions"><button type="button" data-rename-personal="${esc(t.id)}" aria-label="重命名${esc(t.name)}">重命名</button><button type="button" data-remove-personal="${esc(t.id)}" aria-label="移除${esc(t.name)}">移除</button></div></article>`;}).join('');
   modal('更换模板', `
-    <div class="template-topline"><p class="info_tip">${TEMPLATES.length}套基础版式${personal.length?` · ${personal.length}套自定义模板`:''}，切换保留简历内容。</p><button type="button" class="create-template-top" data-create-personal aria-label="创建自定义模板">＋ 自定义模板</button></div>
+    <div class="template-topline"><p class="info_tip">${choices.length}套基础版式${personal.length?` · ${personal.length}套自定义模板`:''}，切换保留简历内容。</p><button type="button" class="create-template-top" data-create-personal aria-label="创建自定义模板">＋ 自定义模板</button></div>
     <div class="tpl_pick">${cards}</div>${personal.length?`<div class="personal-template-heading"><h3>我的模板</h3><span>保存在当前浏览器</span></div><div class="tpl_pick personal-template-grid">${customCards}</div>`:''}`, (w, close) => {
     w.classList.add('qm-template-dialog');
     w.querySelectorAll('[data-tpl]').forEach(card => {
       card.onclick = () => {
         const id = Number(card.dataset.tpl);
+        track('template_select',id);
         set(rr => {
           applyTemplate(rr, id);
           getUi().tplChosen = true;
@@ -694,8 +698,9 @@ export function bootEditor() {
   if (home) { home.classList.add('brand-home'); home.setAttribute('aria-label','返回首页'); home.title='返回首页'; home.innerHTML = '<img src="/assets/img/brand/mark-mono.svg" alt="" width="34" height="34"><span>简影</span>'; }
   const entryParams = new URL(location.href).searchParams;
   const entryTemplate = Number(entryParams.get('template'));
-  if (TEMPLATES.some(template=>template.id===entryTemplate)) {
+  if (availableTemplates(TEMPLATES).some(template=>template.id===entryTemplate)) {
     set(resume=>{applyTemplate(resume,entryTemplate);getUi().tplChosen=true;getUi().customTemplateId=null;});
+    track('template_select',entryTemplate);
     toast('已应用所选模板，简历内容继续保留');
     history.replaceState(null,'',location.pathname);
   }

@@ -4,6 +4,7 @@
  */
 
 import { loadVendor } from './vendor-loader.js';
+import {track} from './analytics.js';
 
 const PAGE_W_PT = 595.28;   // A4 宽（pt）
 const PAGE_H_PT = 841.89;   // A4 高（pt）
@@ -42,8 +43,6 @@ export async function downloadResumePDF(opts = {}) {
     const computed = getComputedStyle(original);
     for (const key of ['width', 'height', 'borderRadius', 'display', 'alignItems', 'justifyContent', 'overflow']) n.style[key] = computed[key];
     const image = n.querySelector('img');
-    // An editor upload hint is not resume content.
-    if (!image) n.style.visibility = 'hidden';
     const originalImage = original.querySelector('img');
     if (image && originalImage?.naturalWidth && originalImage?.naturalHeight) {
       const width = parseFloat(computed.width), height = parseFloat(computed.height);
@@ -120,6 +119,7 @@ export async function downloadResumePDF(opts = {}) {
     const name = (opts.name || '').trim();
     const fileName = `${name ? name + '-' : ''}个人简历.pdf`;
     pdf.save(fileName);
+    track('resume_export');
 
     onProgress(1);
     return { pages, fileName };

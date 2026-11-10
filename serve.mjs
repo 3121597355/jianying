@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createApp } from './portrait/server.mjs';
+import { createAdministration } from './admin.mjs';
 
 const ROOT = import.meta.dirname;
 const MIME = {
@@ -13,7 +14,7 @@ const MIME = {
   '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.ico': 'image/x-icon',
 };
 
-export async function createResumeServer({ portraitOptions = {} } = {}) {
+export async function createResumeServer({ portraitOptions = {}, adminOptions = {} } = {}) {
   let server;
   const portrait = await createApp({
     ...portraitOptions,
@@ -21,10 +22,13 @@ export async function createResumeServer({ portraitOptions = {} } = {}) {
     basePath: '/portrait', hostPort: () => server?.address()?.port,
   });
   const handlePortrait = portrait.listeners('request')[0];
+  const administration = createAdministration({root:ROOT, ...adminOptions, hostPort:()=>server?.address()?.port});
   server = http.createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     try {
       const pathname = decodeURIComponent(new URL(req.url, 'http://127.0.0.1').pathname);
+      if(await administration.handle(req,res,new URL(req.url,'http://127.0.0.1')))return;
+      if(pathname==='/admin') {res.writeHead(308,{Location:'/admin.html','Cache-Control':'no-store'}).end();return;}
       if (pathname === '/portrait') {
         if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }).end(); return; }
         res.writeHead(308, { Location: '/portrait/', 'Cache-Control': 'no-store' }).end(); return;
@@ -35,14 +39,19 @@ export async function createResumeServer({ portraitOptions = {} } = {}) {
       if (pathname === '/resume') {
         res.writeHead(308, { Location: '/resume/', 'Cache-Control': 'no-store' }).end(); return;
       }
-      const page = ({ '/': 'index.html', '/index.html': 'index.html', '/resume/': 'resume.html', '/resume.html': 'resume.html' })[pathname];
+      const page = ({ '/': 'index.html', '/index.html': 'index.html', '/resume/': 'resume.html', '/resume.html': 'resume.html', '/admin.html':'admin.html' })[pathname];
       const isIndex = Boolean(page);
       const assets = path.join(ROOT, 'assets');
       const file = isIndex ? path.join(ROOT, page) : path.resolve(ROOT, '.' + pathname);
       if (!isIndex && (!pathname.startsWith('/assets/') || !file.startsWith(assets + path.sep) || !MIME[path.extname(file).toLowerCase()])) {
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('未找到此内容。'); return;
       }
-      const body = await fs.readFile(file);
+      let body = await fs.readFile(file);
+      if(page==='index.html')body=Buffer.from(administration.renderHomepage(body.toString('utf8')));
+      if(pathname==='/admin.html') {
+        res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+        res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','no-referrer');
+      }
       res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()], 'Cache-Control': 'no-cache' });
       res.end(req.method === 'HEAD' ? undefined : body);
     } catch (error) {

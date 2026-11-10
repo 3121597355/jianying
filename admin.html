@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#f8f7f4">
+  <title>管理员后台 · 简影</title><link rel="icon" href="/assets/img/brand/mark-mono.svg">
+  <link rel="stylesheet" href="/assets/css/admin.css"><script type="module" src="/assets/js/admin.js"></script>
+</head>
+<body>
+  <div id="loading" class="loading" role="status">正在连接网站后台…</div>
+  <main id="login-view" class="login-view" hidden>
+    <section class="login-card" aria-labelledby="login-title">
+      <a class="login-brand" href="/"><span class="monogram"><img src="/assets/img/brand/mark-mono.svg" alt="" width="28" height="28"></span><span>简影</span></a>
+      <p class="eyebrow">管理员工作空间</p><h1 id="login-title">欢迎回来。</h1><p id="login-description" class="muted">管理网站内容，查看简历与证件照的使用情况。</p>
+      <form id="login-form">
+        <label id="setup-code-field" hidden>首次设置码<input id="setup-code" autocomplete="off" maxlength="80"><small>从项目目录的 private/admin/管理员首次设置码.txt 复制，仅首次使用。</small></label>
+        <label>管理员账户<input id="username" autocomplete="username" required minlength="3" maxlength="40" value="admin"></label>
+        <label>密码<input id="password" type="password" autocomplete="current-password" required maxlength="128"></label>
+        <label id="confirm-password-field" hidden>确认密码<input id="confirm-password" type="password" autocomplete="new-password" maxlength="128"></label>
+        <p id="login-error" class="form-error" role="alert" hidden></p>
+        <button class="primary full" id="login-submit" type="submit">登录后台 <span aria-hidden="true">→</span></button>
+      </form>
+      <a class="back-site" href="/">← 返回网站</a>
+    </section>
+  </main>
+  <div id="admin-shell" class="admin-shell" hidden>
+    <aside class="sidebar">
+      <a class="sidebar-brand" href="/admin.html"><span class="monogram"><img src="/assets/img/brand/mark-mono.svg" alt="" width="28" height="28"></span><span>简影<small>管理员后台</small></span></a>
+      <nav aria-label="后台栏目">
+        <button data-panel="overview" class="active"><span aria-hidden="true">◫</span>数据概览</button>
+        <button data-panel="features"><span aria-hidden="true">▤</span>功能表现</button>
+        <button data-panel="audience"><span aria-hidden="true">◎</span>访问来源</button>
+        <div class="nav-divider"></div>
+        <button data-panel="templates"><span aria-hidden="true">▦</span>模板管理</button>
+        <button data-panel="integration"><span aria-hidden="true">⇄</span>统计与接口</button>
+        <button data-panel="security"><span aria-hidden="true">⌑</span>账户安全</button>
+        <button data-panel="content"><span aria-hidden="true">✎</span>网站内容</button>
+      </nav>
+      <div class="sidebar-bottom"><span class="admin-identity"><i></i><span id="admin-name">管理员</span></span><button id="logout">退出登录</button><a href="/">← 返回网站</a></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar"><span id="breadcrumb">网站 / 数据概览</span><div><span class="protected"><i></i>管理员访问</span><button id="theme-toggle" class="theme-button" aria-label="切换深色模式">◐</button><a href="/" target="_blank" rel="noopener">查看网站 <span aria-hidden="true">↗</span></a></div></header>
+      <main id="dashboard-main">
+        <div class="page-heading"><div><p class="eyebrow" id="page-eyebrow">网站数据</p><h1 id="page-title">数据概览</h1><p id="page-description" class="muted">了解简历与证件照的使用情况。</p></div><div class="heading-actions"><button id="refresh-data" class="secondary">刷新</button><a id="export-data" class="secondary" href="/api/admin/export?days=30">导出 CSV <span aria-hidden="true">↓</span></a></div></div>
+        <div id="date-toolbar" class="date-toolbar"><div class="date-presets" role="group" aria-label="统计日期范围"><button data-days="7">近 7 天</button><button data-days="30" class="active">近 30 天</button><button data-days="90">近 90 天</button></div><form id="date-form"><label class="sr-only" for="date-from">开始日期</label><input id="date-from" type="date" required><span>—</span><label class="sr-only" for="date-to">结束日期</label><input id="date-to" type="date" required><button class="date-query" type="submit">查询</button></form></div>
+        <div id="dashboard-error" class="error-banner" role="alert" hidden></div>
+        <section id="dashboard-content" aria-live="polite"></section>
+        <footer class="dashboard-footer"><span>匿名统计 · 管理员与编辑预览不计入 · 不收集简历正文和照片</span><span id="updated-at"></span></footer>
+      </main>
+    </div>
+  </div>
+  <div class="toast" id="admin-toast" role="status" aria-live="polite"></div>
+</body>
+</html>

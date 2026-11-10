@@ -4,6 +4,7 @@ import {createReturnNavigation} from './navigation.js';
 import {portraitNavigationMarkup} from '/assets/js/workspace-nav.js';
 import {createDemo} from '/assets/js/store.js';
 import '/assets/js/motion.js';
+import {track} from '/assets/js/analytics.js';
 const $=id=>document.getElementById(id);
 const apiUrl=url=>new URL(url.replace(/^\//,''),import.meta.url).pathname;
 const state={config:null,token:'',category:'证件底色',presetId:'white',sizeId:'original',original:null,result:null,view:'original',busy:false,jobId:null,history:[],crop:{zoom:1,x:.5,y:.4},toastTimer:null};
@@ -60,6 +61,7 @@ async function generateLocal(){
     }
     if(state.localController.signal.aborted)throw new DOMException('Cancelled','AbortError');
     const canvas=drawQuickBackground(document.createElement('canvas'),source.cutout,options);
+    track('portrait_cutout');
     const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('合成背景失败，请重试。');
     const url=URL.createObjectURL(blob);let img;try{img=await readImage(url);}catch(e){URL.revokeObjectURL(url);throw e;}
     if(state.localController.signal.aborted){URL.revokeObjectURL(url);throw new DOMException('Cancelled','AbortError');}
@@ -139,7 +141,7 @@ async function download(sheet=false){const img=imageSource();if(!img)return;cons
   if(sheet){if(!size.width||['original','square'].includes(size.id))return;const layout=printLayout(size);canvas.width=layout.w;canvas.height=layout.h;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);const photo=drawPhoto(document.createElement('canvas'),img,size.width,size.height,true);const offsetX=(layout.w-layout.cols*size.width-(layout.cols-1)*layout.gap)/2,offsetY=(layout.h-layout.rows*size.height-(layout.rows-1)*layout.gap)/2;for(let y=0;y<layout.rows;y++)for(let x=0;x<layout.cols;x++){const px=offsetX+x*(size.width+layout.gap),py=offsetY+y*(size.height+layout.gap);ctx.drawImage(photo,px,py);ctx.strokeStyle='#d5d9df';ctx.lineWidth=1;ctx.strokeRect(px-.5,py-.5,size.width+1,size.height+1);}format='jpeg';fileName+=`-六寸排版${layout.count}张`;
   }else if(size.width){drawPhoto(canvas,img,size.width,size.height,format==='jpeg');}
   else{canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;const ctx=canvas.getContext('2d');if(format==='jpeg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);}ctx.drawImage(img,0,0);}
-  const target=sheet?$('printButton'):$('downloadButton');target.disabled=true;try{const r=await fetch(apiUrl('/api/export'),{method:'POST',headers:{'Content-Type':'application/json','X-App-Token':state.token},body:JSON.stringify({image:canvas.toDataURL('image/png'),format})});if(!r.ok){const e=await r.json();throw new Error(e.error||'导出失败。');}const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=fileName+(format==='jpeg'?'.jpg':'.png');document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60_000);toast(sheet?'六寸排版已下载，打印时请选择实际尺寸':'照片已下载，分辨率标记为 300 DPI');}catch(e){toast(e.message);}finally{updateButtons();}
+  const target=sheet?$('printButton'):$('downloadButton');target.disabled=true;try{const r=await fetch(apiUrl('/api/export'),{method:'POST',headers:{'Content-Type':'application/json','X-App-Token':state.token},body:JSON.stringify({image:canvas.toDataURL('image/png'),format})});if(!r.ok){const e=await r.json();throw new Error(e.error||'导出失败。');}const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=fileName+(format==='jpeg'?'.jpg':'.png');document.body.append(a);a.click();a.remove();track('portrait_export');setTimeout(()=>URL.revokeObjectURL(url),60_000);toast(sheet?'六寸排版已下载，打印时请选择实际尺寸':'照片已下载，分辨率标记为 300 DPI');}catch(e){toast(e.message);}finally{updateButtons();}
 }
 function saved(){try{const value=JSON.parse(localStorage.getItem('portrait-saved-prompts')||'[]');return Array.isArray(value)?value.filter(p=>typeof p==='string'&&p.length<=4000).slice(0,12):[];}catch{return [];}}
 function saveList(list){try{localStorage.setItem('portrait-saved-prompts',JSON.stringify(list));renderSaved();}catch{toast('浏览器无法保存收藏，请检查存储设置。');}}
@@ -261,6 +263,7 @@ async function applyResumePhoto(){
     const ui=JSON.parse(localStorage.getItem('qmj-clone:ui')||'{}');Object.assign(ui,{tab:'basic',editOpen:true,savedAt:Date.now()});
     localStorage.setItem('qmj-clone:resume',JSON.stringify(resume));localStorage.setItem('qmj-clone:ui',JSON.stringify(ui));
     if(!await persistPhotoDraft())return;
+    track('portrait_apply');
     location.assign('/resume/?portrait=applied');
   }catch{toast('照片未能写入简历，请先下载照片后手动上传。');}finally{button.disabled=false;}
 }
