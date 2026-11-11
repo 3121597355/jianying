@@ -113,6 +113,7 @@ function load() {
 
 let saveTimer = null;
 let savePending = false;
+let resumePending = !savedDraft;
 let saveState = { status: savedDraft ? 'restored' : 'ready', savedAt: state.ui.savedAt || 0 };
 const subscribers = {};
 
@@ -125,10 +126,12 @@ export function flushSave() {
   clearTimeout(saveTimer);
   try {
     const savedAt = Date.now();
-    localStorage.setItem(KEY, JSON.stringify(state.resumeData));
+    // UI-only changes must not serialize a large photo or rewrite the resume.
+    if (resumePending || !savePending) localStorage.setItem(KEY, JSON.stringify(state.resumeData));
     localStorage.setItem(KEY_UI, JSON.stringify({ ...state.ui, savedAt }));
     state.ui.savedAt = savedAt;
     savePending = false;
+    resumePending = false;
     reportSave('saved', savedAt);
     return true;
   } catch (error) {
@@ -139,11 +142,13 @@ export function flushSave() {
   }
 }
 
-function scheduleSave() {
+function scheduleSave({uiOnly=false}={}) {
   clearTimeout(saveTimer);
+  resumePending ||= !uiOnly;
   savePending = true;
   reportSave('saving');
-  saveTimer = setTimeout(flushSave, 300);
+  // Sidebar transitions take 480ms; write their small preference after settling.
+  saveTimer = setTimeout(flushSave, uiOnly ? 550 : 300);
 }
 
 // 刷新、关闭和切到后台时同步写入，避免最后几个字留在防抖计时器里。
@@ -158,10 +163,10 @@ export function onSaveState(fn) { subscribers.saveState = fn; fn(saveState); }
 export function getResume() { return state.resumeData; }
 export function getUi() { return state.ui; }
 
-/** 任何数据变更后调用：触发重渲染 + 自动保存；structural 表示表单结构变了需要重建表单 */
+/** Save changes; uiOnly skips resume rendering and persists only preferences. */
 export function commit(opts = {}) {
-  scheduleSave();
-  subscribers.change && subscribers.change(opts);
+  scheduleSave(opts);
+  if (!opts.uiOnly) subscribers.change?.(opts);
 }
 
 export function set(patchFn, opts = {}) {

@@ -11,7 +11,9 @@ async function motionEnvironment(t) {
   return import(`../assets/js/motion.js?test=${Math.random()}`);
 }
 function element(left=100,width=500) {
+  const classes=new Set();
   return {
+    classList:{add:name=>classes.add(name),remove:name=>classes.delete(name),contains:name=>classes.has(name)},
     bounds:{left,top:0,width,height:500},
     computed:{opacity:'1',visibility:'visible',zoom:'1'},
     played:[],
@@ -24,6 +26,49 @@ function element(left=100,width=500) {
     },
   };
 }
+
+test('workspace completion restores responsive sidebar layout and refits the preview',async t=>{
+  const motion=await motionEnvironment(t),workspace=element();let fits=0;
+  workspace.computed.gridTemplateColumns='1100px 32px';
+  motion.moveWorkspace(workspace,'500px 632px',()=>fits++);
+  assert.equal(workspace.classList.contains('workspace-grid-moving'),true);
+  workspace.played[0].onfinish();
+  assert.equal(workspace.classList.contains('workspace-grid-moving'),false);
+  assert.equal(fits,1);
+});
+
+test('interrupting the workspace keeps the new transition active; reduced motion restores final layout',async t=>{
+  const motion=await motionEnvironment(t),workspace=element();let fits=0;
+  workspace.computed.gridTemplateColumns='1100px 32px';
+  motion.moveWorkspace(workspace,'500px 632px',()=>fits++);
+  const first=workspace.played[0];
+  workspace.computed.gridTemplateColumns='500px 632px';
+  motion.moveWorkspace(workspace,'800px 332px',()=>fits++);
+  assert.equal(first.cancelled,true);
+  assert.equal(workspace.classList.contains('workspace-grid-moving'),true);
+  motion.applyMotionPreference('reduce');
+  assert.equal(workspace.played[1].cancelled,true);
+  assert.equal(workspace.classList.contains('workspace-grid-moving'),false);
+  assert.equal(fits,2);
+  motion.moveWorkspace(workspace,'1100px 32px');
+  assert.equal(workspace.played.length,2);
+});
+
+test('a delayed cancel event cannot unlock the sidebar of a replacement transition',async t=>{
+  const motion=await motionEnvironment(t),workspace=element();let fits=0;
+  workspace.computed.gridTemplateColumns='1100px 32px';
+  motion.moveWorkspace(workspace,'500px 632px',()=>fits++);
+  const first=workspace.played[0];
+  first.cancel=function(){this.cancelled=true;};
+  workspace.computed.gridTemplateColumns='500px 632px';
+  motion.moveWorkspace(workspace,'800px 332px',()=>fits++);
+  first.oncancel(); // Browser delivers the old cancel after the new play call.
+  assert.equal(workspace.classList.contains('workspace-grid-moving'),true);
+  assert.equal(fits,0);
+  workspace.played[1].onfinish();
+  assert.equal(workspace.classList.contains('workspace-grid-moving'),false);
+  assert.equal(fits,1);
+});
 
 test('reversing a sidebar fold keeps its currently visible position and opacity',async t=>{
   const motion=await motionEnvironment(t),sidebar=element();

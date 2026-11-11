@@ -12,7 +12,7 @@ import { MODULES, FONTS } from './dict.js';
 import { buildSettingsPanel } from './settings.js';
 import { getModuleOrder } from './module-order.js';
 import { listPersonalTemplates, savePersonalTemplate, removePersonalTemplate, templateMatches } from './personal-templates.js';
-import { captureElement, capturePaper, moveElement, movePaper, slideSidebar, markLayoutMotion } from './motion.js';
+import { captureElement, capturePaper, moveElement, slideSidebar, moveWorkspace } from './motion.js';
 import { WORKSPACE_NAV } from './workspace-nav.js';
 import {availableTemplates} from './site-settings.js';
 import {track} from './analytics.js';
@@ -201,14 +201,14 @@ function setupWorkspace() {
     const button = e.target.closest('[data-view]');
     if (!button) return;
     setEditorOpen(button.dataset.view === 'edit');
-    commit();
+    commit({uiOnly:true});
   });
 
   // zoom 只作用于预览外壳；导出的离屏简历继续使用原始 820px 宽度。
   const scroller = preview.querySelector('.preview-scroll');
   const fit = () => {
     paper.style.zoom = String(Math.min(1, Math.max(.2, (scroller.clientWidth - 40) / 820)));
-    alignToolbarWithPaper();
+    if(!main.classList.contains('workspace-grid-moving'))alignToolbarWithPaper();
   };
   new ResizeObserver(fit).observe(scroller);
   fitPreviewLayout = fit;
@@ -250,19 +250,18 @@ function setEditorOpen(open,{animate=true}={}) {
   const panel = $('#resumeEditorPanel');
   const workspaceBefore = $('.resume-workspace');
   const changed = workspaceBefore && workspaceBefore.classList.contains('editor-collapsed') === open;
-  const paper = $('#tpl_box');
   const editor = panel?.querySelector('.edit_box');
   const toggle = panel?.querySelector(':scope > .close');
   const heading=$('.editor-heading');
-  const pageNum=$('#pageNum');
   const desktop=window.matchMedia('(min-width: 861px)').matches;
   const moving=animate&&changed&&desktop;
-  const before = moving ? capturePaper(paper) : null;
+  const columnsBefore=moving?getComputedStyle(workspaceBefore).gridTemplateColumns:null;
   const editorBefore=moving?captureElement(editor):null;
   const handleBefore=moving?capturePaper(toggle):null;
   const headingBefore=moving?captureElement(heading):null;
-  const pageBefore=moving?capturePaper(pageNum):null;
-  if (!open && panel?.classList.contains('edit_show')) {
+  // Cancel the old grid only after reading the visible child positions.
+  if(moving)captureElement(workspaceBefore);
+  if (!open && panel?.classList.contains('edit_show')&&!workspaceBefore?.classList.contains('workspace-grid-moving')) {
     const width=`${panel.clientWidth}px`;
     panel.style.setProperty('--editor-expanded-width',width);
     workspaceBefore?.style.setProperty('--editor-expanded-width',width);
@@ -290,15 +289,16 @@ function setEditorOpen(open,{animate=true}={}) {
     toggle.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${open ? 'm9 5 7 7-7 7' : 'm15 5-7 7 7 7'}"/></svg>`;
   }
   if(editor)editor.id='resumeEditorContent';
-  if(moving)markLayoutMotion(workspace);
-  fitPreviewLayout();
   if (moving) {
-    movePaper(paper,before);
-    slideSidebar(editor,editorBefore,open);
-    slideSidebar(heading,headingBefore,open);
+    if(open){const width=`${panel.clientWidth}px`;panel.style.setProperty('--editor-expanded-width',width);workspace.style.setProperty('--editor-expanded-width',width);}
+    const style=getComputedStyle(workspace);
+    const distance=(parseFloat(style.getPropertyValue('--collapsed-editor-width'))||32)+(parseFloat(style.paddingRight)||20);
+    moveWorkspace(workspace,columnsBefore,fitPreviewLayout);
+    slideSidebar(editor,editorBefore,open,{distance});
+    slideSidebar(heading,headingBefore,open,{distance});
     moveElement(toggle,handleBefore);
-    moveElement(pageNum,pageBefore);
   }
+  fitPreviewLayout();
 }
 
 function focusPreview(name = window.__tab, onlyIfOutside = false) {
@@ -668,7 +668,7 @@ function bindPrivacy() {
     $('.privacy-trigger')?.classList.toggle('active');
   });
   const toggle = $('.edit_all .close');
-  toggle?.addEventListener('click', () => { setEditorOpen(!$('.edit_all').classList.contains('edit_show')); commit(); });
+  toggle?.addEventListener('click', () => { setEditorOpen(!$('.edit_all').classList.contains('edit_show')); commit({uiOnly:true}); });
   toggle?.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle.click(); } });
 
   // 数据操作与保存状态放在侧栏底部。

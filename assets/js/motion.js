@@ -117,7 +117,7 @@ export function revealOnScroll(items) {
   };
 }
 
-/** 在最终布局上平移、缩放纸张，避免每帧修改宽度并反复排版。 */
+/** Capture bounds for small controls that keep their layout size. */
 export function capturePaper(element) {
   return captureElement(element)?.bounds || null;
 }
@@ -141,27 +141,38 @@ export function movePaper(element,before) {
   moveElement(element,before,{scale:true});
 }
 
-export function markLayoutMotion(workspace) {
-  if(!workspace || reduced()) return;
-  const animation=play(workspace,[{},{}],foldTiming);
-  workspace.classList.add('workspace-moving');
+export function moveWorkspace(workspace,before,onFinish=()=>{}) {
+  if(!workspace || !before || reduced()) return;
+  // Cancel before adding the class: the previous animation restores layout.
+  animations.get(workspace)?.cancel();
+  workspace.classList.add('workspace-grid-moving');
+  const after=getComputedStyle(workspace).gridTemplateColumns;
+  const animation=play(workspace,[{gridTemplateColumns:before},{gridTemplateColumns:after}],foldTiming);
   const finish=animation.onfinish,cancel=animation.oncancel;
-  animation.onfinish=()=>{finish();workspace.classList.remove('workspace-moving');};
-  animation.oncancel=()=>{cancel();workspace.classList.remove('workspace-moving');};
+  const restore=clean=>{
+    // WAAPI dispatches cancel asynchronously. An old callback must never
+    // unlock the sidebar width while its replacement is still moving.
+    const current=animations.get(workspace)===animation;
+    clean();
+    if(current){workspace.classList.remove('workspace-grid-moving');onFinish();}
+  };
+  animation.onfinish=()=>restore(finish);
+  animation.oncancel=()=>restore(cancel);
 }
 
 /** Slide the full-width sidebar; its inputs never squeeze into the collapsed rail. */
-export function slideSidebar(element,before,open) {
+export function slideSidebar(element,before,open,{distance}={}) {
   if (!element || !before || reduced()) return;
   const after=element.getBoundingClientRect();
   const hidden=before.visibility==='hidden' || before.opacity<=0;
-  const x=hidden?after.width+36:before.bounds.left-after.left;
+  const travel=distance??after.width+36;
+  const x=hidden?travel:before.bounds.left-after.left;
   const y=hidden?0:before.bounds.top-after.top;
   const start=hidden?0:before.opacity;
   play(element,[
     {transform:`translate(${x}px,${y}px)`,opacity:start,visibility:'visible',offset:0},
     {opacity:open?1:start,visibility:'visible',offset:open?.7:.3},
-    {transform:open?'none':`translateX(${after.width+36}px)`,opacity:open?1:0,visibility:'visible',offset:1},
+    {transform:open?'none':`translateX(${travel}px)`,opacity:open?1:0,visibility:'visible',offset:1},
   ],foldTiming);
 }
 
