@@ -6,6 +6,7 @@ import {TEMPLATES, DEFAULT_TPL} from './assets/js/templates.js';
 import {SITE_LINKS} from './assets/js/site-config.js';
 import {buildEngagement} from './engagement.mjs';
 import {createChangelog} from './changelog.mjs';
+import {upgradeSiteBrand} from './site-brand.mjs';
 
 const fail = (message, status=400) => Object.assign(new Error(message), {status});
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
@@ -13,7 +14,7 @@ const dayOf = time => new Date(time + 8*3600000).toISOString().slice(0,10);
 const catalog = TEMPLATES.map(({id,code,name,desc,thumbnail})=>({id,code,name,desc,thumbnail}));
 const routes = {'/':'介绍页','/resume/':'简历编辑','/portrait/':'证件照'};
 export const ACTIONS = {page_view:'页面访问',template_select:'套用模板',template_preview:'预览模板',resume_edit_start:'开始填写简历',resume_export:'导出简历 PDF',resume_export_error:'简历导出失败',portrait_upload:'载入照片',portrait_cutout:'快速换底',portrait_cutout_error:'快速换底失败',portrait_export:'导出证件照',portrait_export_error:'证件照导出失败',portrait_apply:'照片用于简历'};
-const defaults = () => ({site:{title:'简影 · 开源的简历与证件照一站式工具',kicker:'开源 · 简洁 · 一站式',headline:'简历与证件照，\n一站准备好。',description:'简约模板、实时排版、照片换底。\n无需注册，打开就能用。',github:SITE_LINKS.github},templates:catalog.map((item,index)=>({...item,enabled:true,featured:index<4})),defaultTemplate:DEFAULT_TPL,analytics:{enabled:true}});
+const defaults = () => ({site:{title:'一纸简历 · 开源的简历与证件照一站式工具',kicker:'开源 · 简洁 · 一站式',headline:'简历与证件照，\n一站准备好。',description:'简约模板、实时排版、照片换底。\n无需注册，打开就能用。',github:SITE_LINKS.github},templates:catalog.map((item,index)=>({...item,enabled:true,featured:index<4})),defaultTemplate:DEFAULT_TPL,analytics:{enabled:true}});
 export function upgradeTemplateCatalog(settings){
   if(!settings||!Array.isArray(settings.templates))return settings;
   const missing=catalog.filter(item=>!settings.templates.some(saved=>saved.id===item.id));
@@ -60,8 +61,9 @@ export function createAdministration({root,dataDir=path.join(root,'private','adm
   fs.mkdirSync(dataDir,{recursive:true});const settingsFile=path.join(dataDir,'site-settings.json'),eventFile=path.join(dataDir,'events.jsonl'),saltFile=path.join(dataDir,'analytics-salt.txt');
   const atomic=(file,value)=>{fs.writeFileSync(file+'.tmp',value,{mode:0o600});fs.renameSync(file+'.tmp',file);};
   const storedSettings=fs.existsSync(settingsFile)?JSON.parse(fs.readFileSync(settingsFile,'utf8')):null;
-  let settings=storedSettings?normalizeSettings(upgradeTemplateCatalog(storedSettings)):defaults();
-  if(!storedSettings||upgradeTemplateCatalog(storedSettings)!==storedSettings)atomic(settingsFile,JSON.stringify(settings,null,2));
+  const upgradedSettings=upgradeSiteBrand(upgradeTemplateCatalog(storedSettings));
+  let settings=storedSettings?normalizeSettings(upgradedSettings):defaults();
+  if(!storedSettings||upgradedSettings!==storedSettings)atomic(settingsFile,JSON.stringify(settings,null,2));
   const changelog=createChangelog({root,dataDir});
   const salt=fs.existsSync(saltFile)?fs.readFileSync(saltFile,'utf8'):crypto.randomBytes(32).toString('hex');if(!fs.existsSync(saltFile))fs.writeFileSync(saltFile,salt,{mode:0o600});
   let events=fs.existsSync(eventFile)?fs.readFileSync(eventFile,'utf8').split('\n').filter(Boolean).flatMap(line=>{try{return [JSON.parse(line)];}catch{return []}}):[];

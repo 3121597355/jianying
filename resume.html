@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>简影 · 简历制作与证件照</title>
-<meta name="description" content="简影，把简历和证件照一起准备好。实时排版、自动保存、本地换底与照片裁切。">
+<title>一纸简历 · 简历制作与证件照</title>
+<meta property="og:site_name" content="一纸简历">
+<meta property="og:title" content="一纸简历 · 简历制作与证件照">
+<meta name="description" content="一纸简历，把简历和证件照一起准备好。实时排版、自动保存、本地换底与照片裁切。">
 <meta name="theme-color" content="#ffffff">
 <link rel="icon" type="image/svg+xml" href="/assets/img/brand/mark-mono.svg">
 <script>try { document.documentElement.dataset.theme = JSON.parse(localStorage.getItem('qmj-clone:ui') || '{}').theme === 'dark' ? 'dark' : 'light'; } catch { document.documentElement.dataset.theme = 'light'; }</script>
@@ -36,12 +38,13 @@
 <link rel="stylesheet" href="/assets/css/experience.css">
 <link rel="stylesheet" href="/assets/css/interface.css">
 <link rel="stylesheet" href="/assets/css/editor-polish.css">
+<link rel="stylesheet" href="/assets/css/mobile-editor.css">
 <link rel="preload" href="/assets/vendor/quill.js" as="script">
 <link rel="modulepreload" href="/assets/js/app.js">
 </head>
 <body>
 <div class="editor-startup" id="editorStartup">
-  <a class="startup-brand" href="/" aria-label="返回首页"><img src="/assets/img/brand/mark-mono.svg" alt=""><span>简影</span></a>
+  <a class="startup-brand" href="/" aria-label="返回首页"><img src="/assets/img/brand/mark-mono.svg" alt=""><span>一纸简历</span></a>
   <div class="startup-message" role="status" aria-live="polite">
     <span class="startup-loading">正在准备简历编辑器…</span>
     <div class="startup-error"><p>编辑器暂时未能加载，请重试。已保存的草稿会保留。</p><a href="/resume/">重新加载</a><a href="/">返回首页</a></div>
@@ -53,7 +56,7 @@
   <button type="button" class="el-tooltip privacy-trigger" data-v-236d5b80><i class="webfont webicon-yinsi" data-v-236d5b80></i>隐私模式</button>
   <header class="edit_header" data-v-236d5b80>
     <div class="edit_header_main" data-v-236d5b80>
-      <button type="button" class="logo home-button brand-home" aria-label="返回首页" data-v-236d5b80><img src="/assets/img/brand/mark-mono.svg" alt="" width="34" height="34"><span>简影</span></button>
+      <button type="button" class="logo home-button brand-home" aria-label="返回首页" data-v-236d5b80><img src="/assets/img/brand/mark-mono.svg" alt="" width="34" height="34"><span>一纸简历</span></button>
       <ul class="get_list" data-v-236d5b80><li class="active qm-download" role="button" tabindex="0" aria-label="下载 PDF" title="导出为 A4 PDF 文件" data-v-236d5b80><i class="webfont webicon-xiazai" data-v-236d5b80></i><span id="dlLabel" data-v-236d5b80>下载 PDF</span></li></ul>
       <ul class="set_list" data-v-236d5b80><li data-set="templates" data-v-236d5b80><div class="click_btn" data-v-236d5b80><i aria-hidden="true" data-v-236d5b80></i><b data-v-236d5b80>更换模板</b></div></li></ul>
     </div>

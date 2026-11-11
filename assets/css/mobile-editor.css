@@ -1,0 +1,51 @@
+/* Mobile uses the browser's page scroll, including when the keyboard is open. */
+.mobile-module-bar { display:none; }
+@media screen and (max-width:860px) {
+  html { height:auto; min-height:100%; overflow-x:hidden; overflow-y:auto; }
+  body { height:auto; min-height:100%; overflow:visible; }
+  .edit_resume[data-v-236d5b80] { height:auto; min-height:100vh; min-height:100dvh; overflow:visible; }
+  .edit_resume .edit_main.resume-workspace[data-v-236d5b80] { display:block; height:auto; min-height:calc(100vh - 70px); padding:0 12px 24px; }
+  .workspace-views { position:sticky; top:70px; z-index:8; min-height:56px; padding:6px 0; background:var(--ui-canvas); gap:8px; }
+  .workspace-views button { flex:1; max-width:220px; min-height:44px; padding:0 12px; touch-action:manipulation; }
+  .edit_resume .edit_header .edit_header_main .get_list[data-v-236d5b80] { height:44px; gap:6px; }
+  .edit_resume .edit_header .edit_header_main .get_list > li.qm-download[data-v-236d5b80],.edit_resume .theme-toggle { width:44px; min-width:44px; height:44px; }
+  .preview-heading,.editor-heading { min-height:40px; padding:4px; margin-bottom:4px; }
+  .edit_resume #resumeEditorPanel[data-v-236d5b80],.edit_resume #resumeEditorPanel .edit_box[data-v-236d5b80] { height:auto; min-height:0; }
+  .edit_resume #resumeEditorPanel .edit_box[data-v-236d5b80] { display:block; }
+  .mobile-module-bar { display:flex; align-items:center; gap:10px; position:sticky; top:126px; z-index:7; padding:10px 12px; background:var(--ui-surface); border-bottom:1px solid var(--ui-line); border-radius:12px 12px 0 0; }
+  .mobile-module-bar label { font-size:12px; color:var(--ui-muted); white-space:nowrap; }
+  .mobile-module-bar select { flex:1; min-width:0; height:44px; padding:0 10px; border:1px solid var(--ui-line); border-radius:8px; background:var(--ui-soft); color:var(--ui-text); font-size:16px; }
+  .mobile-module-bar button { min-width:76px; min-height:44px; padding:0 10px; border:1px solid var(--ui-line); border-radius:8px; background:var(--ui-surface); color:var(--ui-muted); font-size:12px; touch-action:manipulation; }
+  .mobile-module-bar button[aria-expanded=true] { color:var(--ui-accent); border-color:var(--ui-accent-line); background:var(--ui-accent-soft); }
+  .edit_resume #resumeEditorPanel .edit_top[data-v-236d5b80] { display:none; }
+  .edit_resume #resumeEditorPanel.modules-open .edit_top[data-v-236d5b80] { display:block; }
+  #resumeEditorPanel .edit_tab { grid-template-columns:repeat(2,minmax(0,1fr)); max-height:none; overflow:visible; padding:8px; scrollbar-gutter:auto; }
+  .edit_resume #resumeEditorPanel .edit_top .edit_tab > li[data-v-236d5b80] { min-height:98px; padding:12px 34px 50px; font-size:14px; touch-action:pan-y; }
+  #resumeEditorPanel .edit_tab :is(.btn_prev,.btn_next) { width:44px; height:44px; bottom:2px; }
+  #resumeEditorPanel .edit_tab .btn_prev { left:0; }
+  #resumeEditorPanel .edit_tab .btn_next { right:0; }
+  #resumeEditorPanel .edit_tab .btn_edit { top:4px; right:0; width:32px; height:36px; }
+  #resumeEditorPanel .edit_tab .tab_switch { display:flex; align-items:center; justify-content:center; width:44px; height:44px; bottom:2px; left:calc(50% - 22px); }
+  .edit_resume #resumeEditorPanel .edit_b[data-v-236d5b80] { flex:none; height:auto; overflow:visible; padding:18px 16px 0; }
+  #formHost { scroll-margin-top:202px; }
+  #resumeEditorPanel :is(input,select,textarea,.ql-editor) { font-size:16px; }
+  #resumeEditorPanel :is(.photo_upload,.photo_remove,.btn_more) { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 12px; touch-action:manipulation; }
+  #resumeEditorPanel .photo_set { min-height:44px; display:inline-flex; align-items:center; }
+  #resumeEditorPanel #formHost .info_list > li > b { flex-basis:64px; }
+  #resumeEditorPanel .jingli_nav_list[data-v-271b76ba] { flex-direction:column; overflow:visible; gap:8px; }
+  #resumeEditorPanel .jingli_nav_list > li[data-v-271b76ba] { flex:none; width:100%; min-height:68px; }
+  #resumeEditorPanel .jingli_nav_list li .jingli_nav_op_row { width:36px !important; height:36px !important; line-height:34px !important; }
+  #resumeEditorPanel .jingli_nav_list > li { padding-right:92px !important; }
+  #resumeEditorPanel .ql-toolbar.ql-snow { display:flex; flex-wrap:wrap; gap:2px; padding:6px; }
+  #resumeEditorPanel .ql-toolbar.ql-snow .ql-formats { margin-right:4px; }
+  #resumeEditorPanel .ql-toolbar.ql-snow button { width:34px; height:34px; }
+  #resumeEditorPanel .ql-container { min-height:200px; }
+  #resumeEditorPanel .ql-editor { min-height:200px; overflow:visible; }
+  .editor-footer { padding-bottom:max(16px,env(safe-area-inset-bottom)); }
+  .preview-pane { display:block; height:auto; }
+  .preview-scroll { display:block; height:auto; overflow:visible; overscroll-behavior:auto; scrollbar-gutter:auto; }
+  .preview-paper { min-height:0; padding:0 12px 24px; }
+  .qm-toast { bottom:max(24px,env(safe-area-inset-bottom)); max-width:calc(100vw - 32px); }
+  .qm-modal .el-dialog__headerbtn { top:4px; right:6px; width:44px; height:44px; }
+  .qm-template-dialog .template-use-sample { min-height:44px; }
+}

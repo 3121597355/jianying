@@ -203,6 +203,16 @@ function setupWorkspace() {
   editorHeading.innerHTML = '<strong>简历编辑</strong>';
   main.append(previewHeading, editorHeading, preview, panel);
 
+  const moduleBar = document.createElement('div');
+  moduleBar.className = 'mobile-module-bar';
+  moduleBar.innerHTML = '<label for="mobileModuleSelect">编辑栏目</label><select id="mobileModuleSelect" aria-label="选择编辑栏目"></select><button type="button" id="mobileModuleToggle" aria-expanded="false" aria-controls="resumeModuleTabs">管理栏目</button>';
+  panel.querySelector('.edit_top').before(moduleBar);
+  moduleBar.querySelector('select').addEventListener('change', event => selectEditorModule(event.target.value));
+  moduleBar.querySelector('button').addEventListener('click', () => {
+    const expanded = panel.classList.toggle('modules-open');
+    moduleBar.querySelector('button').setAttribute('aria-expanded', String(expanded));
+  });
+
   const foot = document.createElement('div');
   foot.className = 'editor-footer';
   foot.appendChild($('.save_tip'));
@@ -223,6 +233,7 @@ function setupWorkspace() {
     if (!button) return;
     setEditorOpen(button.dataset.view === 'edit');
     commit({uiOnly:true});
+    if (window.matchMedia('(max-width: 860px)').matches) window.scrollTo({top:0,behavior:'instant'});
   });
 
   // zoom 只作用于预览外壳；导出的离屏简历继续使用原始 820px 宽度。
@@ -343,6 +354,12 @@ function renderTabs() {
 
   const defs = getModuleOrder(r).map(name => MODULES.find(def => def.name === name)).filter(Boolean);
   ul.setAttribute('aria-label', '简历模块');
+  ul.id = 'resumeModuleTabs';
+  const moduleSelect = $('#mobileModuleSelect');
+  if (moduleSelect) {
+    moduleSelect.innerHTML = defs.map(def => `<option value="${def.name}">${esc(getModule(def.name)?.moduleValue || def.label)}${def.kind !== 'basic' && !getModule(def.name)?.visible ? '（未展示）' : ''}</option>`).join('');
+    moduleSelect.value = tab;
+  }
   ul.innerHTML = defs.map((def, index) => {
     const arrows = (index > 0
       ? `<div class="el-tooltip btn_prev webfont webicon-sliderleft" data-prev="${def.name}" title="前移模块" role="button" aria-label="前移${esc(def.label)}" tabindex="0"></div>` : '')
@@ -361,6 +378,19 @@ function renderTabs() {
     </li>`;
   }).join('');
   markScope(ul);
+}
+
+function selectEditorModule(name) {
+  if (!MODULES.some(def => def.name === name)) return;
+  window.__tab = name;
+  getUi().tab = name;
+  setEditorOpen(true);
+  commit({structural:true});
+  if (window.matchMedia('(max-width: 860px)').matches) {
+    $('#resumeEditorPanel')?.classList.remove('modules-open');
+    $('#mobileModuleToggle')?.setAttribute('aria-expanded','false');
+    requestAnimationFrame(() => $('#formHost')?.scrollIntoView({block:'start',behavior:document.documentElement.dataset.motion === 'reduce' ? 'instant' : 'smooth'}));
+  } else requestAnimationFrame(() => focusPreview(name));
 }
 
 function bindTabs() {
@@ -395,11 +425,7 @@ function bindTabs() {
     }
     const li = e.target.closest('[data-tab]');
     if (!li) return;
-    window.__tab = li.dataset.tab;
-    getUi().tab = window.__tab;
-    setEditorOpen(true);
-    commit({ structural: true });
-    requestAnimationFrame(() => focusPreview(window.__tab));
+    selectEditorModule(li.dataset.tab);
   });
 }
 
@@ -727,7 +753,7 @@ export function bootEditor() {
   bindPhotoSlot();
   bindPreviewEditing();
   const home = $('.home-button');
-  if (home) { home.classList.add('brand-home'); home.setAttribute('aria-label','返回首页'); home.title='返回首页'; home.innerHTML = '<img src="/assets/img/brand/mark-mono.svg" alt="" width="34" height="34"><span>简影</span>'; }
+  if (home) { home.classList.add('brand-home'); home.setAttribute('aria-label','返回首页'); home.title='返回首页'; home.innerHTML = '<img src="/assets/img/brand/mark-mono.svg" alt="" width="34" height="34"><span>一纸简历</span>'; }
   const entryParams = new URL(location.href).searchParams;
   const entryTemplate = Number(entryParams.get('template'));
   if (availableTemplates(TEMPLATES).some(template=>template.id===entryTemplate)) {
@@ -746,6 +772,7 @@ export function bootEditor() {
     history.replaceState(null,'',location.pathname);
   }
   $$('.set_list > li').forEach(item=>{const nav=WORKSPACE_NAV.find(nav=>nav.id===item.dataset.set),icon=item.querySelector('.set_btn > i,.click_btn > i');if(icon&&nav) {icon.className='';icon.innerHTML=`<svg ${nav.id==='portrait'?'class="portrait-icon"':''} viewBox="0 0 24 24" aria-hidden="true">${nav.icon}</svg>`;}});
+  renderTabs();
   renderForm($('#formHost'));
   renderPreview();
 

@@ -71,5 +71,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   const port = Number(process.argv[2] || 8099);
   const server = await createResumeServer();
   const publicMode=process.env.PUBLIC_MODE==='1',host=publicMode?(process.env.BIND_HOST||'127.0.0.1'):'127.0.0.1';
-  server.listen(port, host, () => console.log(`简影${publicMode?'（公开免费模式，云端已关闭）':''}已启动：http://${host}:${port}/`));
+  server.listen(port, host, () => console.log(`一纸简历${publicMode?'（公开免费模式，云端已关闭）':''}已启动：http://${host}:${port}/`));
 }

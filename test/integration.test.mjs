@@ -37,7 +37,7 @@ test('homepage and editor have distinct routes with absolute assets and the same
   const s = await setup(t);
   const home = await (await fetch(s.base + '/')).text();
   const editor = await (await fetch(s.base + '/resume/')).text();
-  assert.match(home, /<title>简影/);
+  assert.match(home, /<title>一纸简历/);
   assert.match(home, /href="\/resume\/"/);
   assert.match(home, /href="\/portrait\/"/);
   assert.match(home, /templateDialog/);

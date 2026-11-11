@@ -76,7 +76,7 @@
 
 /* Match the resume toolbar: brand / workspace tools / page actions. */
 :root[data-page=portrait] .topbar { grid-template-columns:176px minmax(0,1fr) 176px; gap:0; padding:0 22px; height:70px; }
-:root[data-page=portrait] .topbar .brand { width:106px; height:42px; padding:0 6px; gap:9px; justify-content:center; }
+:root[data-page=portrait] .topbar .brand { width:150px; height:42px; padding:0 6px; gap:9px; justify-content:center; }
 :root[data-page=portrait] .topbar .brand strong { font-size:19px; font-weight:650; letter-spacing:1px; }
 :root[data-page=portrait] .topbar .brand img { width:34px; height:34px; border-radius:22%; }
 :root[data-page=portrait] .site-nav { gap:0; height:70px; min-width:0; }

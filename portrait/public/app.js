@@ -172,7 +172,7 @@ $('colorPicker').addEventListener('change',()=>maybeQuickPreview());$('colorHex'
 new ResizeObserver(fitImage).observe($('dropzone'));
 window.addEventListener('beforeunload',e=>{if(state.busy){e.preventDefault();e.returnValue='';}});
 renderCategories();renderPresets();renderSizes();refreshPrompt();renderSaved();
-try{const {token,...config}=await api('/api/config');state.token=token;state.config=config;if(config.publicMode){$('processingMode').value='auto';if(!quickIds.has(state.presetId)){state.presetId='white';state.category='证件底色';}renderCategories();renderPresets();}if(!config.features?.localCutout){$('processingMode').value='cloud';$('processingMode').querySelector('option[value="auto"]').disabled=true;message('当前本机处理服务不可用，请刷新页面或重启简影。');}updateConfigUI();}catch(e){message('无法连接证件照服务，请刷新页面或重新启动简影。',true);}
+try{const {token,...config}=await api('/api/config');state.token=token;state.config=config;if(config.publicMode){$('processingMode').value='auto';if(!quickIds.has(state.presetId)){state.presetId='white';state.category='证件底色';}renderCategories();renderPresets();}if(!config.features?.localCutout){$('processingMode').value='cloud';$('processingMode').querySelector('option[value="auto"]').disabled=true;message('当前本机处理服务不可用，请刷新页面或重启一纸简历。');}updateConfigUI();}catch(e){message('无法连接证件照服务，请刷新页面或重新启动一纸简历。',true);}
 await restorePhotoDraft();
 draftReady=true;
 document.querySelector('main').addEventListener('input',schedulePhotoSave);

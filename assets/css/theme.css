@@ -23,7 +23,7 @@
 .portrait-icon { display: block; width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .portrait-link { text-decoration: none; }
 .portrait-link:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -4px; border-radius: 6px; }
-.edit_resume .edit_header .edit_header_main .home-button.brand-home[data-v-236d5b80] { width: 106px; height: 42px; gap: 9px; padding: 0 6px; border-color: transparent; background: transparent; }
+.edit_resume .edit_header .edit_header_main .home-button.brand-home[data-v-236d5b80] { width: 150px; height: 42px; gap: 9px; padding: 0 6px; border-color: transparent; background: transparent; }
 .brand-home img { width: 34px; height: 34px; border-radius: 22%; }
 .brand-home span { font-size: 19px; font-weight: 650; letter-spacing: 1px; }
 
