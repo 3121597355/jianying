@@ -545,6 +545,7 @@ async function handleDownload() {
     setText(oldText);
     toast(r ? `已下载「${r.fileName}」· ${r.pages} 页 A4` : '已取消');
   } catch (e) {
+    track('resume_export_error');
     console.error(e);
     setText(oldText);
     toast('PDF 生成失败：' + (e?.message || e));

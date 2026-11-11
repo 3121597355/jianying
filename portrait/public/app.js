@@ -61,7 +61,6 @@ async function generateLocal(){
     }
     if(state.localController.signal.aborted)throw new DOMException('Cancelled','AbortError');
     const canvas=drawQuickBackground(document.createElement('canvas'),source.cutout,options);
-    track('portrait_cutout');
     const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('合成背景失败，请重试。');
     const url=URL.createObjectURL(blob);let img;try{img=await readImage(url);}catch(e){URL.revokeObjectURL(url);throw e;}
     if(state.localController.signal.aborted){URL.revokeObjectURL(url);throw new DOMException('Cancelled','AbortError');}
@@ -69,8 +68,9 @@ async function generateLocal(){
     const item={id:crypto.randomUUID(),img,url,source,presetId:options.presetId,options,name:presets.find(p=>p.id===options.presetId).name,engine:'local'};
     state.history.unshift(item);if(state.history.length>8){const old=state.history.pop();URL.revokeObjectURL(old.url);}
     state.result=item;state.view='result';renderImage();renderCrop();renderHistory();
+    track('portrait_cutout');
     message(`完成 · ${elapsed} 秒${reused?' · 已复用抠图':''}`);
-  }catch(e){message(e.name==='AbortError'?'已停止本地处理。':e.message,e.name!=='AbortError');}
+  }catch(e){if(e.name!=='AbortError')track('portrait_cutout_error');message(e.name==='AbortError'?'已停止本地处理。':e.message,e.name!=='AbortError');}
   finally{clearInterval(timer);state.localController=null;setBusy(false);if(state.pendingQuick){state.pendingQuick=false;maybeQuickPreview();}}
 }
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(state.toastTimer);state.toastTimer=setTimeout(()=>$('toast').hidden=true,4200);}
@@ -105,7 +105,7 @@ async function openSettings(){if(state.busy||state.config?.publicMode)return;con
 async function saveSettings(check=false){if(!$('settingsForm').reportValidity())return;if(check)return loadModels({check:true});const controls=[$('checkConnection'),$('settingsForm').querySelector('[type=submit]')];controls.forEach(b=>b.disabled=true);const result=$('connectionMessage');modelListVersion++;try{result.hidden=true;state.config=await api('/api/config',{method:'PATCH',body:connectionDraft()});$('apiKey').value='';$('keyStatus').textContent=state.config.hasKey?'已保存':'';updateConfigUI();$('settingsDialog').close();toast('已保存');}catch(e){result.hidden=false;result.textContent=e.message;}finally{controls.forEach(b=>b.disabled=false);$('refreshModels').disabled=false;}}
 async function readImage(src){const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('图片无法读取，请换一张照片。'));img.src=src;});if(!img.naturalWidth||img.naturalWidth*img.naturalHeight>40_000_000)throw new Error('照片分辨率过高，请使用不超过 4000 万像素的图片。');return img;}
 function fileDataURL(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('照片读取失败。'));reader.readAsDataURL(file);});}
-async function upload(file){if(!file||state.busy)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)){toast('请选择 JPG、PNG 或 WebP 格式的照片');return;}if(file.size>12*1024*1024){toast('照片不能超过 12 MB');return;}try{const data=await fileDataURL(file);const img=await readImage(data);state.original={data,img,name:file.name||'粘贴的照片'};state.result=null;state.view='original';resetCrop();message('');renderImage();renderCrop();updateButtons();}catch(e){toast(e.message);}finally{$('fileInput').value='';}}
+async function upload(file){if(!file||state.busy)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)){toast('请选择 JPG、PNG 或 WebP 格式的照片');return;}if(file.size>12*1024*1024){toast('照片不能超过 12 MB');return;}try{const data=await fileDataURL(file);const img=await readImage(data);state.original={data,img,name:file.name||'粘贴的照片'};state.result=null;state.view='original';resetCrop();message('');renderImage();renderCrop();updateButtons();track('portrait_upload');}catch(e){toast(e.message);}finally{$('fileInput').value='';}}
 async function removePhoto(){
   if(state.busy||(!state.original&&!state.result))return;
   // Invalidate image conversions started by an earlier save before clearing the draft.
@@ -141,7 +141,7 @@ async function download(sheet=false){const img=imageSource();if(!img)return;cons
   if(sheet){if(!size.width||['original','square'].includes(size.id))return;const layout=printLayout(size);canvas.width=layout.w;canvas.height=layout.h;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);const photo=drawPhoto(document.createElement('canvas'),img,size.width,size.height,true);const offsetX=(layout.w-layout.cols*size.width-(layout.cols-1)*layout.gap)/2,offsetY=(layout.h-layout.rows*size.height-(layout.rows-1)*layout.gap)/2;for(let y=0;y<layout.rows;y++)for(let x=0;x<layout.cols;x++){const px=offsetX+x*(size.width+layout.gap),py=offsetY+y*(size.height+layout.gap);ctx.drawImage(photo,px,py);ctx.strokeStyle='#d5d9df';ctx.lineWidth=1;ctx.strokeRect(px-.5,py-.5,size.width+1,size.height+1);}format='jpeg';fileName+=`-六寸排版${layout.count}张`;
   }else if(size.width){drawPhoto(canvas,img,size.width,size.height,format==='jpeg');}
   else{canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;const ctx=canvas.getContext('2d');if(format==='jpeg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);}ctx.drawImage(img,0,0);}
-  const target=sheet?$('printButton'):$('downloadButton');target.disabled=true;try{const r=await fetch(apiUrl('/api/export'),{method:'POST',headers:{'Content-Type':'application/json','X-App-Token':state.token},body:JSON.stringify({image:canvas.toDataURL('image/png'),format})});if(!r.ok){const e=await r.json();throw new Error(e.error||'导出失败。');}const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=fileName+(format==='jpeg'?'.jpg':'.png');document.body.append(a);a.click();a.remove();track('portrait_export');setTimeout(()=>URL.revokeObjectURL(url),60_000);toast(sheet?'六寸排版已下载，打印时请选择实际尺寸':'照片已下载，分辨率标记为 300 DPI');}catch(e){toast(e.message);}finally{updateButtons();}
+  const target=sheet?$('printButton'):$('downloadButton');target.disabled=true;try{const r=await fetch(apiUrl('/api/export'),{method:'POST',headers:{'Content-Type':'application/json','X-App-Token':state.token},body:JSON.stringify({image:canvas.toDataURL('image/png'),format})});if(!r.ok){const e=await r.json();throw new Error(e.error||'导出失败。');}const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=fileName+(format==='jpeg'?'.jpg':'.png');document.body.append(a);a.click();a.remove();track('portrait_export');setTimeout(()=>URL.revokeObjectURL(url),60_000);toast(sheet?'六寸排版已下载，打印时请选择实际尺寸':'照片已下载，分辨率标记为 300 DPI');}catch(e){track('portrait_export_error');toast(e.message);}finally{updateButtons();}
 }
 function saved(){try{const value=JSON.parse(localStorage.getItem('portrait-saved-prompts')||'[]');return Array.isArray(value)?value.filter(p=>typeof p==='string'&&p.length<=4000).slice(0,12):[];}catch{return [];}}
 function saveList(list){try{localStorage.setItem('portrait-saved-prompts',JSON.stringify(list));renderSaved();}catch{toast('浏览器无法保存收藏，请检查存储设置。');}}

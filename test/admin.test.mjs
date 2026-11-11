@@ -61,3 +61,16 @@ test('API keys read only anonymous statistics and password changes invalidate ot
   assert.equal((await s.admin('/api/auth/password','POST',{currentPassword:'fixture-password-only-2026',password:'new-fixture-password-2026'})).status,200);
   assert.equal((await s.request('/api/admin/settings','GET',undefined,{Cookie:secondCookie})).status,401);assert.equal((await s.admin('/api/admin/settings')).status,200);
 });
+test('visit snapshots deduplicate unordered checkpoints and retain no raw visitor or submitted private fields',async t=>{
+  const s=await setup(t),visitId='fixture-page-visit-20261111',visitor='fixture-browser-20261111';
+  const send=value=>s.request('/api/analytics/visit','POST',{visitId,visitor,path:'/resume/',seq:1,visibleMs:0,reason:'checkpoint',...value});
+  assert.equal((await send({})).status,204);assert.equal((await send({seq:2,visibleMs:3456,reason:'end',privateText:'do-not-store'})).status,204);assert.equal((await send({seq:1,visibleMs:9999})).status,204);
+  const result=await(await s.admin('/api/admin/summary')).json();assert.equal(result.engagement.metrics.measuredVisits,1);assert.equal(result.engagement.metrics.averageVisibleMs,3456);
+  const raw=await readFile(path.join(s.dataDir,'visits.jsonl'),'utf8');for(const secret of [visitId,visitor,'do-not-store','127.0.0.1'])assert(!raw.includes(secret));assert.equal(raw.trim().split('\n').length,2);
+  assert.equal((await s.admin('/api/analytics/visit','POST',{visitId:'admin-visit-20261111',path:'/',seq:1,visibleMs:0,reason:'checkpoint'})).status,204);assert.equal((await(await s.admin('/api/admin/summary')).json()).engagement.metrics.measuredVisits,1);
+  assert.equal((await send({seq:3,visibleMs:-10})).status,400);
+  const cross=await s.request('/api/analytics/visit','POST',{visitId,path:'/',seq:1,visibleMs:0,reason:'checkpoint'},{Origin:'https://attacker.example'});assert.equal(cross.status,403);
+  assert.equal((await s.request('/private/admin/visits.jsonl')).status,404);assert.equal((await s.request('/api/admin/engagement/export')).status,401);const csv=await s.admin('/api/admin/engagement/export');assert.equal(csv.status,200);assert.match(await csv.text(),/平均可见秒数/);
+  assert.equal((await s.request('/api/analytics/event','POST',{type:'resume_export_error',path:'/resume/',visitId,visitor})).status,204);const failure=await(await s.admin('/api/admin/summary')).json();assert.equal(failure.metrics.actions,0);assert.equal(failure.engagement.failures,1);
+  const config=await(await s.admin('/api/admin/settings')).json();config.settings.analytics.enabled=false;assert.equal((await s.admin('/api/admin/settings','PUT',config)).status,200);assert.equal((await send({seq:3,visibleMs:5000})).status,204);assert.equal((await(await s.admin('/api/admin/summary')).json()).engagement.metrics.averageVisibleMs,3456);
+});
