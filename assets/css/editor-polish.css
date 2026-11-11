@@ -9,7 +9,7 @@
   .edit_resume #resumeEditorPanel .edit_top .edit_tab > li.active[data-v-236d5b80] { border-color:var(--ui-accent-line); background:var(--ui-accent-soft); box-shadow:none; }
   #resumeEditorPanel .edit_tab > li.module_hide > b { color:var(--ui-muted); }
   #resumeEditorPanel .edit_tab .tab_switch { position:absolute; top:auto; bottom:9px; left:calc(50% - 20px); height:18px; }
-  #resumeEditorPanel .edit_tab .el-switch__core { height:18px; }
+  #resumeEditorPanel .edit_tab .el-switch__core { position:relative; flex:none; height:18px; }
   #resumeEditorPanel .edit_tab .el-switch__core::after { width:12px; height:12px; }
   #resumeEditorPanel .edit_tab .is-checked .el-switch__core::after { left:25px; }
   #resumeEditorPanel .edit_tab :is(.btn_prev,.btn_next) { top:auto; bottom:5px; display:grid; place-items:center; width:28px; height:26px; padding:0; font-size:19px; border-radius:5px; color:var(--ui-muted); }
