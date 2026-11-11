@@ -35,3 +35,25 @@
 .standard-business .basic_info_box { border-top:5px solid var(--standard-accent); }
 .standard-business .basic_info dt { letter-spacing:2px; }
 .standard-business .module_tit { border-bottom-color:#d5dae1 !important; border-left:3px solid; padding-left:10px; }
+
+/* Six native counterparts of the original styles, sharing the full data contract. */
+.standard-classic .content_list { position:relative; border-left:1px solid #dce4e7; padding-left:18px; }
+.standard-classic .content_list::before { content:''; position:absolute; left:-4px; top:8px; width:7px; height:7px; background:var(--standard-accent); border-radius:50%; }
+.standard-classic .standard-skills li { border:1px solid #dce4e7; padding:2px 9px; border-radius:4px; }
+.standard-bands .basic_info,.standard-lines .basic_info { text-align:center; }
+.standard-bands .module_tit { border:0; background:#eef3f7; padding:5px 12px; }
+.standard-lines .basic_info_box { border-bottom:2px solid var(--standard-accent); }
+.standard-lines .module_tit { border-bottom:1px solid #b5bdc4; padding-bottom:7px; letter-spacing:1px; }
+.standard-lines .content_list { margin-bottom:3px; }
+.standard-masthead .basic_info_box { background:var(--standard-accent); padding-top:30px !important; padding-bottom:24px !important; min-height:182px; }
+.standard-masthead .basic_info dt { color:#fff; }
+.standard-masthead .basic_info dd,.standard-masthead .basic_info .yixiang_tip,.standard-masthead .basic_info .resume-heading { color:#fff; }
+.standard-masthead .module_tit { border-left:4px solid var(--standard-accent); padding-left:12px; border-bottom:0; }
+.standard-ribbon .module_tit { display:table; position:relative; color:#fff !important; border:0; background:var(--standard-accent); padding:4px 22px 4px 12px; margin-bottom:9px; }
+.standard-ribbon .module_tit::after { content:''; position:absolute; right:0; top:0; border-top:18px solid transparent; border-bottom:18px solid transparent; border-right:10px solid white; }
+.standard-ribbon .basic_info_box { border-bottom:1px solid #dde2e6; }
+.standard-round .photo_box { width:108px; height:108px; border-radius:50%; }
+.standard-round .basic_info dt { color:var(--standard-accent); }
+.standard-round .content_list { position:relative; border-left:1px solid #d8e2e6; padding-left:22px; }
+.standard-round .content_list::before { content:''; position:absolute; top:7px; left:-5px; width:9px; height:9px; border:2px solid var(--standard-accent); background:#fff; border-radius:50%; }
+.standard-round .module_tit { border-bottom-color:#d8e2e6 !important; }

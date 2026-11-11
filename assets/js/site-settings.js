@@ -6,5 +6,6 @@ if(typeof window!=='undefined'&&typeof window.document!=='undefined'){
 export function availableTemplates(templates){return templates.filter(t=>t.enabled!==false);}
 export function configureTemplates(templates){
   const configured=siteSettings?.templates;if(!Array.isArray(configured))return templates;
-  return [...templates].map(template=>{const item=configured.find(t=>t.id===template.id);return item?{...template,name:item.name,desc:item.desc,enabled:item.enabled,featured:item.featured}:template;}).sort((a,b)=>configured.findIndex(t=>t.id===a.id)-configured.findIndex(t=>t.id===b.id));
+  const position=id=>{const index=configured.findIndex(t=>t.id===id);return index<0?configured.length+templates.findIndex(t=>t.id===id):index;};
+  return [...templates].map(template=>{const item=configured.find(t=>t.id===template.id);return item?{...template,name:item.name,desc:item.desc,enabled:item.enabled,featured:item.featured}:template;}).sort((a,b)=>position(a.id)-position(b.id));
 }

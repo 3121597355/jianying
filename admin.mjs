@@ -14,6 +14,12 @@ const catalog = TEMPLATES.map(({id,code,name,desc,thumbnail})=>({id,code,name,de
 const routes = {'/':'介绍页','/resume/':'简历编辑','/portrait/':'证件照'};
 export const ACTIONS = {page_view:'页面访问',template_select:'套用模板',template_preview:'预览模板',resume_edit_start:'开始填写简历',resume_export:'导出简历 PDF',resume_export_error:'简历导出失败',portrait_upload:'载入照片',portrait_cutout:'快速换底',portrait_cutout_error:'快速换底失败',portrait_export:'导出证件照',portrait_export_error:'证件照导出失败',portrait_apply:'照片用于简历'};
 const defaults = () => ({site:{title:'简影 · 开源的简历与证件照一站式工具',kicker:'开源 · 简洁 · 一站式',headline:'简历与证件照，\n一站准备好。',description:'简约模板、实时排版、照片换底。\n无需注册，打开就能用。',github:SITE_LINKS.github},templates:catalog.map((item,index)=>({...item,enabled:true,featured:index<4})),defaultTemplate:DEFAULT_TPL,analytics:{enabled:true}});
+export function upgradeTemplateCatalog(settings){
+  if(!settings||!Array.isArray(settings.templates))return settings;
+  const missing=catalog.filter(item=>!settings.templates.some(saved=>saved.id===item.id));
+  if(!missing.length)return settings;
+  return {...settings,templates:[...settings.templates,...missing.map(item=>({...item,enabled:true,featured:false}))]};
+}
 function json(res,status,value){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));}
 async function body(req,limit=32768){
   if(!req.headers['content-type']?.startsWith('application/json'))throw fail('请使用 JSON 请求。',415);
@@ -53,8 +59,9 @@ export {catalog,defaults,normalizeSettings,dayOf};
 export function createAdministration({root,dataDir=path.join(root,'private','admin'),hostPort,publicOrigin=process.env.PUBLIC_ORIGIN||''}){
   fs.mkdirSync(dataDir,{recursive:true});const settingsFile=path.join(dataDir,'site-settings.json'),eventFile=path.join(dataDir,'events.jsonl'),saltFile=path.join(dataDir,'analytics-salt.txt');
   const atomic=(file,value)=>{fs.writeFileSync(file+'.tmp',value,{mode:0o600});fs.renameSync(file+'.tmp',file);};
-  let settings=fs.existsSync(settingsFile)?normalizeSettings(JSON.parse(fs.readFileSync(settingsFile,'utf8'))):defaults();
-  if(!fs.existsSync(settingsFile))atomic(settingsFile,JSON.stringify(settings,null,2));
+  const storedSettings=fs.existsSync(settingsFile)?JSON.parse(fs.readFileSync(settingsFile,'utf8')):null;
+  let settings=storedSettings?normalizeSettings(upgradeTemplateCatalog(storedSettings)):defaults();
+  if(!storedSettings||upgradeTemplateCatalog(storedSettings)!==storedSettings)atomic(settingsFile,JSON.stringify(settings,null,2));
   const changelog=createChangelog({root,dataDir});
   const salt=fs.existsSync(saltFile)?fs.readFileSync(saltFile,'utf8'):crypto.randomBytes(32).toString('hex');if(!fs.existsSync(saltFile))fs.writeFileSync(saltFile,salt,{mode:0o600});
   let events=fs.existsSync(eventFile)?fs.readFileSync(eventFile,'utf8').split('\n').filter(Boolean).flatMap(line=>{try{return [JSON.parse(line)];}catch{return []}}):[];

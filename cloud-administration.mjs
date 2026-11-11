@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import {promisify} from 'node:util';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
-import {ACTIONS,catalog,defaults,normalizeSettings,dayOf,period,buildSummary,renderHomepageDocument} from './admin.mjs';
+import {ACTIONS,catalog,defaults,normalizeSettings,upgradeTemplateCatalog,dayOf,period,buildSummary,renderHomepageDocument} from './admin.mjs';
 import {normalizeChangelog} from './changelog.mjs';
 
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
@@ -47,6 +47,8 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
   const state=async key=>(await q(`SELECT data FROM ${table('state')} WHERE key=$1`,[key])).rows[0].data;
   const salt=(await state('salt')).value;
   async function mutate(key,operation){const client=await pool.connect();try{await client.query('BEGIN');const current=(await client.query(`SELECT data FROM ${table('state')} WHERE key=$1 FOR UPDATE`,[key])).rows[0].data;const result=await operation(current,client);await client.query(`UPDATE ${table('state')} SET data=$2 WHERE key=$1`,[key,JSON.stringify(current)]);await client.query('COMMIT');return result;}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}}
+  const savedSettings=await state('settings');
+  if(upgradeTemplateCatalog(savedSettings)!==savedSettings)await mutate('settings',current=>{Object.assign(current,upgradeTemplateCatalog(current));});
   const entryId=value=>typeof value==='string'&&/^[a-zA-Z0-9-]{16,80}$/.test(value)?hash(salt+value).slice(0,24):'';
   const sessionKey=req=>{const token=/(?:^|;\s*)jianying_admin=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie||'')?.[1];return token?hash('session'+salt+token):'';};
   async function session(req){const id=sessionKey(req);if(!id)return null;return (await q(`SELECT data FROM ${table('sessions')} WHERE id=$1 AND expires>$2`,[id,Date.now()])).rows[0]?.data||null;}

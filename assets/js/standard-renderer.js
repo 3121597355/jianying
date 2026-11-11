@@ -26,7 +26,7 @@ export function renderStandard(resume){
     const rows=(Array.isArray(mod.data)?mod.data:[]).filter(item=>item&&(item.name||item.job||item.major||item.content||item.timeStart||item.timeEnd));
     return rows.map(item=>{
       const labels=[item.name,mod.moduleName==='jiaoyu'?item.major:item.job,mod.moduleName==='jiaoyu'&&item.xueli!=='不填'?item.xueli:''].filter(Boolean);
-      return `<div class="content_list" style="margin-top:${Math.round(gap/2)}px"><ul class="list_top"><li class="name">${labels.map(escape).join(' <i>·</i> ')}</li><li class="time">${escape(dates(item))}</li></ul>${rich(item.content)}</div>`;
+      return `<div class="content_list" data-item-index="${mod.data.indexOf(item)}" style="margin-top:${Math.round(gap/2)}px"><ul class="list_top"><li class="name">${labels.map(escape).join(' <i>·</i> ')}</li><li class="time">${escape(dates(item))}</li></ul>${rich(item.content)}</div>`;
     }).join('');
   };
   const header=()=>{

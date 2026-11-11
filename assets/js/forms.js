@@ -141,8 +141,8 @@ function formTimeline(r, mod) {
         <div class="jingli_nav_sub" title="${esc(sub)}">${esc(sub)}</div>
       </div>
       <div class="jingli_nav_ops">
-        <div class="jingli_nav_op_row" title="上移"><i class="el-icon-top" data-move="${i}:-1"></i></div>
-        <div class="jingli_nav_op_row" title="下移"><i class="el-icon-bottom" data-move="${i}:1"></i></div>
+        <button type="button" class="jingli_nav_op_row" data-move="${i}:-1" title="前移" aria-label="前移第${i+1}条${esc(mod.moduleValue)}" ${i===0?'disabled':''}><i class="el-icon-top" aria-hidden="true"></i></button>
+        <button type="button" class="jingli_nav_op_row" data-move="${i}:1" title="后移" aria-label="后移第${i+1}条${esc(mod.moduleValue)}" ${i===items.length-1?'disabled':''}><i class="el-icon-bottom" aria-hidden="true"></i></button>
       </div>
     </li>`;
   }).join('');

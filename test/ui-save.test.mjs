@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {TEMPLATES} from '../assets/js/templates.js';
 
 async function environment(t,{draft=true}={}) {
   const originals=new Map(['window','document','localStorage','setTimeout','clearTimeout'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
@@ -51,4 +52,17 @@ test('a first-visit fold creates a recoverable draft and preference',async t=>{
   assert.equal(store.flushSave(),true);
   assert.ok(JSON.parse(data.get(resumeKey)).basicInfo);
   assert.equal(JSON.parse(data.get(uiKey)).editOpen,false);
+});
+
+test('reloading every registered layout preserves the selected template and saved content',async t=>{
+  const {data,resumeKey,uiKey}=await environment(t);
+  for(const template of TEMPLATES){
+    data.set(resumeKey,JSON.stringify({setData:{tplId:template.id,title:'保留标题'},basicInfo:{name:'保留草稿',photo:'data:image/png;base64,fixture'},moduleData:[]}));
+    data.set(uiKey,JSON.stringify({tplChosen:true,editOpen:false}));
+    const reloaded=await import(`../assets/js/store.js?templateReload=${template.id}-${Math.random()}`);
+    assert.equal(reloaded.getResume().setData.tplId,template.id);
+    assert.equal(reloaded.getResume().setData.title,'保留标题');
+    assert.equal(reloaded.getResume().basicInfo.name,'保留草稿');
+    assert.equal(reloaded.getUi().editOpen,false);
+  }
 });

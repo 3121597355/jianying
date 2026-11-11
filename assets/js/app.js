@@ -16,6 +16,8 @@ import { captureElement, capturePaper, moveElement, slideSidebar, moveWorkspace 
 import { WORKSPACE_NAV } from './workspace-nav.js';
 import {availableTemplates} from './site-settings.js';
 import {track} from './analytics.js';
+import {chooseTemplate} from './template-choice.js';
+import {hasResumeContent} from './template-samples.js';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -153,6 +155,25 @@ function bindPhotoSlot() {
   });
   host?.addEventListener('keydown', e => {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-photo-slot]')) { e.preventDefault(); pickPhoto(); }
+  });
+}
+
+function bindPreviewEditing(){
+  $('#resumeHost')?.addEventListener('click',event=>{
+    if(event.target.closest('a,button,input,[data-photo-slot]')||!window.getSelection()?.isCollapsed)return;
+    const section=event.target.closest('#basicInfo,.resume_content[id]');
+    if(!section)return;
+    const name=section.id==='basicInfo'?'basic':section.id;
+    if(!MODULES.some(def=>def.name===name))return;
+    const row=event.target.closest('.content_list');
+    if(row){const index=row.dataset.itemIndex===undefined?[...section.querySelectorAll('.content_list')].indexOf(row):Number(row.dataset.itemIndex);if(index>=0)setActiveItem(name,index);}
+    window.__tab=name;getUi().tab=name;
+    setEditorOpen(true);commit({structural:true});
+    requestAnimationFrame(()=>{
+      const editor=$('#formHost');$('.edit_b')?.scrollTo({top:0,behavior:'instant'});
+      const control=event.target.closest('#myname')?editor?.querySelector('[data-k="basicInfo.name"]'):event.target.closest('.ql-editor')?editor?.querySelector('.ql-editor[contenteditable="true"]'):editor?.querySelector('input:not([type="file"]):not([type="checkbox"]),select,textarea,.ql-editor[contenteditable="true"]');
+      control?.focus({preventScroll:true});
+    });
   });
 }
 
@@ -445,35 +466,43 @@ function openTplDialog() {
   const personal=listPersonalTemplates(),activePersonal=personal.find(t=>t.id===getUi().customTemplateId&&templateMatches(t,getResume().setData));
   const choices = availableTemplates(TEMPLATES);
   const cards = choices.map(t => `
-    <button type="button" class="tpl_card ${!activePersonal&&t.id === Number(cur) ? 'active' : ''}" data-tpl="${t.id}" aria-label="选择${esc(t.name)}模板" aria-pressed="${!activePersonal&&t.id === Number(cur)}">
+    <div class="template-option"><button type="button" class="tpl_card ${!activePersonal&&t.id === Number(cur) ? 'active' : ''}" data-tpl="${t.id}" aria-label="选择${esc(t.name)}模板" aria-pressed="${!activePersonal&&t.id === Number(cur)}">
       <div class="tpl_thumb"><img src="${esc(t.thumbnail)}" alt="${esc(t.name)}模板预览" loading="lazy"></div>
       <strong>${esc(t.code)}</strong>
       <span>${esc(t.name)}</span>
       <em>${esc(t.desc)}</em>
-    </button>`).join('');
+    </button><button type="button" class="template-use-sample" data-use-sample="${t.id}" aria-label="从${esc(t.name)}示例开始">从示例开始</button></div>`).join('');
 
   const customCards=personal.map(t=>{const base=getTemplate(t.style.tplId),active=t===activePersonal;return `<article class="personal-template-card${active?' active':''}"><button type="button" class="personal-template-select" data-personal="${esc(t.id)}" aria-label="使用自定义模板${esc(t.name)}" aria-pressed="${active}"><div class="tpl_thumb"><img src="${esc(base.thumbnail)}" alt="${esc(base.name)}基础版式预览" loading="lazy"><small class="template-base-label">${esc(base.name)}</small></div><strong>${esc(t.name)}</strong><span class="personal-style-summary"><i style="background:${t.style.skin}"></i>${t.style.fontSize}px · ${t.style.lineHeight}倍行距</span></button><div class="personal-template-actions"><button type="button" data-rename-personal="${esc(t.id)}" aria-label="重命名${esc(t.name)}">重命名</button><button type="button" data-remove-personal="${esc(t.id)}" aria-label="移除${esc(t.name)}">移除</button></div></article>`;}).join('');
   modal('更换模板', `
-    <div class="template-topline"><p class="info_tip">${choices.length}套基础版式${personal.length?` · ${personal.length}套自定义模板`:''}，切换保留简历内容。</p><button type="button" class="create-template-top" data-create-personal aria-label="创建自定义模板">＋ 自定义模板</button></div>
+    <div class="template-topline"><p class="info_tip">${choices.length}套可编辑模板${personal.length?` · ${personal.length}套自定义模板`:''}。空白简历载入示例，已有内容切换时保留。</p><button type="button" class="create-template-top" data-create-personal aria-label="创建自定义模板">＋ 自定义模板</button></div>
     <div class="tpl_pick">${cards}</div>${personal.length?`<div class="personal-template-heading"><h3>我的模板</h3><span>保存在当前浏览器</span></div><div class="tpl_pick personal-template-grid">${customCards}</div>`:''}`, (w, close) => {
     w.classList.add('qm-template-dialog');
     w.querySelectorAll('[data-tpl]').forEach(card => {
       card.onclick = () => {
         const id = Number(card.dataset.tpl);
         track('template_select',id);
+        let seeded=false;
         set(rr => {
-          applyTemplate(rr, id);
+          seeded=chooseTemplate(rr, id);
           getUi().tplChosen = true;
           getUi().customTemplateId = null;
-          // 切到带标题版式时补一个默认标题
-          if (id === 2001 && !rr.setData.title) rr.setData.title = '个人简历';
-        });
+          if(seeded){window.__tab='basic';getUi().tab='basic';}
+        },{structural:true,tabs:true});
         w.querySelectorAll('[data-tpl]').forEach(c => {
           c.classList.toggle('active', c === card);
           c.setAttribute('aria-pressed', String(c === card));
         });
         close();
+        if(seeded){toast('示例已载入，请把虚构履历改成你的真实经历');requestAnimationFrame(()=>focusPreview('basic'));}
       };
+    });
+    w.querySelectorAll('[data-use-sample]').forEach(button=>button.onclick=()=>{
+      if(hasResumeContent(getResume())&&!confirm('将当前简历替换为这份模板示例？当前草稿的填写内容会被替换，请先导出需要保留的简历。'))return;
+      const id=Number(button.dataset.useSample);
+      window.__tab='basic';getUi().tab='basic';
+      set(resume=>{chooseTemplate(resume,id,{useSample:true});getUi().tplChosen=true;getUi().customTemplateId=null;},{structural:true,tabs:true});
+      track('template_select',id);close();toast('示例已载入，请把虚构履历改成你的真实经历');requestAnimationFrame(()=>focusPreview('basic'));
     });
     w.querySelectorAll('[data-create-personal]').forEach(button=>button.onclick=()=>{close();openCustomTemplateEditor();});
     w.querySelectorAll('[data-personal]').forEach(button=>button.onclick=()=>{const template=personal.find(t=>t.id===button.dataset.personal);if(!template)return;set(resume=>{Object.assign(resume.setData,template.style);getUi().tplChosen=true;getUi().customTemplateId=template.id;});close();toast(`已套用「${template.name}」`);});
@@ -696,14 +725,16 @@ export function bootEditor() {
   bindHeader();
   bindPrivacy();
   bindPhotoSlot();
+  bindPreviewEditing();
   const home = $('.home-button');
   if (home) { home.classList.add('brand-home'); home.setAttribute('aria-label','返回首页'); home.title='返回首页'; home.innerHTML = '<img src="/assets/img/brand/mark-mono.svg" alt="" width="34" height="34"><span>简影</span>'; }
   const entryParams = new URL(location.href).searchParams;
   const entryTemplate = Number(entryParams.get('template'));
   if (availableTemplates(TEMPLATES).some(template=>template.id===entryTemplate)) {
-    set(resume=>{applyTemplate(resume,entryTemplate);getUi().tplChosen=true;getUi().customTemplateId=null;});
+    let seeded=false;
+    set(resume=>{seeded=chooseTemplate(resume,entryTemplate);getUi().tplChosen=true;getUi().customTemplateId=null;if(seeded){window.__tab='basic';getUi().tab='basic';}},{structural:true,tabs:true});
     track('template_select',entryTemplate);
-    toast('已应用所选模板，简历内容继续保留');
+    toast(seeded?'示例已载入，请把虚构履历改成你的真实经历':'已应用所选模板，简历内容继续保留');
     history.replaceState(null,'',location.pathname);
   }
   if (entryParams.get('templates')==='1') {

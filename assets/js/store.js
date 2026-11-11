@@ -1,5 +1,6 @@
 ﻿import { DEFAULT_TPL } from './templates.js';
 /** 浏览器草稿状态与自动保存。 */
+import {TEMPLATES} from './templates.js';
 
 import { normalizeEditorUi } from './editor-state.js';
 
@@ -103,7 +104,7 @@ function load() {
     // 已有草稿也更新旧默认副标题，用户自行填写的副标题继续保留。
     if (resumeData.setData?.slogan === '努力超越自己，每天进步一点点') resumeData.setData.slogan = 'PERSONAL PROFILE';
     // 一次性迁移：用户从未主动切换过模板时，采用当前默认版式（旧存档里是上一版默认值）
-    if (!ui.tplChosen || ![2001,2002,2003,2004].includes(Number(resumeData.setData?.tplId))) {
+    if (!ui.tplChosen || !TEMPLATES.some(template=>template.id===Number(resumeData.setData?.tplId))) {
       resumeData.setData.tplId = DEFAULT_TPL;
       if (!resumeData.setData.title) resumeData.setData.title = '个人简历';
     }
