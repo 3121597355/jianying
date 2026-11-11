@@ -1,14 +1,17 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {once} from 'node:events';
+import {mkdtemp,rm} from 'node:fs/promises';
+import path from 'node:path';
 import {createResumeServer} from '../serve.mjs';
 import sharp from 'sharp';
 
 async function setup(t,publicOrigin=''){
+  const directory=await mkdtemp(path.join(import.meta.dirname,'fixture-public-'));
   let calls=0;const image=await sharp({create:{width:20,height:20,channels:4,background:'#fff'}}).png().toBuffer();
-  const server=await createResumeServer({portraitOptions:{publicMode:true,publicOrigin,configPath:import.meta.filename,transport:async()=>{calls++;throw Error('must not call provider');},cutout:async()=>({image,cached:false,durationMs:1})}});
+  const server=await createResumeServer({adminOptions:{dataDir:path.join(directory,'admin')},portraitOptions:{publicMode:true,publicOrigin,configPath:import.meta.filename,transport:async()=>{calls++;throw Error('must not call provider');},cutout:async()=>({image,cached:false,durationMs:1})}});
   server.listen(0,'127.0.0.1');await once(server,'listening');
-  t.after(()=>new Promise(resolve=>{server.close(resolve);server.closeAllConnections();}));
+  t.after(async()=>{await new Promise(resolve=>{server.close(resolve);server.closeAllConnections();});const target=path.resolve(directory);assert(target.startsWith(path.resolve(import.meta.dirname)+path.sep));await rm(target,{recursive:true,force:true});});
   const base=`http://127.0.0.1:${server.address().port}`,config=await(await fetch(base+'/portrait/api/config')).json();
   const request=(route,body={},method='POST',headers={})=>fetch(base+'/portrait/api/'+route,{method,headers:{'Content-Type':'application/json','X-App-Token':config.token,...headers},body:JSON.stringify(body)});
   return{base,config,request,image:`data:image/png;base64,${image.toString('base64')}`,calls:()=>calls};

@@ -10,7 +10,8 @@ import { renderForm, setQuillFactory, disposeEditors, setActiveItem } from './fo
 import { downloadResumePDF } from './pdf.js';
 import { MODULES, FONTS } from './dict.js';
 import { buildSettingsPanel } from './settings.js?v=20261112-settings';
-import { getModuleOrder } from './module-order.js';
+import { getModuleOrder } from './module-order.js?v=20261112-drag';
+import { bindModuleDrag } from './module-drag.js';
 import { listPersonalTemplates, savePersonalTemplate, removePersonalTemplate, templateMatches } from './personal-templates.js';
 import { captureElement, capturePaper, moveElement, slideSidebar, moveWorkspace } from './motion.js';
 import { WORKSPACE_NAV } from './workspace-nav.js';
@@ -358,6 +359,7 @@ function renderTabs() {
   const tab = window.__tab || 'basic';
   const ul = $('.edit_tab');
   if (!ul) return;
+  const scrollTop = ul.scrollTop;
 
   const defs = getModuleOrder(r).map(name => MODULES.find(def => def.name === name)).filter(Boolean);
   ul.setAttribute('aria-label', '简历模块');
@@ -368,15 +370,16 @@ function renderTabs() {
     moduleSelect.value = tab;
   }
   ul.innerHTML = defs.map((def, index) => {
+    const grip = `<span class="module-drag-handle" data-drag="${def.name}" role="button" tabindex="0" aria-label="拖动排序${esc(getModule(def.name)?.moduleValue || def.label)}" title="拖动排序，也可按方向键移动"><svg viewBox="0 0 16 20" aria-hidden="true"><g fill="currentColor"><circle cx="5" cy="4" r="1.5"/><circle cx="11" cy="4" r="1.5"/><circle cx="5" cy="10" r="1.5"/><circle cx="11" cy="10" r="1.5"/><circle cx="5" cy="16" r="1.5"/><circle cx="11" cy="16" r="1.5"/></g></svg></span>`;
     const arrows = (index > 0
       ? `<div class="el-tooltip btn_prev webfont webicon-sliderleft" data-prev="${def.name}" title="前移模块" role="button" aria-label="前移${esc(def.label)}" tabindex="0"></div>` : '')
       + (index < defs.length - 1
         ? `<div class="el-tooltip btn_next webfont webicon-sliderright" data-next="${def.name}" title="后移模块" role="button" aria-label="后移${esc(def.label)}" tabindex="0"></div>` : '');
-    if (def.kind === 'basic') return `<li class="${tab === 'basic' ? 'active' : ''}" data-tab="basic" role="button" tabindex="0"><b>基本信息</b>${arrows}</li>`;
+    if (def.kind === 'basic') return `<li class="${tab === 'basic' ? 'active' : ''}" data-tab="basic" role="button" tabindex="0">${grip}<b>基本信息</b>${arrows}</li>`;
     const m = getModule(def.name);
     const visible = !!m?.visible;
     return `<li class="${tab === def.name ? 'active' : ''} ${visible ? '' : 'module_hide'}" data-tab="${def.name}" role="button" tabindex="0">
-      <b class="el-tooltip" title="点击切换模块">${esc(m?.moduleValue || def.label)}</b>
+      ${grip}<b class="el-tooltip" title="点击切换模块">${esc(m?.moduleValue || def.label)}</b>
       <div class="el-switch el-tooltip tab_switch ${visible ? 'is-checked' : ''}" data-switch="${def.name}" role="switch" aria-checked="${visible}" aria-label="显示${esc(m?.moduleValue || def.label)}" title="点击${visible ? '关闭' : '启用'}模块" tabindex="0">
         <input type="checkbox" class="el-switch__input" ${visible ? 'checked' : ''}>
         <span class="el-switch__core" style="width:40px;"></span>
@@ -385,6 +388,7 @@ function renderTabs() {
     </li>`;
   }).join('');
   markScope(ul);
+  ul.scrollTop = scrollTop;
 }
 
 function selectEditorModule(name) {
@@ -401,8 +405,23 @@ function selectEditorModule(name) {
 }
 
 function bindTabs() {
+  bindModuleDrag($('.edit_tab'), (name, order) => {
+    set(rr => { rr.setData.moduleSort = order; }, { tabs: true });
+    const grip = $(`[data-drag="${name}"]`);
+    grip?.focus({ preventScroll: true });
+    announceModuleMove(name, order);
+  });
   $('.edit_tab')?.addEventListener('keydown', e => {
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-prev], [data-next], [data-edit], [data-switch], [data-tab]')) {
+    const grip = e.target.closest('[data-drag]');
+    if (grip && ['ArrowLeft','ArrowUp','ArrowRight','ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      const name = grip.dataset.drag;
+      moveModule(name, ['ArrowLeft','ArrowUp'].includes(e.key) ? -1 : 1);
+      $(`[data-drag="${name}"]`)?.focus({ preventScroll: true });
+      announceModuleMove(name, getModuleOrder(getResume()));
+      return;
+    }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-prev], [data-next], [data-edit], [data-switch], [data-tab], [data-drag]')) {
       e.preventDefault(); e.target.click();
     }
   });
@@ -434,6 +453,17 @@ function bindTabs() {
     if (!li) return;
     selectEditorModule(li.dataset.tab);
   });
+}
+
+function announceModuleMove(name, order) {
+  let status = $('#moduleSortStatus');
+  if (!status) {
+    status = document.createElement('span'); status.id = 'moduleSortStatus';
+    status.className = 'module-sort-status'; status.setAttribute('role', 'status');
+    $('.edit_top')?.appendChild(status);
+  }
+  const label = getModule(name)?.moduleValue || MODULES.find(def => def.name === name)?.label;
+  status.textContent = `${label}已移到第${order.indexOf(name) + 1}位，排序已更新`;
 }
 
 function moveModule(name, dir) {

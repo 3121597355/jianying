@@ -15,7 +15,7 @@ async function setup(t) {
   const configPath = path.join(directory, 'config.json');
   await writeFile(configPath, JSON.stringify({ baseUrl: 'https://fixture.example/v1', apiKey: privateKey, model: 'fixture-image', mode: 'multipart', imageField: 'image[]' }));
   let cloudCalls = 0, cutoutCalls = 0;
-  const server = await createResumeServer({ portraitOptions: { configPath, remoteValidator: async () => {}, transport: async () => { cloudCalls++; return new Response(JSON.stringify({ data: [{ b64_json: image.toString('base64') }] }), { headers: { 'Content-Type': 'application/json' } }); }, cutout: async () => { cutoutCalls++; return { image, durationMs: 1, cached: false }; } } });
+  const server = await createResumeServer({ adminOptions: { dataDir: path.join(directory, 'admin') }, portraitOptions: { configPath, remoteValidator: async () => {}, transport: async () => { cloudCalls++; return new Response(JSON.stringify({ data: [{ b64_json: image.toString('base64') }] }), { headers: { 'Content-Type': 'application/json' } }); }, cutout: async () => { cutoutCalls++; return { image, durationMs: 1, cached: false }; } } });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   t.after(async () => { await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); }); const target = path.resolve(directory); assert(target.startsWith(path.resolve(import.meta.dirname) + path.sep)); await rm(target, { recursive: true, force: true }); });
   const base = `http://127.0.0.1:${server.address().port}`;

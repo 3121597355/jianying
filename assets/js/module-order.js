@@ -11,3 +11,13 @@ export function getModuleOrder(resume) {
   const preferred = saved.includes('basic') ? saved : ['basic', ...saved];
   return [...new Set([...preferred, ...names])].filter(name => names.includes(name));
 }
+
+/** Insert a module at its final position without swapping the intervening modules. */
+export function moveModuleToIndex(order, name, index) {
+  const result = [...order];
+  const from = result.indexOf(name);
+  if (from < 0 || !Number.isInteger(index) || index < 0 || index >= result.length) return result;
+  result.splice(from, 1);
+  result.splice(index, 0, name);
+  return result;
+}
