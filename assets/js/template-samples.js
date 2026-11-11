@@ -28,6 +28,7 @@ const sample={
 
 export function createTemplateSample(id){
   const resume=structuredClone(sample);resume.setData.tplId=Number(id);
+  if(Number(id)===1044){resume.setData.title='个人简历';resume.setData.slogan='PERSONAL PROFILE';}
   if([2002,2003].includes(Number(id)))resume.basicInfo.photoShow=false;
   return resume;
 }

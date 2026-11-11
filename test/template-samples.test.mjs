@@ -12,7 +12,7 @@ test('every empty template choice loads the same editable example shown by the g
     assert.equal(chooseTemplate(resume,template.id),true);
     const sample=createTemplateSample(template.id);
     assert.deepEqual(resume.basicInfo,sample.basicInfo);assert.deepEqual(resume.moduleData,sample.moduleData);
-    assert.equal(resume.setData.tplId,template.id);assert.equal(resume.setData.title,'');
+    assert.equal(resume.setData.tplId,template.id);assert.equal(resume.setData.title,sample.setData.title);
     const html=renderByTpl(resume);
     for(const text of ['林予安','星桥科技','知行数字','企业协作平台体验升级','浙江工商大学'])assert.ok(html.includes(text),`${template.id}: ${text}`);
   }

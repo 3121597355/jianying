@@ -40,8 +40,24 @@
 .standard-classic .content_list { position:relative; border-left:1px solid #dce4e7; padding-left:18px; }
 .standard-classic .content_list::before { content:''; position:absolute; left:-4px; top:8px; width:7px; height:7px; background:var(--standard-accent); border-radius:50%; }
 .standard-classic .standard-skills li { border:1px solid #dce4e7; padding:2px 9px; border-radius:4px; }
-.standard-bands .basic_info,.standard-lines .basic_info { text-align:center; }
-.standard-bands .module_tit { border:0; background:#eef3f7; padding:5px 12px; }
+.standard-lines .basic_info { text-align:center; }
+.standard-bands .resume_box { padding-bottom:24px; }
+.standard-bands .standard-document-title { text-align:center; }
+.standard-bands .standard-document-title h1 { font-size:34px; line-height:1.3; font-weight:700; letter-spacing:6px; margin:0; }
+.standard-bands .standard-document-title p { color:#737d88; font-size:12px; line-height:1.5; letter-spacing:1.5px; margin:7px 0 0; }
+.standard-bands .module_tit { border:0; padding:0; line-height:1.8; }
+.standard-bands .module_tit b { display:inline-block; min-width:122px; padding:1px 18px; text-align:center; color:#fff; background:var(--standard-accent); }
+.standard-bands .basic_info_box { min-height:0; margin-top:14px; }
+.standard-bands .basic_info_box.has-photo { min-height:126px; padding-right:128px; }
+.standard-bands .basic_info_grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:20px; row-gap:11px; padding-top:2px; }
+.standard-bands .basic_info_grid dd { display:flex; align-items:baseline; min-width:0; line-height:1.7; overflow-wrap:anywhere; }
+.standard-bands .profile-label { flex:0 0 5em; margin-right:7px; color:#535f6a; white-space:nowrap; }
+.standard-bands .profile-label::after { content:'：'; }
+.standard-bands .basic_info_grid dd > span:last-child { min-width:0; }
+.standard-bands .photo_box { top:0; right:0; width:94px; height:126px; }
+.standard-bands .list_top { flex-direction:row-reverse; gap:20px; }
+.standard-bands .list_top .time { width:145px; text-align:left; }
+.standard-bands .standard-intent { display:flex; flex-wrap:wrap; gap:8px 32px; margin-top:10px; }
 .standard-lines .basic_info_box { border-bottom:2px solid var(--standard-accent); }
 .standard-lines .module_tit { border-bottom:1px solid #b5bdc4; padding-bottom:7px; letter-spacing:1px; }
 .standard-lines .content_list { margin-bottom:3px; }

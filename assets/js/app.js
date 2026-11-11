@@ -101,6 +101,10 @@ function renderPreview() {
   if (!host) return;
   const html = renderByTpl(r);
   if (html !== previewHTML) { host.innerHTML = html; previewHTML = html; }
+  const empty=!hasResumeContent(r);
+  $('.preview-pane')?.classList.toggle('is-empty',empty);
+  const guidance=$('.preview-empty');
+  if(guidance)guidance.hidden=!empty;
 
   const box = host.querySelector('.resume_box');
   const h = box ? box.offsetHeight : 0;
@@ -195,7 +199,9 @@ function setupWorkspace() {
   preview.className = 'preview-pane';
   preview.setAttribute('aria-label', '简历实时预览');
   preview.innerHTML = `<div class="preview-heading"><div><strong>简历预览</strong><span class="live-indicator save-status" id="saveStatus" role="status" aria-live="polite">自动保存已开启</span></div><span id="pageNum"></span></div>
+    <div class="preview-empty" hidden><strong>从填写姓名开始</strong><p>填写的信息会自动排版在这里，也可以选择模板，从示例开始修改。</p><button type="button">开始填写</button></div>
     <div class="preview-scroll"><div class="preview-paper"></div></div>`;
+  preview.querySelector('.preview-empty button').addEventListener('click',()=>selectEditorModule('basic'));
   preview.querySelector('.preview-paper').appendChild(paper);
   const previewHeading = preview.querySelector('.preview-heading');
   const editorHeading = document.createElement('div');
@@ -776,6 +782,14 @@ export function bootEditor() {
   renderTabs();
   renderForm($('#formHost'));
   renderPreview();
+  // Finalize entry after all draft/template initialization. A history-restored
+  // page must also expose the form instead of reviving a folded blank preview.
+  const showEntryForm=()=>{
+    setEditorOpen(true,{animate:false});
+    if(window.matchMedia('(max-width: 860px)').matches)window.scrollTo({top:0,behavior:'instant'});
+  };
+  showEntryForm();
+  window.addEventListener('pageshow',event=>{if(event.persisted)showEntryForm();});
 
   onChange(opts => {
     queuePreview();

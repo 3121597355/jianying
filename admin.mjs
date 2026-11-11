@@ -18,8 +18,17 @@ const defaults = () => ({site:{title:'一纸简历 · 开源的简历与证件�
 export function upgradeTemplateCatalog(settings){
   if(!settings||!Array.isArray(settings.templates))return settings;
   const missing=catalog.filter(item=>!settings.templates.some(saved=>saved.id===item.id));
-  if(!missing.length)return settings;
-  return {...settings,templates:[...settings.templates,...missing.map(item=>({...item,enabled:true,featured:false}))]};
+  let renamed=false;
+  const templates=settings.templates.map(item=>{
+    if(item.id!==1044)return item;
+    const current=catalog.find(template=>template.id===1044);
+    const name=item.name==='蓝色横条'?current.name:item.name;
+    const desc=item.desc==='居中页眉 · 淡色标题栏 · 层次清晰'?current.desc:item.desc;
+    if(name===item.name&&desc===item.desc)return item;
+    renamed=true;return {...item,name,desc};
+  });
+  if(!missing.length&&!renamed)return settings;
+  return {...settings,templates:[...templates,...missing.map(item=>({...item,enabled:true,featured:false}))]};
 }
 function json(res,status,value){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));}
 async function body(req,limit=32768){

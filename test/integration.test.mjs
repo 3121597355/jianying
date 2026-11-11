@@ -49,7 +49,7 @@ test('homepage and editor have distinct routes with absolute assets and the same
   }
   for(const asset of ['/assets/js/tpl-standard.js','/assets/css/tpl-standard.css'])assert.equal((await fetch(s.base+asset)).status,200);
   assert.match(editor, /resumeHost/);
-  assert.match(editor, /src="\/assets\/js\/editor-entry.js"/);
+  assert.match(editor, /src="\/assets\/js\/editor-entry.js\?v=[^" ]+"/);
   assert.match(editor, /data-editor-state="loading"/);
   assert.match(editor, /id="editorWorkspace"[^>]+inert/);
   assert.doesNotMatch(editor, /登录 \/ 注册|简历智能助手|下载\/导出简历|在线客服|间距设置|字体\/语言|皮肤设置|封面设置/);

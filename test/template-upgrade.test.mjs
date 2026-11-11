@@ -19,6 +19,15 @@ test('four-template site settings upgrade without resetting custom content, orde
   assert.equal(upgradeTemplateCatalog(upgraded),upgraded);
   assert.doesNotThrow(()=>normalizeSettings(upgraded));
 });
+test('classic blue replaces only its old default labels and retains administrator overrides',()=>{
+  const original=defaults(),item=original.templates.find(t=>t.id===1044);
+  Object.assign(item,{name:'蓝色横条',desc:'居中页眉 · 淡色标题栏 · 层次清晰',enabled:false,featured:false});
+  const upgraded=upgradeTemplateCatalog(original),blue=upgraded.templates.find(t=>t.id===1044);
+  assert.equal(item.name,'蓝色横条');assert.equal(blue.name,'经典蓝色');assert.equal(blue.enabled,false);
+  assert.equal(upgradeTemplateCatalog(upgraded),upgraded);
+  item.name='管理员自定蓝色';item.desc='管理员自定介绍';
+  assert.equal(upgradeTemplateCatalog(original),original);
+});
 
 test('all original draft template IDs preserve profile, photo, rich text and reordered modules',()=>{
   for(const template of EXTENDED_TEMPLATES){
