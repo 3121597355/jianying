@@ -21,6 +21,15 @@
   }
   #tpl_box { transform-origin:top left; }
   .resume-workspace.workspace-moving .preview-scroll { overflow-x:hidden; }
+  /* Native scrollbar geometry jumps with the final grid layout. Keep its gutter
+     reserved, mask only its paint during the fold, then reveal it at rest. */
+  .preview-pane { position:relative; }
+  .preview-pane::after {
+    content:''; position:absolute; top:0; bottom:0; right:0; width:16px;
+    background:var(--ui-canvas); pointer-events:none; z-index:1;
+    opacity:0; transition:opacity 160ms ease-out;
+  }
+  .resume-workspace.workspace-moving .preview-pane::after { opacity:1; transition:none; }
   .edit_resume #resumeEditorPanel .close[data-v-236d5b80] {
     position:absolute;
     border:1px solid var(--ui-accent-line); background:#fff; color:var(--ui-accent); box-shadow:0 3px 12px #233d2210;
