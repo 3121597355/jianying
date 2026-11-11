@@ -222,7 +222,8 @@ function setupWorkspace() {
   if (collapseHandle) panel.appendChild(collapseHandle);
   $('.save_tip span').textContent = '修改后自动保存在本机';
   previewHeading.querySelector(':scope > div').appendChild($('.privacy-trigger'));
-  setEditorOpen(getUi().editOpen !== false,{animate:false});
+  // Make the editing controls discoverable on every entry, including older folded drafts.
+  setEditorOpen(true,{animate:false});
 
   const views = document.createElement('div');
   views.className = 'workspace-views';
