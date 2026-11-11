@@ -19,7 +19,7 @@ function fixture(t) {
   const ghosts=[];
   const doc=Object.assign(emitter(),{documentElement:{dataset:{motion:'reduce'},classList:classes()},visibilityState:'visible',
     querySelector:()=>null,body:{appendChild:node=>ghosts.push(node)},createElement:()=>({style:{},setAttribute(){},remove(){ghosts.splice(ghosts.indexOf(this),1);}})});
-  const win=Object.assign(emitter(),{innerHeight:500,matchMedia:()=>({matches:false}),scrollBy(){}});
+  const win=Object.assign(emitter(),{innerWidth:400,innerHeight:500,matchMedia:()=>({matches:false}),scrollBy(){}});
   Object.assign(globalThis,{window:win,document:doc,requestAnimationFrame:()=>1,cancelAnimationFrame:()=>{}});
   const cards=['basic','work','project','pingjia'].map(name=>({dataset:{tab:name},parentElement:list,classList:classes(),offsetWidth:100,offsetHeight:80,
     get offsetLeft(){return list.children.indexOf(this)*100;},offsetTop:0,
@@ -49,7 +49,7 @@ for(const interruption of ['pointercancel','blur','Escape','outside','visibility
     if(interruption==='Escape')f.win.emit('keydown',{key:'Escape',preventDefault(){},stopPropagation(){}});
     else if(interruption==='outside')f.send('pointerup',{x:450});
     else if(interruption==='visibilitychange'){f.doc.visibilityState='hidden';f.doc.emit('visibilitychange');}
-    else f.send(interruption);
+    else {if(interruption==='resize')f.win.innerWidth=300;f.send(interruption);}
     assert.deepEqual(f.order(),['basic','work','project','pingjia']);assert.equal(f.drops.length,0);assert.equal(f.ghosts.length,0);
     assert.equal(f.doc.documentElement.classList.contains('module-dragging'),false);assert.equal(f.list.capture,null);
   });
@@ -69,4 +69,30 @@ test('touch on the card permits native scrolling; touch on the grip permits sort
   f.send('pointerdown',{pointerType:'touch',kind:'grip'});
   assert.equal(f.send('pointermove',{pointerType:'touch',x:250}).prevented,true);
   f.send('pointerup',{pointerType:'touch',x:250});assert.equal(f.drops.length,1);
+});
+
+test('touch capture transferred from the grip to the list does not cancel sorting',t=>{
+  const f=fixture(t);f.send('pointerdown',{pointerType:'touch',kind:'grip'});
+  f.send('pointermove',{pointerType:'touch',x:150});
+  // Touch pointers are implicitly captured by the original hit target. Its
+  // lostpointercapture bubbles when explicit capture moves to the stable list.
+  f.list.emit('lostpointercapture',{target:{dataset:{drag:'basic'}},pointerId:1});
+  assert.equal(f.ghosts.length,1);
+  f.send('pointermove',{pointerType:'touch',x:250});
+  f.send('pointerup',{pointerType:'touch',x:250});
+  assert.deepEqual(f.drops,[{name:'basic',order:['work','project','basic','pingjia']}]);
+});
+
+test('unexpected loss of capture on the list still cancels the current pointer',t=>{
+  const f=fixture(t);f.send('pointerdown',{pointerType:'touch',kind:'grip'});f.send('pointermove',{pointerType:'touch',x:250});
+  f.list.emit('lostpointercapture',{target:f.list,pointerId:1});
+  assert.equal(f.ghosts.length,0);assert.equal(f.drops.length,0);
+  assert.deepEqual(f.order(),['basic','work','project','pingjia']);
+});
+
+test('mobile address-bar height changes do not interrupt an active touch drag',t=>{
+  const f=fixture(t);f.send('pointerdown',{pointerType:'touch',kind:'grip'});f.send('pointermove',{pointerType:'touch',x:150});
+  f.win.innerHeight=440;f.win.emit('resize');assert.equal(f.ghosts.length,1);
+  f.send('pointermove',{pointerType:'touch',x:250});f.send('pointerup',{pointerType:'touch',x:250});
+  assert.equal(f.drops.length,1);
 });

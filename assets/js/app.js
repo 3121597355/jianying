@@ -11,7 +11,7 @@ import { downloadResumePDF } from './pdf.js';
 import { MODULES, FONTS } from './dict.js';
 import { buildSettingsPanel } from './settings.js?v=20261112-settings';
 import { getModuleOrder } from './module-order.js?v=20261112-drag';
-import { bindModuleDrag } from './module-drag.js';
+import { bindModuleDrag } from './module-drag.js?v=20261112-touch';
 import { listPersonalTemplates, savePersonalTemplate, removePersonalTemplate, templateMatches } from './personal-templates.js';
 import { captureElement, capturePaper, moveElement, slideSidebar, moveWorkspace } from './motion.js';
 import { WORKSPACE_NAV } from './workspace-nav.js';

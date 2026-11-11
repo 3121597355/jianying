@@ -64,6 +64,28 @@ test('homepage and editor have distinct routes with absolute assets and the same
   const redirect = await fetch(s.base + '/resume', {redirect:'manual'});
   assert.equal(redirect.status,308); assert.equal(redirect.headers.get('location'),'/resume/');
 });
+
+test('all entry pages offer mobile PNG and Apple icons and conventional icon URLs resolve', async t => {
+  const s = await setup(t);
+  for (const route of ['/', '/resume/', '/portrait/', '/admin.html']) {
+    const html = await (await fetch(s.base + route)).text();
+    assert.match(html, /rel="icon" type="image\/png" sizes="32x32"/);
+    assert.match(html, /rel="apple-touch-icon" sizes="180x180"/);
+    const icons = [...html.matchAll(/<link\s+rel="(?:icon|apple-touch-icon)"[^>]+href="([^"]+)"/g)];
+    assert.equal(icons.length,4,route);
+    for (const [,href] of icons) assert.equal((await fetch(s.base + href)).status,200,`${route}: ${href}`);
+  }
+  for (const [route,size] of [['/assets/img/brand/favicon-32.png',32],['/assets/img/brand/favicon.png',64],['/apple-touch-icon.png',180],['/apple-touch-icon-precomposed.png',180]]) {
+    const response=await fetch(s.base+route);assert.equal(response.status,200,route);
+    assert.equal(response.headers.get('content-type'),'image/png');
+    const metadata=await sharp(Buffer.from(await response.arrayBuffer())).metadata();
+    assert.equal(metadata.width,size);assert.equal(metadata.height,size);
+  }
+  const fallback=await fetch(s.base+'/favicon.ico',{redirect:'manual'});
+  assert.equal(fallback.status,307);assert.match(fallback.headers.get('location'),/^\/assets\/img\/brand\/favicon\.ico\?v=/);
+  const response=await fetch(s.base+'/favicon.ico');assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'image/x-icon');
+  const ico=Buffer.from(await response.arrayBuffer());assert.equal(ico.readUInt16LE(2),1);assert.equal(ico.readUInt16LE(4),3);
+});
 test('mounted portrait API keeps host, origin and request-token checks', async t => {
   const s = await setup(t);
   assert.equal((await s.request('/portrait/api/cutout', { image: dataImage }, { Origin: 'https://other.example' })).status, 403);

@@ -8,7 +8,10 @@
 <meta property="og:title" content="一纸简历 · 简历制作与证件照">
 <meta name="description" content="一纸简历，把简历和证件照一起准备好。实时排版、自动保存、本地换底与照片裁切。">
 <meta name="theme-color" content="#ffffff">
-<link rel="icon" type="image/svg+xml" href="/assets/img/brand/mark-mono.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/brand/favicon-32.png?v=20261112-touch">
+<link rel="icon" type="image/png" sizes="64x64" href="/assets/img/brand/favicon.png?v=20261112-touch">
+<link rel="icon" type="image/svg+xml" sizes="any" href="/assets/img/brand/mark-mono.svg?v=20261112-touch">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/img/brand/apple-touch-icon.png?v=20261112-touch">
 <script>try { document.documentElement.dataset.theme = JSON.parse(localStorage.getItem('qmj-clone:ui') || '{}').theme === 'dark' ? 'dark' : 'light'; } catch { document.documentElement.dataset.theme = 'light'; }</script>
 <!-- Keep the initial paint independent of the editor scripts and legacy styles. -->
 <style>
@@ -40,7 +43,7 @@
 <link rel="stylesheet" href="/assets/css/editor-polish.css?v=20261112-drag">
 <link rel="stylesheet" href="/assets/css/mobile-editor.css?v=20261112-settings">
 <link rel="preload" href="/assets/vendor/quill.js" as="script">
-<link rel="modulepreload" href="/assets/js/app.js?v=20261112-drag">
+<link rel="modulepreload" href="/assets/js/app.js?v=20261112-touch">
 </head>
 <body>
 <div class="editor-startup" id="editorStartup">
@@ -74,6 +77,6 @@
   </main>
 </section>
 <script>setTimeout(function () { if (document.documentElement.dataset.editorState === 'loading') document.documentElement.dataset.editorState = 'error'; }, 15000);</script>
-<script type="module" src="/assets/js/editor-entry.js?v=20261112-drag" onerror="document.documentElement.dataset.editorState='error'"></script>
+<script type="module" src="/assets/js/editor-entry.js?v=20261112-touch" onerror="document.documentElement.dataset.editorState='error'"></script>
 </body>
 </html>

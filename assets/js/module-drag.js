@@ -4,6 +4,7 @@ import { moveModuleToIndex } from './module-order.js?v=20261112-drag';
 export function bindModuleDrag(list, onDrop) {
   if (!list) return;
   let gesture = null, frame = 0, suppressUntil = 0;
+  let viewportWidth = window.innerWidth;
   const animations = new Map();
   const cards = () => [...list.querySelectorAll(':scope > [data-tab]')];
   const order = () => cards().map(card => card.dataset.tab);
@@ -122,10 +123,20 @@ export function bindModuleDrag(list, onDrop) {
     gesture.x = event.clientX; gesture.y = event.clientY; update(); finish();
   });
   window.addEventListener('pointercancel', event => { if (event.pointerId === gesture?.id) finish(true); });
-  list.addEventListener('lostpointercapture', () => finish(true));
+  // Touch starts with implicit capture on the grip. Its loss bubbles when
+  // capture moves here; only losing this list's own capture is cancellation.
+  list.addEventListener('lostpointercapture', event => {
+    if (event.target === list && event.pointerId === gesture?.id) finish(true);
+  });
   window.addEventListener('blur', () => finish(true));
   window.addEventListener('pagehide', () => finish(true));
-  window.addEventListener('resize', () => finish(true));
+  window.addEventListener('resize', () => {
+    // Mobile address bars change the height while scrolling the drag area.
+    // Only a width change invalidates the card grid and cancels the gesture.
+    const width = window.innerWidth;
+    if (width !== viewportWidth) finish(true);
+    viewportWidth = width;
+  });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') finish(true); });
   window.addEventListener('keydown', event => {
     if (event.key === 'Escape' && gesture) { event.preventDefault(); event.stopPropagation(); finish(true); }
