@@ -40,7 +40,9 @@ export async function createResumeServer({ portraitOptions = {}, adminOptions = 
       if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { Allow: 'GET, HEAD' }).end(); return; }
       const iconFallback = ({ '/favicon.ico':'favicon.ico', '/apple-touch-icon.png':'apple-touch-icon.png', '/apple-touch-icon-precomposed.png':'apple-touch-icon.png' })[pathname];
       if (iconFallback) {
-        res.writeHead(307, { Location: `/assets/img/brand/${iconFallback}?v=20261112-touch`, 'Cache-Control':'no-cache' }).end(); return;
+        const icon = await fs.readFile(path.join(ROOT,'assets','img','brand',iconFallback));
+        res.writeHead(200, { 'Content-Type': MIME[path.extname(iconFallback)], 'Cache-Control':'no-cache' });
+        res.end(req.method === 'HEAD' ? undefined : icon); return;
       }
       // 仅开放页面和静态资源，私有配置、模型、依赖与服务代码均不通过 HTTP 暴露。
       if (pathname === '/resume') {

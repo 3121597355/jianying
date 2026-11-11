@@ -69,22 +69,32 @@ test('all entry pages offer mobile PNG and Apple icons and conventional icon URL
   const s = await setup(t);
   for (const route of ['/', '/resume/', '/portrait/', '/admin.html']) {
     const html = await (await fetch(s.base + route)).text();
-    assert.match(html, /rel="icon" type="image\/png" sizes="32x32"/);
+    assert.match(html, /rel="icon" type="image\/png" sizes="64x64"/);
+    assert.doesNotMatch(html, /rel="icon"[^>]+type="image\/svg\+xml"/);
     assert.match(html, /rel="apple-touch-icon" sizes="180x180"/);
-    const icons = [...html.matchAll(/<link\s+rel="(?:icon|apple-touch-icon)"[^>]+href="([^"]+)"/g)];
-    assert.equal(icons.length,4,route);
-    for (const [,href] of icons) assert.equal((await fetch(s.base + href)).status,200,`${route}: ${href}`);
+    const icons = [...html.matchAll(/<link\s+rel="(?:icon|shortcut icon|apple-touch-icon)"[^>]+href="([^"]+)"/g)];
+    assert.equal(icons.length,3,route);
+    for (const [,href] of icons) assert.equal((await fetch(s.base + href,{redirect:'manual'})).status,200,`${route}: ${href}`);
+    assert.doesNotMatch(html, /<img[^>]+src="[^"]*mark-mono\.svg/);
   }
   for (const [route,size] of [['/assets/img/brand/favicon-32.png',32],['/assets/img/brand/favicon.png',64],['/apple-touch-icon.png',180],['/apple-touch-icon-precomposed.png',180]]) {
-    const response=await fetch(s.base+route);assert.equal(response.status,200,route);
+    const response=await fetch(s.base+route,{redirect:'manual'});assert.equal(response.status,200,route);
     assert.equal(response.headers.get('content-type'),'image/png');
     const metadata=await sharp(Buffer.from(await response.arrayBuffer())).metadata();
     assert.equal(metadata.width,size);assert.equal(metadata.height,size);
   }
   const fallback=await fetch(s.base+'/favicon.ico',{redirect:'manual'});
-  assert.equal(fallback.status,307);assert.match(fallback.headers.get('location'),/^\/assets\/img\/brand\/favicon\.ico\?v=/);
+  assert.equal(fallback.status,200);assert.equal(fallback.headers.get('location'),null);
   const response=await fetch(s.base+'/favicon.ico');assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'image/x-icon');
   const ico=Buffer.from(await response.arrayBuffer());assert.equal(ico.readUInt16LE(2),1);assert.equal(ico.readUInt16LE(4),3);
+  for(let index=0;index<3;index++){
+    const entry=6+index*16,offset=ico.readUInt32LE(entry+12),size=ico[entry];
+    assert.equal(ico.readUInt32LE(offset),40);assert.equal(ico.readInt32LE(offset+4),size);
+    assert.equal(ico.readInt32LE(offset+8),size*2);assert.equal(ico.readUInt16LE(offset+14),32);
+    assert.ok(offset+ico.readUInt32LE(entry+8)<=ico.length);
+  }
+  const head=await fetch(s.base+'/favicon.ico',{method:'HEAD',redirect:'manual'});
+  assert.equal(head.status,200);assert.equal((await head.arrayBuffer()).byteLength,0);
 });
 test('mounted portrait API keeps host, origin and request-token checks', async t => {
   const s = await setup(t);

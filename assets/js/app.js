@@ -791,7 +791,7 @@ export function bootEditor() {
   bindPhotoSlot();
   bindPreviewEditing();
   const home = $('.home-button');
-  if (home) { home.classList.add('brand-home'); home.setAttribute('aria-label','返回首页'); home.title='返回首页'; home.innerHTML = '<img src="/assets/img/brand/mark-mono.svg" alt="" width="34" height="34"><span>一纸简历</span>'; }
+  if (home) { home.classList.add('brand-home'); home.setAttribute('aria-label','返回首页'); home.title='返回首页'; home.innerHTML = '<img src="/assets/img/brand/icon.png?v=20261112-favicon" alt="" width="34" height="34"><span>一纸简历</span>'; }
   const entryParams = new URL(location.href).searchParams;
   const entryTemplate = Number(entryParams.get('template'));
   if (availableTemplates(TEMPLATES).some(template=>template.id===entryTemplate)) {

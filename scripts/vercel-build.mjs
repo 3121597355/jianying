@@ -6,6 +6,9 @@ const target=path.join(root,'vercel-public');
 if(!target.startsWith(root+path.sep)||path.basename(target)!=='vercel-public')throw Error('Unsafe build directory');
 await rm(target,{recursive:true,force:true});await mkdir(target,{recursive:true});
 await cp(path.join(root,'assets'),path.join(target,'assets'),{recursive:true,filter:file=>!path.basename(file).startsWith('qa-')});
+for(const [name,source] of [['favicon.ico','favicon.ico'],['apple-touch-icon.png','apple-touch-icon.png'],['apple-touch-icon-precomposed.png','apple-touch-icon.png']]) {
+  await cp(path.join(root,'assets','img','brand',source),path.join(target,name));
+}
 await cp(path.join(root,'portrait','public'),path.join(target,'portrait'),{recursive:true,filter:file=>!file.endsWith('.html')});
 await import('../portrait/setup-model.mjs');
 console.log('Vercel static assets and portrait model are ready.');
