@@ -9,7 +9,7 @@ import { renderByTpl, TEMPLATES, getTemplate, applyTemplate } from './templates.
 import { renderForm, setQuillFactory, disposeEditors, setActiveItem } from './forms.js';
 import { downloadResumePDF } from './pdf.js';
 import { MODULES, FONTS } from './dict.js';
-import { buildSettingsPanel } from './settings.js';
+import { buildSettingsPanel } from './settings.js?v=20261112-settings';
 import { getModuleOrder } from './module-order.js';
 import { listPersonalTemplates, savePersonalTemplate, removePersonalTemplate, templateMatches } from './personal-templates.js';
 import { captureElement, capturePaper, moveElement, slideSidebar, moveWorkspace } from './motion.js';
@@ -706,6 +706,7 @@ function setupHeaderControls() {
     button.setAttribute('aria-controls', panel.id); button.setAttribute('aria-expanded', 'false');
     panel.setAttribute('aria-hidden', 'true');
     panels.push({ li, button, panel });
+    panel.querySelector('[data-close-settings]')?.addEventListener('click',()=>{closePanels();button.focus({preventScroll:true});});
     const open = () => { closePanels(li); li.classList.add('show_set'); button.setAttribute('aria-expanded', 'true'); panel.setAttribute('aria-hidden', 'false'); };
     li.addEventListener('pointerenter', () => { if (window.matchMedia('(hover: hover)').matches) open(); });
     li.addEventListener('pointerleave', () => { if (!li.dataset.pinned && !li.contains(document.activeElement)) closePanels(); });

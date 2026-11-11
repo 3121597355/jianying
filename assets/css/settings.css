@@ -1,6 +1,9 @@
 .edit_resume .edit_header .edit_header_main .set_list > li.show_set > .grouped-settings[data-v-236d5b80] {
-  width:396px;height:auto!important;padding:18px!important;left:50%;margin-left:-198px;max-height:calc(100dvh - 90px);overflow:auto!important;box-sizing:border-box;border-radius:10px;text-align:left;box-shadow:0 8px 28px color-mix(in srgb, var(--ui-text) 14%, transparent);
+  width:396px;height:auto!important;padding:18px!important;left:50%;margin-left:-198px;transform:none;max-height:calc(100dvh - 90px);overflow:auto!important;box-sizing:border-box;border-radius:10px;text-align:left;box-shadow:0 8px 28px color-mix(in srgb, var(--ui-text) 14%, transparent);
 }
+.settings-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;color:var(--ui-text)}
+.settings-panel-heading strong{font-size:15px;font-weight:600}
+.settings-panel-heading button{display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:7px;background:var(--ui-soft);color:var(--ui-muted);font-size:24px;line-height:1;cursor:pointer}
 .settings-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;background:var(--ui-soft);padding:4px;border-radius:7px;margin-bottom:18px}
 .settings-tabs button{border:0;border-radius:5px;background:transparent;color:var(--ui-muted);font:13px/30px "Microsoft YaHei",sans-serif;cursor:pointer;padding:0 8px}
 .settings-tabs button[aria-selected="true"]{background:#fff;color:var(--ui-accent);box-shadow:0 1px 5px color-mix(in srgb, var(--ui-text) 7%, transparent)}
@@ -30,4 +33,22 @@
 :root[data-theme="dark"] .settings-tabs button[aria-selected="true"]{background:var(--ui-accent-soft);color:var(--ui-accent)}
 :root[data-theme="dark"] :is(.settings-range,.settings-field,.settings-caption,.settings-note){color:var(--ui-muted)}
 :root[data-theme="dark"] .settings-field :is(input,select){background:var(--ui-soft);border-color:var(--ui-line);color:var(--ui-text)}
-@media(max-width:860px){.edit_resume .edit_header .edit_header_main .set_list > li.show_set > .grouped-settings[data-v-236d5b80]{left:12px;margin-left:0;max-width:calc(100vw - 24px)}}
+@media screen and (max-width:860px){
+  .edit_resume .edit_header .edit_header_main .set_list > li.show_set > .grouped-settings[data-v-236d5b80]{position:fixed;top:calc(var(--mobile-toolbar-height,70px) + 8px);left:12px;right:12px;width:auto;margin:0;transform:none;max-width:none;max-height:calc(100vh - var(--mobile-toolbar-height,70px) - 24px);max-height:calc(100dvh - var(--mobile-toolbar-height,70px) - 24px - env(safe-area-inset-bottom));padding:14px!important;overscroll-behavior:contain;touch-action:pan-y;}
+  .settings-panel-heading button{width:44px;height:44px;touch-action:manipulation}
+  .settings-panel-heading{position:sticky;top:-14px;z-index:2;margin:-14px -14px 12px;padding:8px 14px;background:var(--ui-surface);border-bottom:1px solid var(--ui-line);}
+  .settings-tabs{margin-bottom:16px}
+  .settings-tabs button{min-height:44px;padding:0 4px;font-size:14px;touch-action:manipulation}
+  .settings-section{min-height:0;gap:18px}
+  .settings-field{align-items:center;gap:10px}
+  .settings-field :is(input,select){height:44px;font-size:16px}
+  .settings-range{font-size:14px;gap:4px 12px}
+  .settings-range input[type=range]{height:44px;touch-action:pan-y}
+  .settings-range input[type=range]::-webkit-slider-thumb{width:22px;height:22px;margin-top:-8.5px}
+  .settings-range input[type=range]::-moz-range-thumb{width:18px;height:18px}
+  .settings-range button{min-width:44px;min-height:44px;font-size:12px;touch-action:manipulation}
+  .settings-swatches{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+  .settings-swatches button{min-height:44px;touch-action:manipulation}
+  .save-personal-template{min-height:44px;font-size:14px;touch-action:manipulation}
+}
+@media screen and (max-width:380px){.settings-swatches{grid-template-columns:repeat(5,minmax(0,1fr));}}

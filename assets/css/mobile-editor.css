@@ -2,18 +2,18 @@
 .mobile-module-bar { display:none; }
 .preview-empty { display:none; }
 @media screen and (max-width:860px) {
-  html { height:auto; min-height:100%; overflow-x:hidden; overflow-y:auto; }
+  html { height:auto; min-height:100%; overflow-x:hidden; overflow-y:auto; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
   body { height:auto; min-height:100%; overflow:visible; }
-  .edit_resume[data-v-236d5b80] { height:auto; min-height:100vh; min-height:100dvh; overflow:visible; }
-  .edit_resume .edit_main.resume-workspace[data-v-236d5b80] { display:block; height:auto; min-height:calc(100vh - 70px); padding:0 12px 24px; }
-  .workspace-views { position:sticky; top:70px; z-index:8; min-height:56px; padding:6px 0; background:var(--ui-canvas); gap:8px; }
+  .edit_resume[data-v-236d5b80] { height:auto; min-height:100vh; min-height:100dvh; overflow:visible; padding-top:var(--mobile-toolbar-height,70px); }
+  .edit_resume .edit_main.resume-workspace[data-v-236d5b80] { display:block; height:auto; min-height:calc(100vh - var(--mobile-toolbar-height,70px)); padding:0 12px 24px; }
+  .workspace-views { position:sticky; top:var(--mobile-toolbar-height,70px); z-index:8; min-height:56px; padding:6px 0; background:var(--ui-canvas); gap:8px; }
   .workspace-views button { flex:1; max-width:220px; min-height:44px; padding:0 12px; touch-action:manipulation; }
   .edit_resume .edit_header .edit_header_main .get_list[data-v-236d5b80] { height:44px; gap:6px; }
   .edit_resume .edit_header .edit_header_main .get_list > li.qm-download[data-v-236d5b80],.edit_resume .theme-toggle { width:44px; min-width:44px; height:44px; }
   .preview-heading,.editor-heading { min-height:40px; padding:4px; margin-bottom:4px; }
   .edit_resume #resumeEditorPanel[data-v-236d5b80],.edit_resume #resumeEditorPanel .edit_box[data-v-236d5b80] { height:auto; min-height:0; }
   .edit_resume #resumeEditorPanel .edit_box[data-v-236d5b80] { display:block; }
-  .mobile-module-bar { display:flex; align-items:center; gap:10px; position:sticky; top:126px; z-index:7; padding:10px 12px; background:var(--ui-surface); border-bottom:1px solid var(--ui-line); border-radius:12px 12px 0 0; }
+  .mobile-module-bar { display:flex; align-items:center; gap:10px; position:sticky; top:calc(var(--mobile-toolbar-height,70px) + 56px); z-index:7; padding:10px 12px; background:var(--ui-surface); border-bottom:1px solid var(--ui-line); border-radius:12px 12px 0 0; }
   .mobile-module-bar label { font-size:12px; color:var(--ui-muted); white-space:nowrap; }
   .mobile-module-bar select { flex:1; min-width:0; height:44px; padding:0 10px; border:1px solid var(--ui-line); border-radius:8px; background:var(--ui-soft); color:var(--ui-text); font-size:16px; }
   .mobile-module-bar button { min-width:76px; min-height:44px; padding:0 10px; border:1px solid var(--ui-line); border-radius:8px; background:var(--ui-surface); color:var(--ui-muted); font-size:12px; touch-action:manipulation; }
@@ -28,7 +28,7 @@
   #resumeEditorPanel .edit_tab .btn_edit { top:4px; right:0; width:32px; height:36px; }
   #resumeEditorPanel .edit_tab .tab_switch { display:flex; align-items:center; justify-content:center; width:44px; height:44px; bottom:2px; left:calc(50% - 22px); }
   .edit_resume #resumeEditorPanel .edit_b[data-v-236d5b80] { flex:none; height:auto; overflow:visible; padding:18px 16px 0; }
-  #formHost { scroll-margin-top:202px; }
+  #formHost { scroll-margin-top:calc(var(--mobile-toolbar-height,70px) + 132px); }
   #resumeEditorPanel :is(input,select,textarea,.ql-editor) { font-size:16px; }
   #resumeEditorPanel :is(.photo_upload,.photo_remove,.btn_more) { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 12px; touch-action:manipulation; }
   #resumeEditorPanel .photo_set { min-height:44px; display:inline-flex; align-items:center; }

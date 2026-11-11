@@ -8,12 +8,15 @@ export function buildSettingsPanel() {
   const settings = getResume().setData;
   const panel = document.createElement('div');
   panel.className = 'set_box grouped-settings';
+  panel.setAttribute('role','region');
+  panel.setAttribute('aria-label','简历设置');
   const ranges = [
     { key: 'mm', label: '模块间距', min: 5, max: 50, step: 1, unit: 'px' },
     { key: 'lineHeight', label: '行间距', min: 1.3, max: 2.2, step: .05, unit: '' },
     { key: 'pp', label: '页面边距', min: 10, max: 80, step: 1, unit: 'px' },
   ];
-  panel.innerHTML = `<div class="settings-tabs" role="tablist" aria-label="简历设置类别">
+  panel.innerHTML = `<div class="settings-panel-heading"><strong>简历设置</strong><button type="button" data-close-settings aria-label="关闭简历设置" title="关闭简历设置">×</button></div>
+    <div class="settings-tabs" role="tablist" aria-label="简历设置类别">
       ${[['layout', '排版'], ['text', '文字'], ['color', '配色'], ['heading', '标题']].map(([key, label]) => `<button type="button" role="tab" id="settings-tab-${key}" data-settings-tab="${key}" aria-controls="settings-section-${key}">${label}</button>`).join('')}
     </div>
     <section class="settings-section" id="settings-section-layout" role="tabpanel" aria-labelledby="settings-tab-layout" data-settings-section="layout">
