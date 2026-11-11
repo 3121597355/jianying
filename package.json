@@ -8,13 +8,15 @@
     "start": "node serve.mjs 8099",
     "start:public": "node serve.mjs 8099 --public",
     "test": "node --test portrait/test/*.test.mjs test/*.test.mjs",
-    "setup-model": "node portrait/setup-model.mjs"
+    "setup-model": "node portrait/setup-model.mjs",
+    "build:vercel": "node scripts/vercel-build.mjs"
   },
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "dependencies": {
     "onnxruntime-node": "^1.24.3",
+    "pg": "^8.23.1",
     "sharp": "^0.35.5"
   },
   "overrides": {

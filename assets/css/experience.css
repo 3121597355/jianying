@@ -20,6 +20,7 @@
     width:var(--editor-expanded-width,560px); opacity:0; visibility:hidden; pointer-events:none;
   }
   #tpl_box { transform-origin:top left; }
+  .resume-workspace.workspace-moving .preview-scroll { overflow-x:hidden; }
   .edit_resume #resumeEditorPanel .close[data-v-236d5b80] {
     position:absolute;
     border:1px solid var(--ui-accent-line); background:#fff; color:var(--ui-accent); box-shadow:0 3px 12px #233d2210;

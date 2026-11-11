@@ -12,7 +12,7 @@ import { MODULES, FONTS } from './dict.js';
 import { buildSettingsPanel } from './settings.js';
 import { getModuleOrder } from './module-order.js';
 import { listPersonalTemplates, savePersonalTemplate, removePersonalTemplate, templateMatches } from './personal-templates.js';
-import { captureElement, capturePaper, moveElement, movePaper, slideSidebar } from './motion.js';
+import { captureElement, capturePaper, moveElement, movePaper, slideSidebar, markLayoutMotion } from './motion.js';
 import { WORKSPACE_NAV } from './workspace-nav.js';
 import {availableTemplates} from './site-settings.js';
 import {track} from './analytics.js';
@@ -290,6 +290,7 @@ function setEditorOpen(open,{animate=true}={}) {
     toggle.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${open ? 'm9 5 7 7-7 7' : 'm15 5-7 7 7 7'}"/></svg>`;
   }
   if(editor)editor.id='resumeEditorContent';
+  if(moving)markLayoutMotion(workspace);
   fitPreviewLayout();
   if (moving) {
     movePaper(paper,before);

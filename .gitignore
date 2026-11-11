@@ -17,3 +17,8 @@ drafts/
 *.bundle
 *.download
 assets/qa-*.html
+
+
+.vercel/
+
+vercel-public/

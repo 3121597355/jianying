@@ -5,6 +5,7 @@ import createAuth from './admin-auth.cjs';
 import {TEMPLATES, DEFAULT_TPL} from './assets/js/templates.js';
 import {SITE_LINKS} from './assets/js/site-config.js';
 import {buildEngagement} from './engagement.mjs';
+import {createChangelog} from './changelog.mjs';
 
 const fail = (message, status=400) => Object.assign(new Error(message), {status});
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
@@ -32,11 +33,29 @@ function normalizeSettings(input){
   if(typeof input.analytics?.enabled!=='boolean')throw fail('统计开关不正确。');
   return {site,templates,defaultTemplate,analytics:{enabled:input.analytics.enabled}};
 }
+export function period(params){let from,to;if(params.has('from')||params.has('to')){from=params.get('from');to=params.get('to');}else{const days=Number(params.get('days')||30);if(![7,30,90].includes(days))throw fail('请选择 7、30 或 90 天。');to=dayOf(Date.now());from=dayOf(Date.now()-(days-1)*86400000);}const valid=value=>/^\d{4}-\d{2}-\d{2}$/.test(value||'')&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;if(!valid(from)||!valid(to)||from>to||(Date.parse(to)-Date.parse(from))/86400000>=90)throw fail('请选择不超过 90 天的有效日期范围。');return {from,to};}
+export function buildSummary({events,visits,settings,range}){
+    const selected=events.filter(e=>e.day>=range.from&&e.day<=range.to),views=selected.filter(e=>e.type==='page_view'),actions=selected.filter(e=>e.type!=='page_view'&&!e.type.endsWith('_error'));
+    const engagement=buildEngagement({visits,events,range});
+    const count=(list,key)=>Object.entries(list.reduce((out,e)=>{const value=e[key];out[value]=(out[value]||0)+1;return out;},{})).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);
+    const series=[];for(let time=Date.parse(range.from);time<=Date.parse(range.to);time+=86400000){const date=new Date(time).toISOString().slice(0,10),dayEvents=selected.filter(e=>e.day===date);series.push({date,views:dayEvents.filter(e=>e.type==='page_view').length,actions:dayEvents.filter(e=>e.type!=='page_view'&&!e.type.endsWith('_error')).length});}
+    return {range,enabled:settings.analytics.enabled,engagement,metrics:{views:views.length,visitors:new Set(views.filter(e=>e.visitor).map(e=>e.visitor)).size,exports:actions.filter(e=>['resume_export','portrait_export'].includes(e.type)).length,actions:actions.length},series,pages:Object.entries(routes).map(([route,name])=>({route,name,views:views.filter(e=>e.path===route).length,actions:actions.filter(e=>e.path===route).length})),actions:count(actions,'type').map(item=>({...item,name:ACTIONS[item.label]})),sources:count(views,'source'),devices:count(views,'device').map(item=>({...item,name:({desktop:'电脑',mobile:'手机',tablet:'平板'})[item.label]})),templates:settings.templates.map(t=>({id:t.id,name:t.name,uses:actions.filter(e=>e.type==='template_select'&&e.templateId===t.id).length})),recent:actions.slice(-15).reverse().map(({time,type,path,templateId})=>({time,type,name:ACTIONS[type],path,templateId})),updatedAt:new Date().toISOString()};
+  }
+export function renderHomepageDocument(html,settings){
+    const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const site=settings.site,featured=settings.templates.filter(t=>t.enabled&&t.featured).slice(0,4);
+    const gallery=featured.map(t=>`<article class="template-card"><button type="button" class="template-preview" data-preview="${t.id}" data-name="${esc(t.name)}" aria-label="预览${esc(t.name)}模板"><img loading="lazy" src="${esc(t.thumbnail)}" alt="${esc(t.name)}模板的示例简历" width="820" height="1160"><span class="preview-label">放大预览 ↗</span></button><div class="template-caption"><div><h3>${esc(t.name)}</h3><p>${esc(t.desc)}</p></div><a href="/resume/?template=${t.id}" aria-label="使用${esc(t.name)}模板">↗</a></div></article>`).join('');
+    return html.replace(/<title>[^<]*<\/title>/,`<title>${esc(site.title)}</title>`).replace(/<p class="hero-kicker">[\s\S]*?<\/p>/,`<p class="hero-kicker">${esc(site.kicker)}</p>`).replace(/<h1>[\s\S]*?<\/h1>/,`<h1>${site.headline.split('\n').map((line,index)=>index?`<br><span>${esc(line)}</span>`:esc(line)).join('')}</h1>`).replace(/<p class="hero-description">[\s\S]*?<\/p>/,`<p class="hero-description">${site.description.split('\n').map(esc).join('<br>')}</p>`).replace(/<div class="template-grid">[\s\S]*?<\/div><p class="section-note">[\s\S]*?<\/p>/,`<div class="template-grid">${gallery}</div><p class="section-note">${settings.templates.filter(t=>t.enabled).length}套基础版式，也可以把自己的配色、字体和间距保存为自定义模板。</p>`);
+  }
+
+export {catalog,defaults,normalizeSettings,dayOf};
+
 export function createAdministration({root,dataDir=path.join(root,'private','admin'),hostPort,publicOrigin=process.env.PUBLIC_ORIGIN||''}){
   fs.mkdirSync(dataDir,{recursive:true});const settingsFile=path.join(dataDir,'site-settings.json'),eventFile=path.join(dataDir,'events.jsonl'),saltFile=path.join(dataDir,'analytics-salt.txt');
   const atomic=(file,value)=>{fs.writeFileSync(file+'.tmp',value,{mode:0o600});fs.renameSync(file+'.tmp',file);};
   let settings=fs.existsSync(settingsFile)?normalizeSettings(JSON.parse(fs.readFileSync(settingsFile,'utf8'))):defaults();
   if(!fs.existsSync(settingsFile))atomic(settingsFile,JSON.stringify(settings,null,2));
+  const changelog=createChangelog({root,dataDir});
   const salt=fs.existsSync(saltFile)?fs.readFileSync(saltFile,'utf8'):crypto.randomBytes(32).toString('hex');if(!fs.existsSync(saltFile))fs.writeFileSync(saltFile,salt,{mode:0o600});
   let events=fs.existsSync(eventFile)?fs.readFileSync(eventFile,'utf8').split('\n').filter(Boolean).flatMap(line=>{try{return [JSON.parse(line)];}catch{return []}}):[];
   const prune=()=>{const cutoff=Date.now()-90*86400000;events=events.filter(event=>event.time>=cutoff).slice(-100000);atomic(eventFile,events.map(e=>JSON.stringify(e)).join('\n')+(events.length?'\n':''));};
@@ -73,14 +92,7 @@ export function createAdministration({root,dataDir=path.join(root,'private','adm
     const item={id,visitor,path:input.path,seq:input.seq,startedAt,updatedAt:now,visibleMs:Math.max(existing?.visibleMs||0,Math.min(input.visibleMs,now-startedAt+15000)),reason:input.reason,nextPath:input.nextPath||''};
     visits.set(id,item);fs.appendFileSync(visitFile,JSON.stringify(item)+'\n',{mode:0o600});visitWrites++;if(visitWrites>=10000||visits.size>100000||now>=nextVisitPrune)compactVisits();
   }
-  function period(params){let from,to;if(params.has('from')||params.has('to')){from=params.get('from');to=params.get('to');}else{const days=Number(params.get('days')||30);if(![7,30,90].includes(days))throw fail('请选择 7、30 或 90 天。');to=dayOf(Date.now());from=dayOf(Date.now()-(days-1)*86400000);}const valid=value=>/^\d{4}-\d{2}-\d{2}$/.test(value||'')&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;if(!valid(from)||!valid(to)||from>to||(Date.parse(to)-Date.parse(from))/86400000>=90)throw fail('请选择不超过 90 天的有效日期范围。');return {from,to};}
-  function summary(params){
-    const range=period(params),selected=events.filter(e=>e.day>=range.from&&e.day<=range.to),views=selected.filter(e=>e.type==='page_view'),actions=selected.filter(e=>e.type!=='page_view'&&!e.type.endsWith('_error'));
-    const engagement=buildEngagement({visits:[...visits.values()],events,range});
-    const count=(list,key)=>Object.entries(list.reduce((out,e)=>{const value=e[key];out[value]=(out[value]||0)+1;return out;},{})).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);
-    const series=[];for(let time=Date.parse(range.from);time<=Date.parse(range.to);time+=86400000){const date=new Date(time).toISOString().slice(0,10),dayEvents=selected.filter(e=>e.day===date);series.push({date,views:dayEvents.filter(e=>e.type==='page_view').length,actions:dayEvents.filter(e=>e.type!=='page_view'&&!e.type.endsWith('_error')).length});}
-    return {range,enabled:settings.analytics.enabled,engagement,metrics:{views:views.length,visitors:new Set(views.filter(e=>e.visitor).map(e=>e.visitor)).size,exports:actions.filter(e=>['resume_export','portrait_export'].includes(e.type)).length,actions:actions.length},series,pages:Object.entries(routes).map(([route,name])=>({route,name,views:views.filter(e=>e.path===route).length,actions:actions.filter(e=>e.path===route).length})),actions:count(actions,'type').map(item=>({...item,name:ACTIONS[item.label]})),sources:count(views,'source'),devices:count(views,'device').map(item=>({...item,name:({desktop:'电脑',mobile:'手机',tablet:'平板'})[item.label]})),templates:settings.templates.map(t=>({id:t.id,name:t.name,uses:actions.filter(e=>e.type==='template_select'&&e.templateId===t.id).length})),recent:actions.slice(-15).reverse().map(({time,type,path,templateId})=>({time,type,name:ACTIONS[type],path,templateId})),updatedAt:new Date().toISOString()};
-  }
+  function summary(params){return buildSummary({events,visits:[...visits.values()],settings,range:period(params)});}
   async function handle(req,res,url){
     if(!['/api/site-config','/api/analytics/event','/api/analytics/visit','/api/analytics/summary'].includes(url.pathname)&&!url.pathname.startsWith('/api/auth/')&&!url.pathname.startsWith('/api/admin/'))return false;
     try{
@@ -98,6 +110,13 @@ export function createAdministration({root,dataDir=path.join(root,'private','adm
       if(url.pathname==='/api/auth/password'&&req.method==='POST'){await auth.changePassword(req,await body(req,8192));json(res,200,{ok:true});return true;}
       if(url.pathname==='/api/analytics/summary'&&req.method==='GET'){auth.apiKey(req);json(res,200,summary(url.searchParams));return true;}
       auth.requireSession(req);if(!['GET','HEAD'].includes(req.method))auth.requireCsrf(req);
+      if(url.pathname==='/api/admin/changelog'&&req.method==='GET'){json(res,200,changelog.list());return true;}
+      if(url.pathname==='/api/admin/changelog'&&req.method==='POST'){json(res,201,changelog.create(await body(req)));return true;}
+      if(/^\/api\/admin\/changelog\/[a-f0-9-]{36}$/.test(url.pathname)){
+        const id=url.pathname.split('/').at(-1);
+        if(req.method==='PUT'){json(res,200,changelog.update(id,await body(req)));return true;}
+        if(req.method==='DELETE'){json(res,200,changelog.remove(id,await body(req)));return true;}
+      }
       if(url.pathname==='/api/admin/summary'&&req.method==='GET'){json(res,200,summary(url.searchParams));return true;}
       if(url.pathname==='/api/admin/settings'&&req.method==='GET'){json(res,200,result());return true;}
       if(url.pathname==='/api/admin/settings'&&req.method==='PUT'){const input=await body(req);if(input.revision!==revision())throw fail('设置已在其他窗口更新。请刷新后重新编辑。',409);const next=normalizeSettings(input.settings);atomic(settingsFile,JSON.stringify(next,null,2));settings=next;json(res,200,result());return true;}
@@ -109,11 +128,6 @@ export function createAdministration({root,dataDir=path.join(root,'private','adm
       throw fail('未找到此管理接口。',404);
     }catch(error){json(res,error.status||500,{error:error.status?error.message:'管理操作未完成，请稍后重试。'});return true;}
   }
-  function renderHomepage(html){
-    const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const site=settings.site,featured=settings.templates.filter(t=>t.enabled&&t.featured).slice(0,4);
-    const gallery=featured.map(t=>`<article class="template-card"><button type="button" class="template-preview" data-preview="${t.id}" data-name="${esc(t.name)}" aria-label="预览${esc(t.name)}模板"><img loading="lazy" src="${esc(t.thumbnail)}" alt="${esc(t.name)}模板的示例简历" width="820" height="1160"><span class="preview-label">放大预览 ↗</span></button><div class="template-caption"><div><h3>${esc(t.name)}</h3><p>${esc(t.desc)}</p></div><a href="/resume/?template=${t.id}" aria-label="使用${esc(t.name)}模板">↗</a></div></article>`).join('');
-    return html.replace(/<title>[^<]*<\/title>/,`<title>${esc(site.title)}</title>`).replace(/<p class="hero-kicker">[\s\S]*?<\/p>/,`<p class="hero-kicker">${esc(site.kicker)}</p>`).replace(/<h1>[\s\S]*?<\/h1>/,`<h1>${site.headline.split('\n').map((line,index)=>index?`<br><span>${esc(line)}</span>`:esc(line)).join('')}</h1>`).replace(/<p class="hero-description">[\s\S]*?<\/p>/,`<p class="hero-description">${site.description.split('\n').map(esc).join('<br>')}</p>`).replace(/<div class="template-grid">[\s\S]*?<\/div><p class="section-note">[\s\S]*?<\/p>/,`<div class="template-grid">${gallery}</div><p class="section-note">${settings.templates.filter(t=>t.enabled).length}套基础版式，也可以把自己的配色、字体和间距保存为自定义模板。</p>`);
-  }
+  function renderHomepage(html){return renderHomepageDocument(html,settings);}
   return {handle,record,summary,renderHomepage};
 }

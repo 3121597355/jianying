@@ -5,6 +5,7 @@ import {portraitNavigationMarkup} from '/assets/js/workspace-nav.js';
 import {createDemo} from '/assets/js/store.js';
 import '/assets/js/motion.js';
 import {track} from '/assets/js/analytics.js';
+import {exportCanvas,processingImage} from './export-image.js';
 const $=id=>document.getElementById(id);
 const apiUrl=url=>new URL(url.replace(/^\//,''),import.meta.url).pathname;
 const state={config:null,token:'',category:'证件底色',presetId:'white',sizeId:'original',original:null,result:null,view:'original',busy:false,jobId:null,history:[],crop:{zoom:1,x:.5,y:.4},toastTimer:null};
@@ -43,19 +44,19 @@ function invalidateModels(){modelListVersion++;availableModels=[];renderModelCho
 function useQuick(){return state.config?.features?.localCutout&&$('processingMode').value!=='cloud'&&quickIds.has(state.presetId);}
 function maybeQuickPreview(){if(useQuick()&&state.result?.engine==='local'&&state.original?.cutout){if(state.busy){state.pendingQuick=true;return;}void generateLocal();}}
 function visiblePresets(){return state.config?.publicMode?presets.filter(p=>quickIds.has(p.id)):presets;}
-function setProcessingCopy(local){$('processingTitle').textContent=local?'正在本机提取人像':'正在等待云端生成背景';$('processingDetail').textContent=local?'完成后切换纯色和渐变，无需再次抠图':'云端整图编辑可能需要数分钟';$('cancelNote').textContent=local?(state.config?.publicMode?'站点服务处理 · 不调用第三方 AI':'照片不离开本机 · 不消耗 API 额度'):'停止后服务商可能仍会完成处理并计费';}
+function setProcessingCopy(local){$('processingTitle').textContent=local?'正在提取人像':'正在等待云端生成背景';$('processingDetail').textContent=local?'完成后切换纯色和渐变，无需再次抠图':'云端整图编辑可能需要数分钟';$('cancelNote').textContent=local?(state.config?.publicMode?'站点服务处理 · 不调用第三方 AI':'照片不离开本机 · 不消耗 API 额度'):'停止后服务商可能仍会完成处理并计费';}
 async function generateLocal(){
   if(!state.original||state.busy)return;
   const source=state.original,options=getPromptOptions(),started=performance.now(),reused=!!source.cutout;
   state.localController=new AbortController();
   // Cached compositing is brief: keep the image visible and controls stable.
   if(reused)state.busy=true;else{setProcessingCopy(true);setBusy(true);message('');}
-  $('processingTime').textContent=source.cutout?'正在合成新背景…':'正在提取人像，首次需加载本地模型…';
-  const timer=setInterval(()=>{$('processingTime').textContent=`已等待 ${((performance.now()-started)/1000).toFixed(1)} 秒 · 本地处理`;},250);
+  $('processingTime').textContent=source.cutout?'正在合成新背景…':'首次处理需要稍等片刻…';
+  const timer=setInterval(()=>{$('processingTime').textContent=`已等待 ${((performance.now()-started)/1000).toFixed(1)} 秒 · 人像处理`;},250);
   try{
     if(!source.cutout){
-      const response=await fetch(apiUrl('/api/cutout'),{method:'POST',headers:{'Content-Type':'application/json','X-App-Token':state.token},body:JSON.stringify({image:source.data}),signal:state.localController.signal});
-      if(!response.ok){const e=await response.json();throw new Error(e.error||'本地抠图失败');}
+      const response=await fetch(apiUrl('/api/cutout'),{method:'POST',headers:{'Content-Type':'application/json','X-App-Token':state.token},body:JSON.stringify({image:processingImage(source.img,source.data,state.config.features.maxUploadBytes)}),signal:state.localController.signal});
+      if(!response.ok){const e=await response.json();throw new Error(e.error||'人像提取失败');}
       const url=URL.createObjectURL(await response.blob());try{source.cutout=await readImage(url);}finally{URL.revokeObjectURL(url);}
       source.cutoutVersion=state.config.features.cutoutVersion;
     }
@@ -70,12 +71,12 @@ async function generateLocal(){
     state.result=item;state.view='result';renderImage();renderCrop();renderHistory();
     track('portrait_cutout');
     message(`完成 · ${elapsed} 秒${reused?' · 已复用抠图':''}`);
-  }catch(e){if(e.name!=='AbortError')track('portrait_cutout_error');message(e.name==='AbortError'?'已停止本地处理。':e.message,e.name!=='AbortError');}
+  }catch(e){if(e.name!=='AbortError')track('portrait_cutout_error');message(e.name==='AbortError'?'已停止等待。':e.message,e.name!=='AbortError');}
   finally{clearInterval(timer);state.localController=null;setBusy(false);if(state.pendingQuick){state.pendingQuick=false;maybeQuickPreview();}}
 }
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(state.toastTimer);state.toastTimer=setTimeout(()=>$('toast').hidden=true,4200);}
 function message(text,error=false){$('resultMessage').textContent=text;$('resultMessage').hidden=!text;$('resultMessage').classList.toggle('error',error);}
-async function api(url,{method='GET',body}={}){const r=await fetch(apiUrl(url),{method,headers:method==='GET'?{}:{'Content-Type':'application/json','X-App-Token':state.token},body:body===undefined?undefined:JSON.stringify(body)});const data=await r.json().catch(()=>({error:'本地服务返回异常，请重新启动。'}));if(!r.ok)throw new Error(data.error||'操作未完成。');return data;}
+async function api(url,{method='GET',body}={}){const r=await fetch(apiUrl(url),{method,headers:method==='GET'?{}:{'Content-Type':'application/json','X-App-Token':state.token},body:body===undefined?undefined:JSON.stringify(body)});const data=await r.json().catch(()=>({error:'照片服务返回异常，请稍后重试。'}));if(!r.ok)throw new Error(data.error||'操作未完成。');return data;}
 function button(text,className,action){const b=document.createElement('button');b.type='button';b.textContent=text;b.className=className;b.addEventListener('click',action);return b;}
 function getPromptOptions(){return {presetId:state.presetId,customColor:$('colorPicker').value,customPrompt:$('customPrompt').value,edge:Number($('edgeTrim').value),decontam:Number($('decontam').value)};}
 function refreshPrompt(){const prompt=getPromptOptions();$('promptCount').textContent=`${prompt.customPrompt.length} / 4000`;$('fullPrompt').textContent=buildPrompt(prompt);}
@@ -118,7 +119,7 @@ async function removePhoto(){
   $('cropCanvas').getContext('2d').clearRect(0,0,$('cropCanvas').width,$('cropCanvas').height);
   message('');renderImage();renderCrop();renderHistory();updateButtons();$('uploadButton').focus();
   if(await persistPhotoDraft({force:true}))toast('照片已移除');
-  else message('照片已移除，但本机保存失败；请检查浏览器存储权限，刷新后可能恢复旧照片。',true);
+  else message('照片已移除，但浏览器保存失败；请检查浏览器存储权限，刷新后可能恢复旧照片。',true);
 }
 function imageSource(){return state.result?.img||state.original?.img;}
 function renderImage(){const source=state.view==='original'?state.original?.img:state.result?.img||state.original?.img;const exists=!!source;$('uploadEmpty').hidden=exists;$('imageArea').hidden=!exists;$('photoActions').hidden=!exists;$('photoInfo').hidden=exists;$('previewCaption').textContent=exists?`${source.naturalWidth} × ${source.naturalHeight} px`:'';for(const key of ['Original','Result','Compare'])$('view'+key).classList.toggle('active',state.view===key.toLowerCase());const compare=state.view==='compare'&&!!state.result;$('compareControls').hidden=!compare;if(!source){$('resultImage').removeAttribute('src');$('originalImage').removeAttribute('src');return;}$('resultImage').src=source.src;$('originalImage').src=state.original.img.src;$('originalOverlay').hidden=!compare;$('compareLine').hidden=!compare;$('originalLabel').hidden=state.view==='result';$('resultLabel').hidden=state.view==='original';fitImage();renderCompare();}
@@ -141,7 +142,7 @@ async function download(sheet=false){const img=imageSource();if(!img)return;cons
   if(sheet){if(!size.width||['original','square'].includes(size.id))return;const layout=printLayout(size);canvas.width=layout.w;canvas.height=layout.h;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);const photo=drawPhoto(document.createElement('canvas'),img,size.width,size.height,true);const offsetX=(layout.w-layout.cols*size.width-(layout.cols-1)*layout.gap)/2,offsetY=(layout.h-layout.rows*size.height-(layout.rows-1)*layout.gap)/2;for(let y=0;y<layout.rows;y++)for(let x=0;x<layout.cols;x++){const px=offsetX+x*(size.width+layout.gap),py=offsetY+y*(size.height+layout.gap);ctx.drawImage(photo,px,py);ctx.strokeStyle='#d5d9df';ctx.lineWidth=1;ctx.strokeRect(px-.5,py-.5,size.width+1,size.height+1);}format='jpeg';fileName+=`-六寸排版${layout.count}张`;
   }else if(size.width){drawPhoto(canvas,img,size.width,size.height,format==='jpeg');}
   else{canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;const ctx=canvas.getContext('2d');if(format==='jpeg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);}ctx.drawImage(img,0,0);}
-  const target=sheet?$('printButton'):$('downloadButton');target.disabled=true;try{const r=await fetch(apiUrl('/api/export'),{method:'POST',headers:{'Content-Type':'application/json','X-App-Token':state.token},body:JSON.stringify({image:canvas.toDataURL('image/png'),format})});if(!r.ok){const e=await r.json();throw new Error(e.error||'导出失败。');}const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=fileName+(format==='jpeg'?'.jpg':'.png');document.body.append(a);a.click();a.remove();track('portrait_export');setTimeout(()=>URL.revokeObjectURL(url),60_000);toast(sheet?'六寸排版已下载，打印时请选择实际尺寸':'照片已下载，分辨率标记为 300 DPI');}catch(e){track('portrait_export_error');toast(e.message);}finally{updateButtons();}
+  const target=sheet?$('printButton'):$('downloadButton');target.disabled=true;try{const url=URL.createObjectURL(await exportCanvas(canvas,format));const a=document.createElement('a');a.href=url;a.download=fileName+(format==='jpeg'?'.jpg':'.png');document.body.append(a);a.click();a.remove();track('portrait_export');setTimeout(()=>URL.revokeObjectURL(url),60_000);toast(sheet?'六寸排版已下载，打印时请选择实际尺寸':'照片已下载，分辨率标记为 300 DPI');}catch(e){track('portrait_export_error');toast(e.message);}finally{updateButtons();}
 }
 function saved(){try{const value=JSON.parse(localStorage.getItem('portrait-saved-prompts')||'[]');return Array.isArray(value)?value.filter(p=>typeof p==='string'&&p.length<=4000).slice(0,12):[];}catch{return [];}}
 function saveList(list){try{localStorage.setItem('portrait-saved-prompts',JSON.stringify(list));renderSaved();}catch{toast('浏览器无法保存收藏，请检查存储设置。');}}
@@ -153,7 +154,7 @@ $('baseUrl').addEventListener('input',invalidateModels);$('apiKey').addEventList
 $('settingsDialog').addEventListener('close',()=>{modelListVersion++;$('refreshModels').disabled=false;});
 $('enableTextMode').onclick=()=>{$('processingMode').value='cloud';updateButtons();$('customPrompt').focus();};
 $('removePhoto').onclick=removePhoto;$('uploadButton').onclick=$('replacePhoto').onclick=()=>$('fileInput').click();$('fileInput').onchange=e=>upload(e.target.files[0]);
-const sampleButton=document.createElement('button');sampleButton.type='button';sampleButton.className='text-button sample-photo';sampleButton.textContent='试用示例照片';sampleButton.title='用示意人像体验本地换底与构图';$('uploadEmpty').append(sampleButton);
+const sampleButton=document.createElement('button');sampleButton.type='button';sampleButton.className='text-button sample-photo';sampleButton.textContent='试用示例照片';sampleButton.title='用示意人像体验快速换底与构图';$('uploadEmpty').append(sampleButton);
 sampleButton.onclick=async()=>{try{const response=await fetch('/assets/img/landing/portrait-demo.webp');if(!response.ok)throw new Error();const file=new File([await response.blob()],'示例人像.webp',{type:'image/webp'});await upload(file);}catch{toast('示例照片未能载入，请上传照片。');}};
 for(const event of ['dragenter','dragover'])$('dropzone').addEventListener(event,e=>{e.preventDefault();$('dropzone').classList.add('dragover');});for(const event of ['dragleave','drop'])$('dropzone').addEventListener(event,e=>{e.preventDefault();$('dropzone').classList.remove('dragover');if(event==='drop')upload(e.dataTransfer.files[0]);});
 document.addEventListener('paste',e=>{if($('settingsDialog').open||['INPUT','TEXTAREA'].includes(document.activeElement?.tagName))return;const file=[...(e.clipboardData?.items||[])].find(item=>item.type.startsWith('image/'))?.getAsFile();if(file){e.preventDefault();upload(file);}});
@@ -225,11 +226,11 @@ async function persistPhotoDraft({force=false}={}){
   const original=state.original,result=state.result,preferences=photoPreferences();
   try{
     localStorage.setItem('qmj-clone:portrait-ui',JSON.stringify(preferences));
-    if(!force&&original===savedDraftSource&&result===savedDraftResult){draftStatus('照片与构图已自动保存到本机','saved');return true;}
+    if(!force&&original===savedDraftSource&&result===savedDraftResult){draftStatus('照片与构图已自动保存到当前浏览器','saved');return true;}
     draftStatus('正在保存照片与构图…','saving');
     const record={preferences,original:original?{data:original.data,name:original.name,cutout:original.cutout?await imageBlob(original.cutout):null,cutoutVersion:original.cutoutVersion}:null,result:result?{blob:await imageBlob(result.img),id:result.id,name:result.name,presetId:result.presetId,options:result.options,engine:result.engine,warning:result.warning}:null};
     if(version!==draftVersion)return true;
-    await draftRecord(record);savedDraftSource=original;savedDraftResult=result;draftStatus('照片与构图已自动保存到本机','saved');return true;
+    await draftRecord(record);savedDraftSource=original;savedDraftResult=result;draftStatus('照片与构图已自动保存到当前浏览器','saved');return true;
   }catch(error){console.warn('portrait draft save failed',error.name);draftStatus('照片保存失败，请先下载照片再离开','error');return false;}
 }
 async function restorePhotoDraft(){

@@ -4,6 +4,8 @@ import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import {once} from 'node:events';
 import path from 'node:path';
 import {createResumeServer} from '../serve.mjs';
+import {createChangelog} from '../changelog.mjs';
+import {changelogView} from '../assets/js/admin-changelog.js';
 
 async function setup(t){
   const dataDir=await mkdtemp(path.join(import.meta.dirname,'fixture-admin-'));
@@ -16,6 +18,28 @@ async function setup(t){
   const admin=(route,method='GET',value,extra={})=>request(route,method,value,{Cookie:cookie,'X-Editor-Token':status.csrf,...extra});
   return {base,request,admin,dataDir,cookie,status};
 }
+test('changelog CRUD persists entries, protects concurrent changes, and escapes rendered text',async t=>{
+  const s=await setup(t);assert.equal((await s.request('/api/admin/changelog')).status,401);
+  for(const route of ['/changelog-seed.json','/changelog.mjs','/private/admin/changelog.json'])assert.equal((await s.request(route)).status,404);
+  const original=await(await s.admin('/api/admin/changelog')).json();assert(original.entries.length>=1);
+  const entry={version:'fixture-2.1',date:'2026-11-11',kind:'fix',title:'测试修复',content:'第一行\n<script>alert(1)</script>',privateField:'must-not-store'};
+  assert.equal((await s.request('/api/admin/changelog','POST',{revision:original.revision,entry},{Cookie:s.cookie})).status,403);
+  assert.equal((await s.admin('/api/admin/changelog','POST',{revision:original.revision,entry},{Origin:'https://attacker.example'})).status,403);
+  const createdResponse=await s.admin('/api/admin/changelog','POST',{revision:original.revision,entry});assert.equal(createdResponse.status,201);const created=await createdResponse.json(),item=created.entries.find(e=>e.version===entry.version);assert(item);assert.equal(item.privateField,undefined);
+  assert.equal((await s.admin('/api/admin/changelog','POST',{revision:original.revision,entry})).status,409);
+  const rendered=changelogView(created);assert(!rendered.includes('<script>'));assert(rendered.includes('&lt;script&gt;'));
+  const updated=await(await s.admin('/api/admin/changelog/'+item.id,'PUT',{revision:created.revision,entry:{...entry,title:'修改后的日志'}})).json();assert.equal(updated.entries.find(e=>e.id===item.id).title,'修改后的日志');
+  const reopened=createChangelog({root:path.resolve(import.meta.dirname,'..'),dataDir:s.dataDir}).list();assert.deepEqual(reopened,updated);
+  assert.equal((await s.admin('/api/admin/changelog/'+item.id,'DELETE',{revision:created.revision})).status,409);
+  const removedResponse=await s.admin('/api/admin/changelog/'+item.id,'DELETE',{revision:updated.revision});assert.equal(removedResponse.status,200);const removed=await removedResponse.json();assert.equal(removed.entries.length,original.entries.length);assert(!removed.entries.some(e=>e.id===item.id));
+  assert.equal((await s.admin('/api/admin/changelog/'+item.id,'DELETE',{revision:removed.revision})).status,404);
+});
+test('changelog rejects malformed dates, empty content, oversized text and unknown categories',async t=>{
+  const s=await setup(t),original=await(await s.admin('/api/admin/changelog')).json();
+  const entry={version:'test',date:'2026-11-11',kind:'feature',title:'测试',content:'一项更新'};
+  for(const change of [{date:'2026-02-30'},{content:' '},{content:'x'.repeat(6001)},{kind:'toString'},{title:[]},{version:''}])assert.equal((await s.admin('/api/admin/changelog','POST',{revision:original.revision,entry:{...entry,...change}})).status,400);
+  assert.deepEqual(await(await s.admin('/api/admin/changelog')).json(),original);
+});
 test('admin authentication, CSRF, origin checks and private files protect managed settings',async t=>{
   const s=await setup(t);
   assert.equal((await s.request('/api/admin/settings')).status,401);

@@ -1,0 +1,11 @@
+import {mkdir,cp,rm} from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const target=path.join(root,'vercel-public');
+if(!target.startsWith(root+path.sep)||path.basename(target)!=='vercel-public')throw Error('Unsafe build directory');
+await rm(target,{recursive:true,force:true});await mkdir(target,{recursive:true});
+await cp(path.join(root,'assets'),path.join(target,'assets'),{recursive:true,filter:file=>!path.basename(file).startsWith('qa-')});
+await cp(path.join(root,'portrait','public'),path.join(target,'portrait'),{recursive:true,filter:file=>!file.endsWith('.html')});
+await import('../portrait/setup-model.mjs');
+console.log('Vercel static assets and portrait model are ready.');

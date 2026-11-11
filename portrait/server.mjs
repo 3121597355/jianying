@@ -9,7 +9,7 @@ import sharp from 'sharp';
 import {buildPrompt} from './public/presets.js';
 import {localCutout,CUTOUT_VERSION} from './local-cutout.mjs';
 
-const root=path.dirname(fileURLToPath(import.meta.url));
+const root=process.env.VERCEL?path.join(process.cwd(),'portrait'):path.dirname(fileURLToPath(import.meta.url));
 const MAX_IMAGE=12*1024*1024;
 class AppError extends Error {constructor(message,status=400){super(message);this.status=status;}}
 export function normalizeConfig(input,previous={}) {
@@ -26,7 +26,7 @@ export function normalizeConfig(input,previous={}) {
   }
   return result;
 }
-function publicConfig(c,publicMode=false){return {...c,apiKey:undefined,hasKey:!publicMode&&!!c.apiKey,configured:!publicMode&&!!(c.apiKey&&c.baseUrl),keyHint:!publicMode&&c.apiKey?'已保存在本机':'',publicMode,features:{localCutout:true,cloudEditing:!publicMode,cutoutVersion:CUTOUT_VERSION}};}
+function publicConfig(c,publicMode=false){return {...c,apiKey:undefined,hasKey:!publicMode&&!!c.apiKey,configured:!publicMode&&!!(c.apiKey&&c.baseUrl),keyHint:!publicMode&&c.apiKey?'已保存在本机':'',publicMode,features:{localCutout:true,cloudEditing:!publicMode,cutoutVersion:CUTOUT_VERSION,maxUploadBytes:process.env.VERCEL?3500000:null}};}
 function isPrivate(ip){
   if(net.isIPv4(ip)){const [a,b]=ip.split('.').map(Number);return a===0||a===10||a===127||a>=224||(a===169&&b===254)||(a===172&&b>=16&&b<=31)||(a===192&&(b===168||b===0))||(a===100&&b>=64&&b<=127)||(a===198&&(b===18||b===19));}
   const s=ip.toLowerCase();return s==='::'||s==='::1'||s.startsWith('fc')||s.startsWith('fd')||/^fe[89ab]/.test(s)||s.startsWith('::ffff:')||s.startsWith('ff');
@@ -62,14 +62,14 @@ function connectionError(error){
   return new AppError('无法连接图像服务，请检查网络和完整的 Base URL（通常以 /v1 结尾）。',502);
 }
 
-export async function createApp({configPath=path.join(root,'private','config.json'),transport=fetch,remoteValidator=validateRemote,cutout=localCutout,basePath='',hostPort=null,publicMode=process.env.PUBLIC_MODE==='1',publicOrigin=process.env.PUBLIC_ORIGIN||''}={}){
+export async function createApp({configPath=path.join(root,'private','config.json'),transport=fetch,remoteValidator=validateRemote,cutout=localCutout,basePath='',hostPort=null,publicMode=process.env.PUBLIC_MODE==='1',publicOrigin=process.env.PUBLIC_ORIGIN||'',allowedOrigins=[],requestToken='',checkRate}={}){
   let siteOrigin='';
   if(publicOrigin){const site=new URL(publicOrigin);if(!publicMode||!['https:','http:'].includes(site.protocol)||site.username||site.password||site.search||site.hash||site.pathname!=='/')throw new Error('PUBLIC_ORIGIN 须为公开站点的完整域名，如 https://example.com。');siteOrigin=site.origin;}
   let installationId='workspace';try{installationId=(await readFile(path.join(root,'private','installation.id'),'utf8')).trim();}catch{}
   // Public mode never reads the owner's connection file, even if it is present.
   let config=normalizeConfig({});if(!publicMode)try{const stored=JSON.parse(await readFile(configPath,'utf8'));config=normalizeConfig(stored,stored);}catch(e){if(e.code!=='ENOENT')throw e;}
   const requestLimits=new Map();
-  const csrf=crypto.randomBytes(32).toString('hex'),jobs=new Map();let activeJob=null;
+  const csrf=requestToken||crypto.randomBytes(32).toString('hex'),jobs=new Map();let activeJob=null;
   const json=(res,status,body)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(body));};
   async function requestJson(req){let size=0;const parts=[];for await(const chunk of req){size+=chunk.length;if(size>19*1024*1024)throw new AppError('上传内容过大。',413);parts.push(chunk);}try{return JSON.parse(Buffer.concat(parts).toString());}catch{throw new AppError('请求内容不是有效的 JSON。');}}
   async function upstream(c,suffix,options={}){const address=c.baseUrl+suffix;try{await remoteValidator(address);return await transport(address,{...options,redirect:'error',headers:{...options.headers,Authorization:`Bearer ${c.apiKey}`}});}catch(e){throw connectionError(e);}}
@@ -131,9 +131,9 @@ export async function createApp({configPath=path.join(root,'private','config.jso
     res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
     try{
       const port=server.address()?.port??(typeof hostPort==='function'?hostPort():hostPort);
-      const allowedHosts=[`127.0.0.1:${port}`,`localhost:${port}`,...(siteOrigin?[new URL(siteOrigin).host]:[])];
+      const allowedHosts=[`127.0.0.1:${port}`,`localhost:${port}`,...[siteOrigin,...allowedOrigins].filter(Boolean).map(origin=>new URL(origin).host)];
       if(!allowedHosts.includes(req.headers.host))throw new AppError('无效的访问主机。',403);
-      const origin=req.headers.origin;if(origin&&origin!==siteOrigin&&!allowedHosts.slice(0,2).some(h=>origin===`http://${h}`))throw new AppError('不允许跨站请求。',403);
+      const origin=req.headers.origin;if(origin&&origin!==siteOrigin&&!allowedOrigins.includes(origin)&&!allowedHosts.slice(0,2).some(h=>origin===`http://${h}`))throw new AppError('不允许跨站请求。',403);
       const url=new URL(req.url,'http://127.0.0.1');
       if(basePath){if(!url.pathname.startsWith(basePath+'/'))throw new AppError('未找到此内容。',404);url.pathname=url.pathname.slice(basePath.length);}
       if(url.pathname==='/api/health'&&req.method==='GET')return json(res,200,{app:'portrait-studio',installationId,ready:true});
@@ -141,11 +141,14 @@ export async function createApp({configPath=path.join(root,'private','config.jso
       if(publicMode&&(/^\/api\/(models|check|jobs)(\/|$)/.test(url.pathname)||(url.pathname==='/api/config'&&req.method!=='GET')))throw new AppError('公开版仅提供免费换底，云端连接与 AI 调用已关闭。',403);
       if(url.pathname==='/api/config'&&req.method==='GET')return json(res,200,{...publicConfig(config,publicMode),token:csrf});
       if(publicMode&&['/api/cutout','/api/export'].includes(url.pathname)&&req.method==='POST'){
+        if(checkRate)await checkRate(req);
+        else{
         const now=Date.now(),ip=req.socket.remoteAddress||'unknown';
         for(const [key,value]of requestLimits)if(now-value.start>60_000)requestLimits.delete(key);
         const entry=requestLimits.get(ip)||{start:now,count:0};entry.count++;requestLimits.set(ip,entry);
         if(entry.count>12){res.setHeader('Retry-After','60');throw new AppError('操作较频繁，请稍等一分钟再试。',429);}
         if(requestLimits.size>1024)requestLimits.delete(requestLimits.keys().next().value);
+        }
       }
       if(url.pathname==='/api/cutout'&&req.method==='POST'){
         const body=await requestJson(req),image=await inputImage(body.image);

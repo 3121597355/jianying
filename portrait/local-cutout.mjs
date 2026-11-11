@@ -6,7 +6,7 @@ import sharp from 'sharp';
 import * as ort from 'onnxruntime-node';
 import {refineAlpha} from './matting-refine.mjs';
 
-const modelPath=path.join(path.dirname(fileURLToPath(import.meta.url)),'models','modnet_photographic.onnx');
+const modelPath=process.env.VERCEL?path.join(process.cwd(),'portrait','models','modnet_photographic.onnx'):path.join(path.dirname(fileURLToPath(import.meta.url)),'models','modnet_photographic.onnx');
 const checksum='5069a5e306b9f5e9f4f2b0360264c9f8ea13b257c7c39943c7cf6a2ec3a102ae';
 export const CUTOUT_VERSION='modnet-photo-v1';
 let sessionPromise;

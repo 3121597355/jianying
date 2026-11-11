@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { createApp } from './portrait/server.mjs';
 import { createAdministration } from './admin.mjs';
 
-const ROOT = import.meta.dirname;
+const ROOT = process.env.VERCEL ? process.cwd() : import.meta.dirname;
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg',
@@ -16,13 +16,16 @@ const MIME = {
 
 export async function createResumeServer({ portraitOptions = {}, adminOptions = {} } = {}) {
   let server;
+  const cloud=adminOptions.cloud===true||Boolean(process.env.VERCEL);
+  const allowedOrigins=process.env.VERCEL?[process.env.VERCEL_URL,process.env.VERCEL_PROJECT_PRODUCTION_URL].filter(Boolean).map(host=>'https://'+host):[];
+  const administration=cloud?await (await import('./cloud-administration.mjs')).createCloudAdministration({root:ROOT,allowedOrigins,...adminOptions,hostPort:()=>server?.address()?.port}):createAdministration({root:ROOT,...adminOptions,hostPort:()=>server?.address()?.port});
   const portrait = await createApp({
     ...portraitOptions,
     configPath: portraitOptions.configPath || path.join(ROOT, 'private', 'portrait-config.json'),
     basePath: '/portrait', hostPort: () => server?.address()?.port,
+    ...(cloud?{publicMode:true,allowedOrigins,requestToken:process.env.PORTRAIT_REQUEST_SECRET,checkRate:administration.checkPortraitRate}:{}),
   });
   const handlePortrait = portrait.listeners('request')[0];
-  const administration = createAdministration({root:ROOT, ...adminOptions, hostPort:()=>server?.address()?.port});
   server = http.createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     try {
@@ -47,7 +50,7 @@ export async function createResumeServer({ portraitOptions = {}, adminOptions = 
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('未找到此内容。'); return;
       }
       let body = await fs.readFile(file);
-      if(page==='index.html')body=Buffer.from(administration.renderHomepage(body.toString('utf8')));
+      if(page==='index.html')body=Buffer.from(await administration.renderHomepage(body.toString('utf8')));
       if(pathname==='/admin.html') {
         res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
         res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','no-referrer');
@@ -59,7 +62,7 @@ export async function createResumeServer({ portraitOptions = {}, adminOptions = 
     }
   });
   server.requestTimeout = 60_000;
-  server.on('close', () => portrait.emit('close'));
+  server.on('close', () => {portrait.emit('close');void administration.close?.();});
   return server;
 }
 

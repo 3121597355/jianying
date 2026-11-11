@@ -1,5 +1,6 @@
 // Match the portfolio's soft deceleration, with a shorter rhythm for editing.
 const timing = {duration:360, easing:'cubic-bezier(.22,1,.36,1)'};
+const foldTiming = {duration:480, easing:'cubic-bezier(.4,0,.2,1)'};
 const animations = new WeakMap();
 const runningAnimations = new Set();
 const media = matchMedia('(prefers-reduced-motion: reduce)');
@@ -124,17 +125,29 @@ export function moveElement(element, before, {scale=false}={}) {
   if (!element || !before || reduced()) return;
   const after = element.getBoundingClientRect();
   if (!after.width || !before.width) return;
-  const zoom = Number(getComputedStyle(element).zoom) || 1;
+  // Bounds include ancestor CSS zoom, while transform distances use local pixels.
+  // Measuring against the layout width avoids the jump when the preview fits
+  // from a narrow column into the full workspace.
+  const zoom = element.offsetWidth ? after.width / element.offsetWidth : Number(getComputedStyle(element).zoom) || 1;
   const x = (before.left-after.left)/zoom, y = (before.top-after.top)/zoom;
   const ratio = scale?before.width/after.width:1;
   if (Math.abs(x)<.5 && Math.abs(y)<.5 && Math.abs(ratio-1)<.001) return;
   play(element,[
     {transform:`translate(${x}px,${y}px) scale(${ratio})`},
     {transform:'none'},
-  ]);
+  ],foldTiming);
 }
 export function movePaper(element,before) {
   moveElement(element,before,{scale:true});
+}
+
+export function markLayoutMotion(workspace) {
+  if(!workspace || reduced()) return;
+  const animation=play(workspace,[{},{}],foldTiming);
+  workspace.classList.add('workspace-moving');
+  const finish=animation.onfinish,cancel=animation.oncancel;
+  animation.onfinish=()=>{finish();workspace.classList.remove('workspace-moving');};
+  animation.oncancel=()=>{cancel();workspace.classList.remove('workspace-moving');};
 }
 
 /** Slide the full-width sidebar; its inputs never squeeze into the collapsed rail. */
@@ -144,10 +157,12 @@ export function slideSidebar(element,before,open) {
   const hidden=before.visibility==='hidden' || before.opacity<=0;
   const x=hidden?after.width+36:before.bounds.left-after.left;
   const y=hidden?0:before.bounds.top-after.top;
+  const start=hidden?0:before.opacity;
   play(element,[
-    {transform:`translate(${x}px,${y}px)`,opacity:hidden?0:before.opacity,visibility:'visible'},
-    {transform:open?'none':`translateX(${after.width+36}px)`,opacity:open?1:0,visibility:'visible'},
-  ]);
+    {transform:`translate(${x}px,${y}px)`,opacity:start,visibility:'visible',offset:0},
+    {opacity:open?1:start,visibility:'visible',offset:open?.7:.3},
+    {transform:open?'none':`translateX(${after.width+36}px)`,opacity:open?1:0,visibility:'visible',offset:1},
+  ],foldTiming);
 }
 
 /** 先应用最终状态，再由旧高度过渡；结束后恢复内容自己的高度。 */

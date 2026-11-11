@@ -56,7 +56,7 @@ test('a hidden sidebar enters from the right at full width',async t=>{
   motion.slideSidebar(sidebar,{bounds:{left:100,top:0,width:500},opacity:0,visibility:'hidden'},true);
   assert.equal(sidebar.played[0].keyframes[0].transform,'translate(536px,0px)');
   assert.equal(sidebar.played[0].keyframes[0].opacity,0);
-  assert.equal(sidebar.played[0].options.duration,360);
+  assert.equal(sidebar.played[0].options.duration,480);
 });
 
 async function scrollEnvironment(t) {
@@ -124,4 +124,11 @@ test('reduced motion reveals pending cards immediately without playback',async t
   observers[0].deliver(card,true);
   assert.equal(card.played.length,0);
   assert.equal(card.classList.contains('scroll-reveal-pending'),false);
+});
+
+test('paper translation compensates for CSS zoom on its preview ancestor',async t=>{
+  const motion=await motionEnvironment(t),paper=element(300,410);paper.offsetWidth=820;
+  motion.movePaper(paper,{left:100,top:0,width:328});
+  assert.equal(paper.played[0].keyframes[0].transform,'translate(-400px,0px) scale(0.8)');
+  assert.equal(paper.played[0].options.duration,480);
 });

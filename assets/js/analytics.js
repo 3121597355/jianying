@@ -3,7 +3,8 @@ import {createVisitTracker} from './visit-tracker.js';
 let visitor='';
 try{visitor=sessionStorage.getItem('jianying:visit')||crypto.randomUUID();sessionStorage.setItem('jianying:visit',visitor);}catch{}
 const route=({'/index.html':'/','/resume.html':'/resume/'})[location.pathname]||location.pathname;
-const preview=new URLSearchParams(location.search).has('adminPreview');
+let preview=new URLSearchParams(location.search).has('adminPreview');
+try{if(preview)sessionStorage.setItem('jianying:admin-preview','1');preview ||= sessionStorage.getItem('jianying:admin-preview')==='1';}catch{}
 const enabled=siteSettings?.analytics?.enabled!==false&&!preview&&['/','/resume/','/portrait/'].includes(route);
 let tracker,editStarted=false;
 if(enabled)tracker=createVisitTracker({document,window,route,now:()=>performance.now(),makeId:()=>crypto.randomUUID(),onRestore:()=>{editStarted=false;track('page_view');},send:(snapshot,beacon)=>{

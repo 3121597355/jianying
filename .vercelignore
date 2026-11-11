@@ -1,0 +1,17 @@
+.git
+.vercel
+node_modules
+private
+.env
+.env.*
+*.log
+*.tmp
+*.download
+test
+portrait/test
+shots
+outputs
+uploads
+drafts
+vercel-public
+assets/qa-*.html
