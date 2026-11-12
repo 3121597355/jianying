@@ -1,8 +1,9 @@
 <!doctype html>
 <html lang="zh-CN" data-page="portrait">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff"><title>证件照 · 一纸简历</title>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff"><title>免费证件照换底色、裁剪与下载 · 一纸简历</title>
+<meta name="description" content="免费在线证件照换底色，支持白底、蓝底、红底，调整构图、裁剪尺寸并下载照片。无需注册，快速换底无需第三方 AI 服务。">
 <meta property="og:site_name" content="一纸简历">
-<meta property="og:title" content="证件照 · 一纸简历">
+<meta property="og:title" content="免费证件照换底色、裁剪与下载 · 一纸简历">
 <link rel="shortcut icon" href="/favicon.ico?v=20261112-favicon">
 <link rel="icon" type="image/png" sizes="64x64" href="/assets/img/brand/favicon.png?v=20261112-favicon">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=20261112-favicon">
@@ -13,7 +14,7 @@
     <div id="configBanner" class="config-banner" hidden><span><b>AI 精修尚未连接</b><span id="bannerText"> · 快速换底不受影响，可免费使用。</span></span><button id="bannerSettings" class="text-button">连接 AI 精修 <span aria-hidden="true">↗</span></button></div>
     <div class="workspace">
       <section class="editor panel" aria-label="照片预览">
-        <div class="panel-title"><div><h2>照片</h2></div><div id="photoActions" class="photo-actions" hidden><button id="replacePhoto" class="text-button" type="button">↥ 更换照片</button><button id="removePhoto" class="icon-button remove-photo" type="button" aria-label="移除照片" title="移除照片"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><span id="photoInfo" class="muted">JPG / PNG / WebP</span></div>
+        <div class="panel-title"><div><h1>证件照换底</h1></div><div id="photoActions" class="photo-actions" hidden><button id="replacePhoto" class="text-button" type="button">↥ 更换照片</button><button id="removePhoto" class="icon-button remove-photo" type="button" aria-label="移除照片" title="移除照片"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><span id="photoInfo" class="muted">JPG / PNG / WebP</span></div>
         <div class="preview-stage" id="dropzone">
           <div id="uploadEmpty" class="upload-empty"><div class="portrait-illustration" aria-hidden="true"><div class="mini-card card-back"></div><div class="mini-card card-front"><svg viewBox="0 0 120 152" fill="none"><path d="M23 140v-20c0-23 74-23 74 0v20" fill="#c0cce6"/><path d="M46 83v19c4 8 24 8 28 0V83" fill="#e0e7f3"/><ellipse cx="60" cy="64" rx="27" ry="34" fill="#e6ebf5"/><path d="M32 60c-3-31 15-39 30-37 23 0 31 16 26 37-10-4-17-14-19-18-6 12-18 18-37 18Z" fill="#8495b7"/><path d="M23 140h74" stroke="#fff" stroke-opacity=".5"/></svg><span class="sparkle">✦</span></div><span class="color-chip c1"></span><span class="color-chip c2"></span><span class="color-chip c3"></span></div><p>拖拽或粘贴照片</p><button id="uploadButton" class="button primary upload-button"><span aria-hidden="true">＋</span> 上传照片</button><span class="upload-tip">JPG / PNG / WebP · 12 MB</span></div>
           <div id="imageArea" class="image-area" hidden><div id="imageFrame" class="image-frame checker"><img id="resultImage" alt="处理后的照片预览"><div id="originalOverlay" class="original-overlay"><img id="originalImage" alt="上传的原照片"></div><div id="compareLine" class="compare-line"><span>‹ ›</span></div><div class="image-label left" id="originalLabel">原图</div><div class="image-label right" id="resultLabel">生成结果</div></div></div>
@@ -43,7 +44,7 @@
         </div>
       </section>
     </div>
-    <div class="draft-note"><span id="draftStatus" role="status" aria-live="polite">照片与构图自动保存在当前浏览器</span></div><section id="historySection" class="history-section" hidden><div class="subheading"><h2>本次生成</h2><span class="muted">最近 8 张</span></div><div id="historyGrid" class="history-grid"></div></section>
+    <div class="draft-note"><a href="/privacy/">使用与隐私</a><span id="draftStatus" role="status" aria-live="polite">照片与构图自动保存在当前浏览器</span></div><section id="historySection" class="history-section" hidden><div class="subheading"><h2>本次生成</h2><span class="muted">最近 8 张</span></div><div id="historyGrid" class="history-grid"></div></section>
 
   </main>
   <dialog id="settingsDialog"><form id="settingsForm">

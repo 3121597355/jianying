@@ -1,5 +1,6 @@
 import {siteSettings} from './site-settings.js';
 import {createVisitTracker} from './visit-tracker.js';
+import {captureAttribution} from './attribution.js';
 let visitor='';
 try{visitor=sessionStorage.getItem('jianying:visit')||crypto.randomUUID();sessionStorage.setItem('jianying:visit',visitor);}catch{}
 const route=({'/index.html':'/','/resume.html':'/resume/'})[location.pathname]||location.pathname;
@@ -17,7 +18,9 @@ export function track(type,templateId){
   const device=/iPad|Tablet/i.test(navigator.userAgent)?'tablet':/Mobile|Android/i.test(navigator.userAgent)?'mobile':'desktop';
   // Fixed event names only; never read the resume, photo, contact details or draft storage.
   let referrer='';try{referrer=new URL(document.referrer).origin;}catch{}
-  void fetch('/api/analytics/event',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({type,path:route,visitor,device,referrer,templateId,visitId:tracker?.visitId})}).catch(()=>{});
+  let storage;try{storage=window.sessionStorage;}catch{}
+  const attribution=captureAttribution({search:location.search,referrer,origin:location.origin,storage});
+  void fetch('/api/analytics/event',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({type,path:route,visitor,device,referrer,templateId,attribution,visitId:tracker?.visitId})}).catch(()=>{});
 }
 track('page_view');
 if(route==='/resume/')document.addEventListener('input',event=>{if(!editStarted&&event.isTrusted&&event.target?.closest?.('#formHost')){editStarted=true;track('resume_edit_start');}});

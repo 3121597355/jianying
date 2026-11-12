@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const clientAddress = require('./request-client.cjs');
 const { promisify } = require('node:util');
 const scrypt = promisify(crypto.scrypt);
 const digest = value => crypto.createHash('sha256').update(String(value)).digest('hex');
@@ -28,7 +29,7 @@ module.exports = function createAuth(dataDir) {
     save();
   }
   function throttle(req) {
-    const key = digest(req.socket.remoteAddress || 'local'), now = Date.now();
+    const key = digest(clientAddress(req)), now = Date.now();
     const entry = attempts.get(key);
     if (entry && now < entry.until && entry.count >= 8) throw fail('尝试次数较多，请 15 分钟后再试。', 429);
     const current = entry && now < entry.until ? entry : { count: 0, until: now + 15 * 60000 };

@@ -2,12 +2,14 @@ import http from 'node:http';
 import {readFile,writeFile,mkdir,rename} from 'node:fs/promises';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import path from 'node:path';
+import clientAddress from '../request-client.cjs';
 import crypto from 'node:crypto';
 import dns from 'node:dns/promises';
 import net from 'node:net';
 import sharp from 'sharp';
 import {buildPrompt} from './public/presets.js';
 import {localCutout,CUTOUT_VERSION} from './local-cutout.mjs';
+import {renderSeo} from '../seo.mjs';
 
 const root=process.env.VERCEL?path.join(process.cwd(),'portrait'):path.dirname(fileURLToPath(import.meta.url));
 const MAX_IMAGE=12*1024*1024;
@@ -136,14 +138,15 @@ export async function createApp({configPath=path.join(root,'private','config.jso
       const origin=req.headers.origin;if(origin&&origin!==siteOrigin&&!allowedOrigins.includes(origin)&&!allowedHosts.slice(0,2).some(h=>origin===`http://${h}`))throw new AppError('不允许跨站请求。',403);
       const url=new URL(req.url,'http://127.0.0.1');
       if(basePath){if(!url.pathname.startsWith(basePath+'/'))throw new AppError('未找到此内容。',404);url.pathname=url.pathname.slice(basePath.length);}
+      const files={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/export-image.js':'export-image.js','/navigation.js':'navigation.js','/quick-background.js':'quick-background.js','/edge-adjust.js':'edge-adjust.js','/presets.js':'presets.js','/style.css':'style.css','/integration.css':'integration.css','/experience.css':'experience.css','/favicon.svg':'favicon.svg'};
       if(url.pathname==='/api/health'&&req.method==='GET')return json(res,200,{app:'portrait-studio',installationId,ready:true});
-      if(req.method!=='GET'&&(!['POST','PATCH'].includes(req.method)||req.headers['x-app-token']!==csrf||!req.headers['content-type']?.startsWith('application/json')))throw new AppError('请求校验失败，请刷新页面。',403);
+      if(req.method!=='GET'&&!(req.method==='HEAD'&&Object.hasOwn(files,url.pathname))&&(!['POST','PATCH'].includes(req.method)||req.headers['x-app-token']!==csrf||!req.headers['content-type']?.startsWith('application/json')))throw new AppError('请求校验失败，请刷新页面。',403);
       if(publicMode&&(/^\/api\/(models|check|jobs)(\/|$)/.test(url.pathname)||(url.pathname==='/api/config'&&req.method!=='GET')))throw new AppError('公开版仅提供免费换底，云端连接与 AI 调用已关闭。',403);
       if(url.pathname==='/api/config'&&req.method==='GET')return json(res,200,{...publicConfig(config,publicMode),token:csrf});
       if(publicMode&&['/api/cutout','/api/export'].includes(url.pathname)&&req.method==='POST'){
         if(checkRate)await checkRate(req);
         else{
-        const now=Date.now(),ip=req.socket.remoteAddress||'unknown';
+        const now=Date.now(),ip=clientAddress(req);
         for(const [key,value]of requestLimits)if(now-value.start>60_000)requestLimits.delete(key);
         const entry=requestLimits.get(ip)||{start:now,count:0};entry.count++;requestLimits.set(ip,entry);
         if(entry.count>12){res.setHeader('Retry-After','60');throw new AppError('操作较频繁，请稍等一分钟再试。',429);}
@@ -200,8 +203,7 @@ export async function createApp({configPath=path.join(root,'private','config.jso
         const out=body.format==='jpeg'?await p.flatten({background:'#fff'}).jpeg({quality:95,chromaSubsampling:'4:4:4'}).toBuffer():await p.png().toBuffer();
         res.writeHead(200,{'Content-Type':`image/${body.format}`,'Cache-Control':'no-store','Content-Disposition':`attachment; filename="portrait.${body.format==='jpeg'?'jpg':'png'}"`});return res.end(out);
       }
-      const files={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/navigation.js':'navigation.js','/quick-background.js':'quick-background.js','/edge-adjust.js':'edge-adjust.js','/presets.js':'presets.js','/style.css':'style.css','/integration.css':'integration.css','/experience.css':'experience.css','/favicon.svg':'favicon.svg'};
-      if(req.method==='GET'&&files[url.pathname]){const file=files[url.pathname];const mime=file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':file.endsWith('.svg')?'image/svg+xml':'text/html';const data=await readFile(path.join(root,'public',file));res.writeHead(200,{'Content-Type':`${mime}; charset=utf-8`,'Cache-Control':'no-cache'});return res.end(data);}
+      if(['GET','HEAD'].includes(req.method)&&files[url.pathname]){const file=files[url.pathname];const mime=file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':file.endsWith('.svg')?'image/svg+xml':'text/html';let data=await readFile(path.join(root,'public',file));if(file==='index.html'&&basePath==='/portrait')data=Buffer.from(renderSeo(data.toString('utf8'),'/portrait/'));res.writeHead(200,{'Content-Type':`${mime}; charset=utf-8`,'Cache-Control':'no-cache'});return res.end(req.method==='HEAD'?undefined:data);}
       throw new AppError('未找到此内容。',404);
     }catch(e){if(!res.headersSent)json(res,e instanceof AppError?e.status:500,{error:e instanceof AppError?e.message:'操作未完成，请检查网络或配置后重试。'});else res.end();}
   });

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createApp } from './portrait/server.mjs';
 import { createAdministration } from './admin.mjs';
+import { renderSeo, searchDocument, SITE_ORIGIN } from './seo.mjs';
 
 const ROOT = process.env.VERCEL ? process.cwd() : import.meta.dirname;
 const MIME = {
@@ -29,12 +30,25 @@ export async function createResumeServer({ portraitOptions = {}, adminOptions = 
   server = http.createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     try {
-      const pathname = decodeURIComponent(new URL(req.url, 'http://127.0.0.1').pathname);
+      const url = new URL(req.url, 'http://127.0.0.1');
+      const pathname = decodeURIComponent(url.pathname);
+      const isRead = req.method === 'GET' || req.method === 'HEAD';
+      if (isRead && req.headers.host?.split(':')[0] === 'www.yizhijianli.cn') {
+        res.writeHead(308, {Location:SITE_ORIGIN+url.pathname+url.search}).end(); return;
+      }
+      const alias = ({'/index.html':'/','/resume.html':'/resume/','/portrait/index.html':'/portrait/','/privacy':'/privacy/','/privacy.html':'/privacy/'})[pathname];
+      if (isRead && alias) {res.writeHead(308,{Location:alias+url.search,'Cache-Control':'no-cache'}).end();return;}
+      const searchFile = searchDocument(pathname);
+      if (searchFile) {
+        if (!isRead) {res.writeHead(405,{Allow:'GET, HEAD'}).end();return;}
+        res.writeHead(200,{'Content-Type':searchFile.type,'Cache-Control':'public, max-age=3600'}).end(req.method==='HEAD'?undefined:searchFile.body);return;
+      }
+      if(pathname==='/admin'||pathname==='/admin.html'||pathname.startsWith('/api/')||pathname.startsWith('/portrait/api/')||url.searchParams.has('adminPreview'))res.setHeader('X-Robots-Tag','noindex, nofollow');
       if(await administration.handle(req,res,new URL(req.url,'http://127.0.0.1')))return;
       if(pathname==='/admin') {res.writeHead(308,{Location:'/admin.html','Cache-Control':'no-store'}).end();return;}
       if (pathname === '/portrait') {
-        if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }).end(); return; }
-        res.writeHead(308, { Location: '/portrait/', 'Cache-Control': 'no-store' }).end(); return;
+        if (!isRead) { res.writeHead(405, { Allow: 'GET, HEAD' }).end(); return; }
+        res.writeHead(308, { Location: '/portrait/'+url.search, 'Cache-Control': 'no-store' }).end(); return;
       }
       if (pathname.startsWith('/portrait/')) { await handlePortrait(req, res); return; }
       if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { Allow: 'GET, HEAD' }).end(); return; }
@@ -46,9 +60,9 @@ export async function createResumeServer({ portraitOptions = {}, adminOptions = 
       }
       // 仅开放页面和静态资源，私有配置、模型、依赖与服务代码均不通过 HTTP 暴露。
       if (pathname === '/resume') {
-        res.writeHead(308, { Location: '/resume/', 'Cache-Control': 'no-store' }).end(); return;
+        res.writeHead(308, { Location: '/resume/'+url.search, 'Cache-Control': 'no-store' }).end(); return;
       }
-      const page = ({ '/': 'index.html', '/index.html': 'index.html', '/resume/': 'resume.html', '/resume.html': 'resume.html', '/admin.html':'admin.html' })[pathname];
+      const page = ({ '/': 'index.html', '/resume/': 'resume.html', '/privacy/':'privacy.html', '/admin.html':'admin.html' })[pathname];
       const isIndex = Boolean(page);
       const assets = path.join(ROOT, 'assets');
       const file = isIndex ? path.join(ROOT, page) : path.resolve(ROOT, '.' + pathname);
@@ -57,6 +71,7 @@ export async function createResumeServer({ portraitOptions = {}, adminOptions = 
       }
       let body = await fs.readFile(file);
       if(page==='index.html')body=Buffer.from(await administration.renderHomepage(body.toString('utf8')));
+      if(page)body=Buffer.from(renderSeo(body.toString('utf8'),pathname));
       if(pathname==='/admin.html') {
         res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
         res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','no-referrer');
