@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { createApp } from './portrait/server.mjs';
 import { createAdministration } from './admin.mjs';
 import { renderSeo, searchDocument, SITE_ORIGIN } from './seo.mjs';
+import { maintenanceResponse } from './maintenance.mjs';
 
 const ROOT = process.env.VERCEL ? process.cwd() : import.meta.dirname;
 const MIME = {
@@ -32,6 +33,8 @@ export async function createResumeServer({ portraitOptions = {}, adminOptions = 
     try {
       const url = new URL(req.url, 'http://127.0.0.1');
       const pathname = decodeURIComponent(url.pathname);
+      const maintenance=maintenanceResponse(pathname,process.env.MAINTENANCE_MODE==='1');
+      if(maintenance){res.writeHead(maintenance.status,maintenance.headers).end(req.method==='HEAD'?undefined:maintenance.body);return;}
       const isRead = req.method === 'GET' || req.method === 'HEAD';
       if (isRead && req.headers.host?.split(':')[0] === 'www.yizhijianli.cn') {
         res.writeHead(308, {Location:SITE_ORIGIN+url.pathname+url.search}).end(); return;

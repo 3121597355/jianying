@@ -1,8 +1,11 @@
 import {createResumeServer} from '../serve.mjs';
+import {maintenanceResponse} from '../maintenance.mjs';
 process.env.PUBLIC_MODE='1';
 let serverPromise;
 export default async function handler(req,res){
   try{
+    const maintenance=maintenanceResponse(new URL(req.url,'https://yizhijianli.cn').pathname,process.env.MAINTENANCE_MODE==='1');
+    if(maintenance){res.writeHead(maintenance.status,maintenance.headers).end(maintenance.body);return;}
     if(!process.env.DATABASE_URL||!process.env.ADMIN_SETUP_CODE||!process.env.PORTRAIT_REQUEST_SECRET)throw Error('Missing deployment configuration');
     serverPromise??=createResumeServer().catch(error=>{serverPromise=null;throw error;});
     const server=await serverPromise;
