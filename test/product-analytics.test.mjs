@@ -19,6 +19,31 @@ test('product outcomes deduplicate refreshes and exports, separate tools, and us
   assert.equal(report.failures[0].value,1);assert.equal(report.channels[0].sessions,4);assert.equal(report.channels[0].completed,2);
   assert.equal(report.series[0].completed,2);assert.match(JSON.stringify(productAnalyticsCsvRows(report)),/制作完成率/);
 });
+test('guest and signed-in sessions are reported separately so unregistered usage is visible',()=>{
+  const events=[
+    event(0,'page_view','/resume/','guest-a',{signedIn:false}),
+    event(100,'resume_edit_start','/resume/','guest-a',{signedIn:false}),
+    event(200,'resume_export','/resume/','guest-a',{signedIn:false}),
+    event(0,'page_view','/portrait/','guest-b',{signedIn:false}),
+    event(100,'portrait_upload','/portrait/','guest-b',{signedIn:false}),
+    event(200,'portrait_export','/portrait/','guest-b',{signedIn:false}),
+    event(0,'page_view','/resume/','member-a',{signedIn:true}),
+    event(100,'resume_edit_start','/resume/','member-a',{signedIn:true}),
+    event(200,'resume_export','/resume/','member-a',{signedIn:true})
+  ];
+  const report=buildProductAnalytics({events,range});
+  assert.equal(report.usageByAccount.guest.sessions,2);
+  assert.equal(report.usageByAccount.guest.started,2);
+  assert.equal(report.usageByAccount.guest.completed,2);
+  assert.equal(report.usageByAccount.signedIn.sessions,1);
+  assert.equal(report.usageByAccount.signedIn.completed,1);
+  assert.equal(report.usageByAccount.unmarked.sessions,0);
+  const resume=report.usageByAccount.guestTools.find(tool=>tool.key==='resume');
+  const portrait=report.usageByAccount.guestTools.find(tool=>tool.key==='portrait');
+  assert.equal(resume.completed,1);
+  assert.equal(portrait.completed,1);
+  assert.match(JSON.stringify(productAnalyticsCsvRows(report)),/未登录（未注册）/);
+});
 test('visible visit intervals keep a long editing session together, idle gaps split it',()=>{
   const events=[event(0,'page_view'),event(100,'resume_edit_start'),event(45*60000,'resume_export'),event(80*60000,'page_view')];
   const visits=[{id:'page-a',visitor:'anonymous-a',path:'/resume/',startedAt:base,updatedAt:base+46*60000,visibleMs:40*60000}];

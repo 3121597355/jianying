@@ -111,7 +111,7 @@ export function createAdministration({root,dataDir=path.join(root,'private','adm
     budget(req);const now=Date.now(),day=dayOf(now);
     let source='直接访问';if(typeof input.referrer==='string'&&input.referrer.length<=300){try{const u=new URL(input.referrer);if(['http:','https:'].includes(u.protocol)&&u.host!==req.headers.host)source=u.hostname.slice(0,100);}catch{}}
     const visitor=typeof input.visitor==='string'&&/^[a-zA-Z0-9-]{16,80}$/.test(input.visitor)?hash(salt+day+input.visitor).slice(0,24):'';
-    const event={time:now,day,type:input.type,path:input.path,visitor,source,attribution:sanitizeAttribution(input.attribution),device:['desktop','mobile','tablet'].includes(input.device)?input.device:'desktop',templateId:catalog.some(t=>t.id===Number(input.templateId))?Number(input.templateId):null};
+    const event={time:now,day,type:input.type,path:input.path,visitor,source,attribution:sanitizeAttribution(input.attribution),device:['desktop','mobile','tablet'].includes(input.device)?input.device:'desktop',signedIn:/(?:^|;\s*)yizhi_member=[a-f0-9]{64}(?:;|$)/.test(req.headers.cookie||''),templateId:catalog.some(t=>t.id===Number(input.templateId))?Number(input.templateId):null};
     const id=visitKey(input.visitId);if(id)event.visitId=id;
     // Only fixed event fields are retained. Resume content, photos, raw addresses and referrer query strings never enter this store.
     events.push(event);fs.appendFileSync(eventFile,JSON.stringify(event)+'\n',{mode:0o600});if(events.length>100000||now>nextPrune){prune();nextPrune=now+3600000;}

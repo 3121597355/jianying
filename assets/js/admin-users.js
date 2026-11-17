@@ -35,6 +35,30 @@ function usagePanel(usage){
   </section>`;
 }
 
+function guestPanel(registration,product){
+  const usage=product?.usageByAccount;
+  if(!usage)return '';
+  const guest=usage.guest||{sessions:0,started:0,completed:0};
+  const member=usage.signedIn||{sessions:0,started:0,completed:0};
+  const guestTools=usage.guestTools||[];
+  const registered=registration?.last30||0;
+  const exportTotal=guest.completed+member.completed;
+  const guestShare=exportTotal?Math.round(guest.completed/exportTotal*1000)/10:null;
+  const toolLine=guestTools.filter(tool=>tool.completed>0).map(tool=>`${esc(tool.name)} ${number(tool.completed)}`).join(' · ');
+  return `<section class="panel guest-panel">
+    <div class="panel-heading"><div><h2>用过但没注册</h2><p>未登录状态下开始制作或导出的人就是「用过但没注册」；已登录会话才算注册用户。</p></div></div>
+    <div class="metric-grid">${metric('未注册 · 开始制作',guest.started,'未登录会话数，近似人次')}${metric('未注册 · 完成导出',guest.completed,guestShare===null?'还没有导出会话':`占导出会话 ${guestShare}%`)}${metric('已登录 · 完成导出',member.completed,'登录后导出，可计入账户数据')}${metric('同期新注册',registered,'近 30 天新建账户')}</div>
+    <div class="guest-figures">
+      <span>未注册会话共 <strong>${number(guest.sessions)}</strong> 个，其中开始制作 <strong>${number(guest.started)}</strong> 个、完成导出 <strong>${number(guest.completed)}</strong> 个</span>
+      <span>已登录会话 <strong>${number(member.sessions)}</strong> 个，完成导出 <strong>${number(member.completed)}</strong> 个</span>
+      ${guestShare===null?'':`<span>导出会话共 <strong>${number(exportTotal)}</strong> 个：未登录 <strong>${number(guest.completed)}</strong> 个（${guestShare}%）、已登录 <strong>${number(member.completed)}</strong> 个</span>`}
+      ${toolLine?`<span>未注册导出拆分：${toolLine}</span>`:''}
+      ${usage.unmarked?.sessions?`<span>另有 <strong>${number(usage.unmarked.sessions)}</strong> 个会话产生于登录标记上线前，未计入左右两侧</span>`:''}
+    </div>
+    <p class="settings-help">按未登录 / 已登录划分，依据访客请求里是否携带登录状态，不记录账户名。会话按 30 分钟空闲切分，和真实人数有偏差；同一人先匿名使用、后注册会计入两边。</p>
+  </section>`;
+}
+
 function registrationPanel(registration){
   if(!registration)return '';
   const series=registration.series||[];
@@ -55,12 +79,13 @@ function registrationPanel(registration){
   </section>`;
 }
 
-export function usersView(data){
+export function usersView(data,product){
   if(!data||data.unavailable)return '<div class="empty"><strong>账户数据尚未连接</strong>请检查服务部署配置后再试。</div>';
   const query=data.query||'';
   const locked=sorts.some(([key])=>key===data.sort)?data.sort:'recent';
   const stats=registrationPanel(data.registration);
   const usage=usagePanel(data.registration?.usage);
+  const guests=guestPanel(data.registration,product);
   const toolbar=`<div class="users-toolbar">
     <form id="users-search" class="users-search" role="search">
       <input id="users-query" type="search" name="q" value="${esc(query)}" maxlength="40" placeholder="搜索用户名或昵称" aria-label="搜索用户名或昵称">
@@ -71,8 +96,8 @@ export function usersView(data){
     </label>
     <a class="secondary" href="/api/admin/accounts/export">导出 CSV <span aria-hidden="true">↓</span></a>
   </div>`;
-  if(!data.total)return stats+usage+toolbar+'<div class="empty"><strong>还没有注册账户</strong>有人注册后会出现在这里。</div>';
-  if(!data.matched)return stats+usage+toolbar+`<div class="empty"><strong>没有匹配的账户</strong>换个用户名或昵称再试。</div>`;
+  if(!data.total)return stats+usage+guests+toolbar+'<div class="empty"><strong>还没有注册账户</strong>有人注册后会出现在这里。</div>';
+  if(!data.matched)return stats+usage+guests+toolbar+`<div class="empty"><strong>没有匹配的账户</strong>换个用户名或昵称再试。</div>`;
   const rows=data.accounts.map(item=>`<tr>
     <td><strong>${esc(item.username)}</strong>${item.nickname&&item.nickname!==item.username?`<small class="muted">${esc(item.nickname)}</small>`:''}</td>
     <td><span class="usage-tag${(item.resumeCount>0||item.cloudSaves>0||item.exports>0||item.aiGenerations>0)?' used':''}">${(item.resumeCount>0||item.cloudSaves>0||item.exports>0||item.aiGenerations>0)?'已使用':'仅注册'}</span></td>
@@ -85,7 +110,7 @@ export function usersView(data){
     <td class="num">${number(item.logins)}</td>
   </tr>`).join('');
   const pager=data.pages>1?`<div class="users-pager"><button type="button" class="secondary" data-users-page="${data.page-1}"${data.page<=1?' disabled':''}>← 上一页</button><span>第 ${data.page} / ${data.pages} 页 · 共 ${number(data.matched)} 个账户</span><button type="button" class="secondary" data-users-page="${data.page+1}"${data.page>=data.pages?' disabled':''}>下一页 →</button></div>`:`<p class="users-count">共 ${number(data.matched)} 个账户</p>`;
-  return `${stats}${usage}<section class="panel users-panel">${toolbar}<div class="data-table-wrap"><table class="data-table data-table-wide"><thead><tr><th>账户</th><th>状态</th><th>注册时间</th><th>最近活动</th><th>云端简历</th><th>云端保存</th><th>导出</th><th>AI 生成</th><th>登录</th></tr></thead><tbody>${rows}</tbody></table></div>${pager}<p class="settings-help">${esc(data.notice||'仅显示账户标识、时间和操作次数；不展示简历正文和照片。')}</p></section>`;
+  return `${stats}${usage}${guests}<section class="panel users-panel">${toolbar}<div class="data-table-wrap"><table class="data-table data-table-wide"><thead><tr><th>账户</th><th>状态</th><th>注册时间</th><th>最近活动</th><th>云端简历</th><th>云端保存</th><th>导出</th><th>AI 生成</th><th>登录</th></tr></thead><tbody>${rows}</tbody></table></div>${pager}<p class="settings-help">${esc(data.notice||'仅显示账户标识、时间和操作次数；不展示简历正文和照片。')}</p></section>`;
 }
 
 export function bindUsers({host,onChange}){
