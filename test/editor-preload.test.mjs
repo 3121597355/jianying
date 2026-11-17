@@ -18,7 +18,10 @@ test('resume.html 的 modulepreload 区块与编辑器模块图一致', async ()
 test('编辑器模块图包含入口依赖且都是本地路径', async () => {
   const hrefs = await collectEditorPreloads(root);
   assert.ok(hrefs.length > 20, `模块数量异常：${hrefs.length}`);
-  assert.ok(hrefs.includes('/assets/js/app.js?v=20261115-guide-details'), '缺少 app.js 预加载');
+  // app.js 的版本号随发版更新，这里跟入口实际 import 的版本对齐，避免写死旧值。
+  const entry = await readFile(path.join(root, 'assets/js/editor-entry.js'), 'utf8');
+  const version = /import\(\s*'\.\/app\.js(\?v=[\w-]+)?'\s*\)/.exec(entry)?.[1] || '';
+  assert.ok(hrefs.includes(`/assets/js/app.js${version}`), `缺少 app.js 预加载（${version || '无版本号'}）`);
   for (const href of hrefs) assert.match(href, /^\/assets\/js\/[\w./-]+(\.js)?(\?[\w=-]+)?$/);
   assert.equal(new Set(hrefs).size, hrefs.length, '存在重复的预加载地址');
 });
