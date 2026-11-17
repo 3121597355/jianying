@@ -176,6 +176,7 @@ export async function buildResumeWordBlob(opts = {}) {
 
   const heading = label => paragraph(run(label, {bold: true, size: 24, color: BRAND}), {
     heading: HeadingLevel.HEADING_2,
+    keepNext: true,
     spacing: {before: 200, after: 90},
     border: {bottom: {style: BorderStyle.SINGLE, size: 6, color: BRAND, space: 2}},
   });
@@ -194,6 +195,7 @@ export async function buildResumeWordBlob(opts = {}) {
     [...left, ...(right ? [run('\t'), run(right, {color: '555555'})] : [])],
     {
       tabStops: [{type: TabStopType.RIGHT, position: CONTENT_WIDTH}],
+      keepNext: true,
       spacing: {before: 80, after: 20, line: 288},
     },
   );
