@@ -8,6 +8,9 @@
   .editor-quick-guide header,.editor-quick-guide footer { display:flex; align-items:center; gap:8px; }
   .editor-quick-guide header { justify-content:space-between; }
   .guide-count { color:var(--ui-muted); font-size:11px; }
+  .guide-head-actions { display:flex; align-items:center; gap:2px; }
+  .editor-quick-guide .guide-skip { border:0; padding:4px 6px; background:transparent; color:var(--ui-muted); font-size:12px; }
+  .editor-quick-guide .guide-skip:hover { color:var(--ui-accent); }
   .editor-quick-guide h2 { margin:4px 0 6px; font-size:15px; font-weight:600; line-height:1.6; }
   .editor-quick-guide p { margin:0 0 14px; color:var(--ui-muted); font-size:12px; line-height:1.8; }
   .editor-quick-guide button { min-height:36px; padding:6px 10px; border:1px solid var(--ui-line); border-radius:7px; color:var(--ui-text); background:var(--ui-surface); font:inherit; font-size:12px; cursor:pointer; touch-action:manipulation; }

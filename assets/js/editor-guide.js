@@ -14,7 +14,7 @@ export function setupEditorGuide({isSample,openEditor,openModules,selectModule})
   const card=document.createElement('section');
   card.id='editorQuickGuide';card.className='editor-quick-guide';card.hidden=true;
   card.setAttribute('aria-label','简历编辑使用提示');
-  card.innerHTML='<header><span class="guide-count"></span><button type="button" data-guide-close aria-label="关闭使用提示">×</button></header><div aria-live="polite"><h2></h2><p></p></div><footer><button type="button" data-guide-blank hidden>从空白开始</button><button type="button" data-guide-prev>上一步</button><button type="button" data-guide-next></button></footer>';
+  card.innerHTML='<header><span class="guide-count"></span><div class="guide-head-actions"><button type="button" class="guide-skip" data-guide-skip>跳过</button><button type="button" data-guide-close aria-label="关闭使用提示">×</button></div></header><div aria-live="polite"><h2></h2><p></p></div><footer><button type="button" data-guide-blank hidden>从空白开始</button><button type="button" data-guide-prev>上一步</button><button type="button" data-guide-next></button></footer>';
   document.body.append(card);
   let step=0,target=null,initialOpen=true,initialEditorOpen=true,initialTab='basic',frame=0;
   const steps=[
@@ -78,6 +78,8 @@ export function setupEditorGuide({isSample,openEditor,openModules,selectModule})
   }
   trigger.onclick=()=>start();
   card.querySelector('[data-guide-close]').onclick=()=>close();
+  // 跳过＝直接结束整套提示，和关闭一样不再自动弹出，但比右上角的 × 更容易被看到。
+  card.querySelector('[data-guide-skip]').onclick=()=>close();
   card.querySelector('[data-guide-prev]').onclick=()=>{step--;showStep();};
   card.querySelector('[data-guide-next]').onclick=()=>{
     if(step<steps.length-1){step++;showStep();}
