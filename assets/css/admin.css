@@ -74,6 +74,15 @@
 .chart-figures strong{color:var(--ink);font-weight:500;margin:0 3px}
 .chart-figures .delta{margin-left:7px}
 .product-trend .product-area{fill:url(#product-area);stroke:none}
+.product-trend .bar{fill:#e3e9d9}
+.product-trend .bar:hover{fill:#d2ddc2}
+.product-trend .dot{stroke:none}
+.product-trend .dot.starts{fill:#769ba6}
+.product-trend .dot.finishes{fill:#b38c62}
+.chart-legend i.bar-swatch{width:9px;height:9px;border-radius:2px;background:#e3e9d9;box-shadow:inset 0 0 0 1px #d7dfc9}
+:root[data-theme=dark] .product-trend .bar{fill:#3a4630}
+:root[data-theme=dark] .product-trend .bar:hover{fill:#485740}
+:root[data-theme=dark] .chart-legend i.bar-swatch{background:#3a4630;box-shadow:inset 0 0 0 1px #4a5840}
 .chart-scroll{overflow-x:auto;overflow-y:hidden;margin-top:10px}
 .chart-scroll .product-trend{margin-top:0}
 @media(max-width:700px){.chart-scroll .product-trend{min-width:620px}}
