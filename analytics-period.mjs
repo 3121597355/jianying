@@ -1,39 +1,27 @@
-// The filtering deployment finished at 2026-11-16 03:10:01.486 (UTC+8).
-// Use the next complete minute as a conservative, fixed reporting boundary.
-// This must not move on subsequent deployments or delete stored events.
-export const ANALYTICS_FILTERED_SINCE = Date.parse('2026-11-15T19:11:00.000Z');
-export const ANALYTICS_FILTERED_LABEL = '2026-11-16 03:11（北京时间）';
-const boundaryDay = '2026-11-16';
-const invalidScope = () => Object.assign(new Error('请选择新周期或历史数据。'), {status:400});
-export function analyticsScope(params) {
-  const scope = params.get('scope') ?? 'current';
-  if (!['current','history'].includes(scope)) throw invalidScope();
-  return scope;
+// 统计口径只保留一条时间线：过滤部署（2026-11-16 03:10 UTC+8）前后的记录合并统计，
+// 不再把「新周期 / 历史数据」拆成两份。分界之前混有本人访问、调试与自动化流量，
+// 所以只在说明和 CSV 里标注，不用它来宣称真实用户量。
+export const ANALYTICS_CLEAN_SINCE = Date.parse('2026-11-15T19:11:00.000Z');
+export const ANALYTICS_CLEAN_LABEL = '2026-11-16 03:11（北京时间）';
+const validTime = value => Number.isFinite(value);
+export function analyticsScope() {
+  return 'all';
 }
-export function selectAnalyticsPeriod({events=[],visits=[],range,scope='current'}) {
-  if (!['current','history'].includes(scope)) throw invalidScope();
-  const current = scope === 'current';
-  const reportRange = current
-    ? {from:range.from > boundaryDay ? range.from : boundaryDay,to:range.to}
-    : {from:range.from,to:range.to < boundaryDay ? range.to : boundaryDay};
-  const selectedEvents = events.filter(e=>Number.isFinite(e.time) && (current ? e.time >= ANALYTICS_FILTERED_SINCE : e.time < ANALYTICS_FILTERED_SINCE));
-  // A visit's visible duration cannot be accurately split at the boundary.
-  // Exclude straddling visits from both periods instead of estimating it.
-  const selectedVisits = visits.filter(v=>Number.isFinite(v.startedAt) && Number.isFinite(v.updatedAt) && (current ? v.startedAt >= ANALYTICS_FILTERED_SINCE : v.updatedAt < ANALYTICS_FILTERED_SINCE));
+export function selectAnalyticsPeriod({events=[],visits=[],range}) {
+  const selectedEvents = events.filter(event=>validTime(event.time));
+  // 时长快照无法在分界处准确切分，过去会被两侧排除；现在整段都保留。
+  const selectedVisits = visits.filter(visit=>validTime(visit.startedAt)&&validTime(visit.updatedAt));
   const collection = {
-    scope,
-    label:current ? '新周期' : '历史数据',
-    since:new Date(ANALYTICS_FILTERED_SINCE).toISOString(),
-    boundaryLabel:ANALYTICS_FILTERED_LABEL,
-    range:reportRange.from <= reportRange.to ? reportRange : null,
-    notice:current
-      ? '仅统计过滤规则上线后的记录，已排除历史数据。匿名会话仍不等于真人数，无法保证识别所有自动化访问。'
-      : '过滤规则上线前的记录，包含无法准确剥离的本人访问、调试与自动化流量，不作为真实用户量证明。',
-    durationNotice:'跨分界时间的页面停留不参与两侧时长统计；操作事件按发生时间划分。'
+    scope:'all',
+    label:'全部记录',
+    cleanSince:ANALYTICS_CLEAN_LABEL,
+    range,
+    notice:`已合并 ${ANALYTICS_CLEAN_LABEL} 前后的记录一起统计。这个时间点之前的访问混有本人访问、调试与自动化流量，那几天的数字会偏高，不能直接当作真实用户量。`,
+    durationNotice:'页面停留按每次访问快照统计，跨零点不切分。'
   };
-  return {events:selectedEvents,visits:selectedVisits,range:reportRange,collection};
+  return {events:selectedEvents,visits:selectedVisits,range,collection};
 }
 export function analyticsCsvNotes(collection) {
   if (!collection) return [];
-  return [[],['数据口径',collection.label],['分界时间',collection.boundaryLabel],['实际统计日期',collection.range ? `${collection.range.from} 至 ${collection.range.to}` : '所选日期与该周期无交集'],['数据说明',collection.notice],['时长说明',collection.durationNotice]];
+  return [[],['数据口径',collection.label],['清洁记录起点',collection.cleanSince||''],['统计日期',collection.range?`${collection.range.from} 至 ${collection.range.to}`:'所选日期没有记录'],['数据说明',collection.notice]];
 }

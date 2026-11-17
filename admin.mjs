@@ -15,7 +15,7 @@ import {createSponsorship,buildSupportReport,receiptsCsv,SUPPORT_EVENTS} from '.
 import {ANALYTICS_PAGES} from './assets/js/public-pages.js';
 import {excludeAnalyticsRequest} from './analytics-policy.mjs';
 import {buildProductAnalytics,productAnalyticsCsvRows,productAcquisitionCsvRows} from './product-analytics.mjs';
-import {analyticsScope,selectAnalyticsPeriod,analyticsCsvNotes} from './analytics-period.mjs';
+import {selectAnalyticsPeriod,analyticsCsvNotes} from './analytics-period.mjs';
 
 const fail = (message, status=400) => Object.assign(new Error(message), {status});
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
@@ -60,8 +60,8 @@ function normalizeSettings(input){
   return {site,templates,defaultTemplate,analytics:{enabled:input.analytics.enabled},support};
 }
 export function period(params){let from,to;if(params.has('from')||params.has('to')){from=params.get('from');to=params.get('to');}else{const days=Number(params.get('days')||30);if(![7,30,90].includes(days))throw fail('请选择 7、30 或 90 天。');to=dayOf(Date.now());from=dayOf(Date.now()-(days-1)*86400000);}const valid=value=>/^\d{4}-\d{2}-\d{2}$/.test(value||'')&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;if(!valid(from)||!valid(to)||from>to||(Date.parse(to)-Date.parse(from))/86400000>=90)throw fail('请选择不超过 90 天的有效日期范围。');return {from,to};}
-export function buildSummary({events=[],visits=[],settings,range,scope='current'}){
-    const requestedRange=range,periodData=selectAnalyticsPeriod({events,visits,range,scope});
+export function buildSummary({events=[],visits=[],settings,range}){
+    const requestedRange=range,periodData=selectAnalyticsPeriod({events,visits,range});
     ({events,visits,range}=periodData);const collection=periodData.collection;
     const selected=events.filter(e=>e.day>=range.from&&e.day<=range.to),views=selected.filter(e=>e.type==='page_view'),actions=selected.filter(e=>e.type!=='page_view'&&!e.type.endsWith('_error'));
     const engagement=buildEngagement({visits,events,range});
@@ -129,7 +129,7 @@ export function createAdministration({root,dataDir=path.join(root,'private','adm
     const item={id,visitor,path:input.path,seq:input.seq,startedAt,updatedAt:now,visibleMs:Math.max(existing?.visibleMs||0,Math.min(input.visibleMs,now-startedAt+15000)),reason:input.reason,nextPath:input.nextPath||''};
     visits.set(id,item);fs.appendFileSync(visitFile,JSON.stringify(item)+'\n',{mode:0o600});visitWrites++;if(visitWrites>=10000||visits.size>100000||now>=nextVisitPrune)compactVisits();
   }
-  function summary(params){return buildSummary({events,visits:[...visits.values()],settings,range:period(params),scope:analyticsScope(params)});}
+  function summary(params){return buildSummary({events,visits:[...visits.values()],settings,range:period(params)});}
   async function handle(req,res,url){
     if(!['/api/site-config','/api/analytics/event','/api/analytics/visit','/api/analytics/summary'].includes(url.pathname)&&!url.pathname.startsWith('/api/auth/')&&!url.pathname.startsWith('/api/admin/'))return false;
     try{

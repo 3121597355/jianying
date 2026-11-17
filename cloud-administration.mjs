@@ -13,7 +13,7 @@ import {acquisitionCsvRows} from './acquisition.mjs';
 import {ANALYTICS_PAGES} from './assets/js/public-pages.js';
 import {excludeAnalyticsRequest} from './analytics-policy.mjs';
 import {productAnalyticsCsvRows,productAcquisitionCsvRows} from './product-analytics.mjs';
-import {analyticsScope,analyticsCsvNotes} from './analytics-period.mjs';
+import {analyticsCsvNotes} from './analytics-period.mjs';
 
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 const hash=value=>crypto.createHash('sha256').update(String(value)).digest('hex');
@@ -85,7 +85,7 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
   async function recordVisit(req,input){const settings=await state('settings');if(!settings.analytics.enabled||excludeAnalyticsRequest(req,{allowLocal:analyticsTestMode})||await session(req))return;const id=entryId(input.visitId);if(!id||!routes.has(input.path)||!Number.isSafeInteger(input.seq)||input.seq<1||input.seq>1000000||!Number.isSafeInteger(input.visibleMs)||input.visibleMs<0||input.visibleMs>86400000||!['checkpoint','hidden','end'].includes(input.reason)||input.nextPath&&!routes.has(input.nextPath))throw fail('停留统计参数不正确。');await budget(req);const now=Date.now(),data={visitor:entryId(input.visitor)?hash(salt+dayOf(now)+input.visitor).slice(0,24):'',reason:input.reason,nextPath:input.nextPath||''};
     await q(`INSERT INTO ${table('visits')} AS v (id,seq,path,started,updated,visible,data) VALUES ($1,$2,$3,$4,$4,$5,$6) ON CONFLICT(id) DO UPDATE SET seq=EXCLUDED.seq,updated=EXCLUDED.updated,visible=GREATEST(v.visible,LEAST($7,EXCLUDED.updated-v.started+15000)),data=jsonb_set(EXCLUDED.data,'{visitor}',v.data->'visitor') WHERE EXCLUDED.seq>v.seq AND EXCLUDED.path=v.path`,[id,input.seq,input.path,now,Math.min(input.visibleMs,15000),JSON.stringify(data),input.visibleMs]);
   }
-  async function summary(params){const range=period(params),scope=analyticsScope(params),cutoff=Date.now()-90*86400000;const [settings,events,visits]=await Promise.all([state('settings'),q(`SELECT data FROM ${table('events')} WHERE time>=$1 ORDER BY time DESC,id DESC LIMIT 100000`,[cutoff]),q(`SELECT * FROM ${table('visits')} WHERE updated>=$1 ORDER BY updated DESC LIMIT 100000`,[cutoff])]);return buildSummary({settings,events:events.rows.reverse().map(e=>e.data),visits:visits.rows.map(v=>({id:v.id,path:v.path,seq:Number(v.seq),startedAt:Number(v.started),updatedAt:Number(v.updated),visibleMs:Number(v.visible),...v.data})),range,scope});}
+  async function summary(params){const range=period(params),cutoff=Date.now()-90*86400000;const [settings,events,visits]=await Promise.all([state('settings'),q(`SELECT data FROM ${table('events')} WHERE time>=$1 ORDER BY time DESC,id DESC LIMIT 100000`,[cutoff]),q(`SELECT * FROM ${table('visits')} WHERE updated>=$1 ORDER BY updated DESC LIMIT 100000`,[cutoff])]);return buildSummary({settings,events:events.rows.reverse().map(e=>e.data),visits:visits.rows.map(v=>({id:v.id,path:v.path,seq:Number(v.seq),startedAt:Number(v.started),updatedAt:Number(v.updated),visibleMs:Number(v.visible),...v.data})),range});}
   const logsResult=entries=>({entries:[...entries].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt)||String(b.version).localeCompare(String(a.version))),revision:revision(entries)});
   const seedLogs=(()=>{try{const list=JSON.parse(fs.readFileSync(path.join(root,'changelog-seed.json'),'utf8'));return Array.isArray(list)?list:[];}catch{return [];}})();
   /** 部署后把仓库里新增的更新日志补进站点数据库，按版本去重；后台删过的版本不复活。 */

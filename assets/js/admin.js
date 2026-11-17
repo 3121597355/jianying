@@ -5,7 +5,7 @@ import {acquisitionView,bindAcquisition} from './admin-acquisition.js';
 import {resumeAiView,bindResumeAi} from './admin-members.js';
 import {usersView,bindUsers} from './admin-users.js';
 import {MOBILE_ADMIN_MEDIA} from './mobile-layout.js';
-import {productOverview,productFeatures,productAudience} from './admin-product.js?v=20261117-default7';
+import {productOverview,productFeatures,productAudience} from './admin-product.js?v=20261117-merged';
 import {setAnalyticsExclusion} from './analytics-policy.js';
 function excludeThisBrowser(){let storage,session;try{storage=window.localStorage;}catch{}try{session=window.sessionStorage;}catch{}setAnalyticsExclusion(true,{document,storage,session});}
 const $=selector=>document.querySelector(selector),$$=selector=>[...document.querySelectorAll(selector)];
@@ -21,13 +21,12 @@ let sponsorshipData;
 let changelogData;
 let usersQuery={q:'',sort:'recent',page:1,days:30};
 // 默认看近 7 天：数据量还小，7 天窗口才看得到每天的起伏。
-let csrf='',username='',panel='overview',days=7,custom=null,dataScope='current',settings,revision='',summary,dirty=false,requestId=0,toastTimer;
+let csrf='',username='',panel='overview',days=7,custom=null,settings,revision='',summary,dirty=false,requestId=0,toastTimer;
 const isAnalyticsPanel=()=>['overview','features','audience','engagement'].includes(panel);
-const params=()=>{const query=new URLSearchParams(custom||{days});if(isAnalyticsPanel())query.set('scope',dataScope);return query.toString();};
+const params=()=>new URLSearchParams(custom||{days}).toString();
 function showAnalyticsPeriod(collection){
-  $('#analytics-period-description').textContent='分界：'+collection.boundaryLabel;
-  const dates=collection.range?`实际统计日期：${collection.range.from} 至 ${collection.range.to}。`:'所选日期与该周期无交集，暂无数据。';
-  const notice=$('#analytics-period-notice');notice.classList.toggle('is-history',collection.scope==='history');notice.textContent=`${collection.label} · ${dates} ${collection.notice}`;
+  const dates=collection.range?`统计日期：${collection.range.from} 至 ${collection.range.to}。`:'所选日期没有记录。';
+  const notice=$('#analytics-period-notice');notice.classList.remove('is-history');notice.textContent=`${collection.label} · ${dates} ${collection.notice}`;
 }
 // Slide the whole date range by its own length, so 7 天窗口永远看 7 天，
 // 往前推一期就是上一周同一口径的对比。
@@ -51,7 +50,7 @@ async function api(url,method='GET',value){
   const data=await response.json().catch(()=>({}));if(!response.ok){if(response.status===401&&!url.endsWith('/login'))showLogin(false);throw new Error(data.error||'连接失败，请确认网站服务正在运行。');}return data;
 }
 function showLogin(){
-  requestId++;csrf='';dirty=false;dataScope='current';$('#loading').hidden=true;$('#admin-shell').hidden=true;$('#login-view').hidden=false;$('#dashboard-content').replaceChildren();
+  requestId++;csrf='';dirty=false;$('#loading').hidden=true;$('#admin-shell').hidden=true;$('#login-view').hidden=false;$('#dashboard-content').replaceChildren();
   $('#login-title').textContent='管理员登录';$('#login-description').textContent='使用管理员账户和密码登录，管理网站内容与使用统计。';
   $('#password').minLength=1;$('#password').autocomplete='current-password';$('#login-submit').textContent='登录后台 →';
 }
@@ -84,7 +83,7 @@ function integration(keys){return `<div class="settings-layout">${panelBox('匿�
 function security(){return `<div class="settings-layout">${panelBox('管理员账户','独立账户与会话，不影响其他项目后台。',`<p class="account-info">当前账户：${esc(username)} · 登录有效期 12 小时</p><form id="security-form" class="security-form"><label>当前密码<input id="current-password" type="password" autocomplete="current-password" required></label><label>新密码<input id="new-password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required><small class="muted">使用 10～128 个字符。</small></label><label>确认新密码<input id="new-password-confirm" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label><button class="primary" type="submit">更新密码</button></form><p class="settings-help">修改后，其他管理员会话会失效。密码仅以 scrypt 哈希保存；退出登录后需重新验证。</p>`)}</div>`;}
 async function load(){
   const id=++requestId;dirty=false;showError('');$$('[data-panel]').forEach(b=>{b.classList.toggle('active',b.dataset.panel===panel);b.setAttribute('aria-current',b.dataset.panel===panel?'page':'false');});
-  const analytics=isAnalyticsPanel();$('#analytics-period-toolbar').hidden=!analytics;$('#analytics-period-notice').hidden=true;$$('[data-scope]').forEach(button=>{const active=button.dataset.scope===dataScope;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
+  const analytics=isAnalyticsPanel();$('#analytics-period-notice').hidden=true;
   $('#page-title').textContent=panels[panel][0];$('#page-description').textContent=panels[panel][1];$('#breadcrumb').textContent='网站 / '+panels[panel][0];const stats=['overview','features','audience','engagement'].includes(panel);$('#date-toolbar').hidden=!stats&&!['members','sponsorship'].includes(panel);$('#export-data').hidden=!stats&&panel!=='sponsorship';$('#page-eyebrow').textContent=stats?'网站数据':'网站管理';$('#export-data').href=panel==='sponsorship'?'/api/admin/sponsorship/export':(panel==='engagement'?'/api/admin/engagement/export?':'/api/admin/export?')+params()+(panel==='audience'?'&view=acquisition':panel==='overview'||panel==='features'?'&view=product':'');$('#dashboard-content').innerHTML='<div class="loading" role="status">正在读取…</div>';
   try{
     const loaded=await api('/api/admin/settings');if(id!==requestId)return;settings=loaded.settings;revision=loaded.revision;
@@ -126,7 +125,6 @@ $$('[data-panel]').forEach(button=>button.addEventListener('click',()=>void navi
 window.addEventListener('hashchange',()=>void navigate(location.hash.slice(1)));
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
 $('#refresh-data').addEventListener('click',()=>{if(!dirty||confirm('刷新会放弃尚未保存的修改，确定刷新？'))void load();});
-$$('[data-scope]').forEach(button=>button.addEventListener('click',()=>{if(dataScope===button.dataset.scope)return;dataScope=button.dataset.scope;void load();}));
 $$('[data-days]').forEach(button=>button.addEventListener('click',()=>{days=Number(button.dataset.days);custom=null;$$('[data-days]').forEach(b=>b.classList.toggle('active',b===button));void load();}));
 $('#date-form').addEventListener('submit',event=>{event.preventDefault();custom={from:$('#date-from').value,to:$('#date-to').value};$$('[data-days]').forEach(b=>b.classList.remove('active'));void load();});
 $('#logout').addEventListener('click',async()=>{if(dirty&&!confirm('有尚未保存的修改，确定退出？'))return;try{await api('/api/auth/logout','POST');showLogin(false);}catch(error){showError(error.message);}});
