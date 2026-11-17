@@ -43,9 +43,12 @@ body.export-open { overflow: hidden; }
 .export-pages.can-pan .export-page { cursor: grab; }
 .export-pages.is-panning, .export-pages.is-panning .export-page { cursor: grabbing; user-select: none; }
 
-/* 首次打开的滚轮提示：只出现一次，不挡操作。 */
-.export-wheel-tip { position: absolute; left: 50%; bottom: 84px; z-index: 2; margin: 0; padding: 6px 12px; border-radius: 999px; background: rgb(16 18 22 / .82); color: #fff; font-size: 12px; line-height: 1.5; white-space: nowrap; pointer-events: none; transform: translateX(-50%); }
-.export-modal.is-page .export-wheel-tip { bottom: 60px; }
+/* 常驻的滚轮说明：待在底栏左边，不占预览高度、不挡操作。 */
+.export-hint-stack { min-width: 0; max-width: 54%; }
+.export-hint-stack .export-hint { max-width: none; }
+.export-wheel-tip { margin: 6px 0 0; font-size: 11px; line-height: 1.6; color: var(--ui-muted); pointer-events: none; }
+.export-modal.is-page .export-hint-stack { max-width: none; }
+.export-modal.is-page .export-wheel-tip { margin: 0; font-size: 10.5px; }
 
 /* 全屏预览：整页铺满，只看简历。 */
 .export-modal.is-fullscreen { padding: 0; }
@@ -58,7 +61,12 @@ body.export-open { overflow: hidden; }
 .export-modal.is-page .export-head h2 { font-size: 16px; }
 .export-modal.is-page .export-head p { margin-top: 4px; font-size: 11px; }
 .export-modal.is-page .export-pages { padding: 14px; gap: 16px; }
-.export-modal.is-page .export-actions { justify-content: flex-end; padding: 10px 16px; }
+.export-modal.is-page .export-actions { position: relative; justify-content: flex-end; padding: 10px 16px; }
+.export-modal.is-page .export-hint-stack { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); max-width: none; }
+.export-modal.is-page .export-wheel-tip { white-space: nowrap; }
+.export-wheel-tip-short { display: none; }
+.export-modal.is-page .export-wheel-tip-full { display: none; }
+.export-modal.is-page .export-wheel-tip-short { display: inline; }
 .export-modal.is-page .export-hint { display: none; }
 .export-modal.is-page .export-btn { min-height: 34px; padding: 0 12px; font-size: 12px; }
 .export-page img { display: block; width: 100%; height: auto; border: 1px solid var(--ui-line); border-radius: 6px; background: #fff; box-shadow: 0 14px 36px -20px rgb(16 18 22 / .38); }
@@ -89,6 +97,7 @@ body.export-open { overflow: hidden; }
   .export-head { padding: 16px 18px; gap: 10px; }
   .export-head h2 { font-size: 16px; }
   .export-fullscreen { display: none; }
+  .export-wheel-tip { display: none; }
   .export-zoom-value { min-width: 50px; }
   .export-pages { padding: 16px; gap: 18px; }
   .export-actions { flex-direction: column; align-items: stretch; gap: 12px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
