@@ -55,6 +55,24 @@ test('registered account list exposes identifiers and counts without credentials
   assert.equal(Object.keys(entry).sort().join(','),['aiGenerations','cloudSaves','createdAt','exports','lastActiveAt','lastLoginAt','logins','nickname','resumeCount','username'].join(','));
   assert.equal(list.accounts.find(item=>item.username==='qa_quiet').resumeCount,0);
 
+  const registration=list.registration;
+  assert.equal(registration.days,30);
+  assert.equal(registration.series.length,30);
+  assert.equal(registration.total,2);
+  assert.equal(registration.today,2);
+  assert.equal(registration.last7,2);
+  assert.equal(registration.last30,2);
+  assert.equal(registration.withResumes,1);
+  assert.equal(registration.active7,2);
+  assert.equal(registration.windowTotal,2);
+  assert.equal(registration.peak,2);
+  assert.equal(registration.series.reduce((total,item)=>total+item.count,0),2);
+  const narrow=await(await s.admin('/api/admin/accounts?days=7')).json();
+  assert.equal(narrow.registration.days,7);
+  assert.equal(narrow.registration.series.length,7);
+  const wide=await(await s.admin('/api/admin/accounts?days=90')).json();
+  assert.equal(wide.registration.series.length,90);
+
   const byName=await(await s.admin('/api/admin/accounts?q=qa_active')).json();
   assert.equal(byName.matched,1);
   assert.equal(byName.accounts[0].username,'qa_active');

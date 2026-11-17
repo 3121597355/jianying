@@ -142,7 +142,28 @@ export async function createMembers({root,directory=path.join(root,'private','me
     const sorted=[...matched].sort(order);
     const pages=all?1:Math.max(1,Math.ceil(sorted.length/size));
     const current=all?1:Math.min(page,pages);
-    return {total:rows.length,matched:sorted.length,page:current,pages,size,sort,query,accounts:all?sorted:sorted.slice((current-1)*size,current*size),notice:'仅显示账户标识、时间和操作次数；不展示简历正文、照片、密码或恢复码。'};
+    // Registration overview: totals plus a per-day series across the selected window.
+    const days=Math.max(7,Math.min(90,Number(params.get('days'))||30));
+    const dayStart=value=>Date.parse(dayOf(value)+'T00:00:00+08:00');
+    const current0=now();
+    const series=[];
+    for(let index=days-1;index>=0;index-=1)series.push({date:dayOf(current0-index*86400000),count:0});
+    const buckets=new Map(series.map(item=>[item.date,item]));
+    for(const row of rows){const bucket=buckets.get(dayOf(row.createdAt||0));if(bucket)bucket.count+=1;}
+    const since=dayOffset=>dayStart(current0-dayOffset*86400000);
+    const registration={
+      days,
+      total:rows.length,
+      today:buckets.get(dayOf(current0))?.count||0,
+      last7:rows.filter(row=>(row.createdAt||0)>=since(6)).length,
+      last30:rows.filter(row=>(row.createdAt||0)>=since(29)).length,
+      withResumes:rows.filter(row=>row.resumeCount>0).length,
+      active7:rows.filter(row=>row.lastActiveAt>=current0-7*86400000).length,
+      windowTotal:series.reduce((total,item)=>total+item.count,0),
+      peak:series.reduce((total,item)=>Math.max(total,item.count),0),
+      series
+    };
+    return {total:rows.length,matched:sorted.length,page:current,pages,size,sort,query,registration,accounts:all?sorted:sorted.slice((current-1)*size,current*size),notice:'仅显示账户标识、时间和操作次数；不展示简历正文、照片、密码或恢复码。'};
   }
   async function handle(req,res,url){
     const route=url.pathname;if(!route.startsWith('/api/member/'))return false;
