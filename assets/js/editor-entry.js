@@ -3,7 +3,7 @@ import { loadVendor } from './vendor-loader.js';
 async function startEditor() {
   try {
     const [{ bootEditor }] = await Promise.all([
-      import('./app.js?v=20261117-zoommotion4'),
+      import('./app.js?v=20261117-nozoomfx'),
       loadVendor('/assets/vendor/quill.js', () => Boolean(window.Quill)),
     ]);
     bootEditor();

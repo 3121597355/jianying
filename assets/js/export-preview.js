@@ -62,35 +62,12 @@ export function setupExportPreview({ getFileName, toast } = {}) {
 
   const zoomWidth = () => (zoomMode === 'page' ? fitPageWidth() : zoomMode === 'width' ? fitWidth() : fitWidth() * zoomFactor);
 
-  const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-
-  /** 缩放用 FLIP：先按新尺寸排版，再用 transform 补一段放大/缩小，避免宽度动画把整页拉长。 */
-  function animateScale(pages, fromWidth) {
-    if (!pages.length || !fromWidth || reduceMotion()) return;
-    const toWidth = pages[0].getBoundingClientRect().width;
-    if (!toWidth || Math.abs(toWidth - fromWidth) < 0.5) return;
-    const scale = fromWidth / toWidth;
-    if (!Number.isFinite(scale) || scale === 1) return;
-    for (const page of pages) {
-      page.style.transformOrigin = 'top center';
-      if (typeof page.animate !== 'function') { page.style.transformOrigin = ''; continue; }
-      const animation = page.animate(
-        [{ transform: `scale(${scale})` }, { transform: 'scale(1)' }],
-        { duration: 220, easing: 'cubic-bezier(.22,.61,.36,1)' },
-      );
-      const finish = () => { animation.cancel(); page.style.transformOrigin = ''; };
-      animation.onfinish = finish;
-      animation.oncancel = () => { page.style.transformOrigin = ''; };
-    }
-  }
-
-  function applyZoom({ animate = false } = {}) {
+  /** 缩放直接切换尺寸，不做过渡：预览是文档，动画反而显得拖沓。 */
+  function applyZoom() {
     const pages = [...pagesEl.querySelectorAll('.export-page')];
-    const fromWidth = animate && pages.length ? pages[0].getBoundingClientRect().width : 0;
     const width = Math.round(zoomWidth());
     lastWidth = width;
     for (const page of pages) page.style.width = `${width}px`;
-    animateScale(pages, fromWidth);
     const label = zoomMode === 'page' ? '整页' : zoomMode === 'width' ? '适应' : `${Math.round(zoomFactor * 100)}%`;
     if (zoomValueButton) {
       zoomValueButton.textContent = label;
@@ -105,7 +82,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
   function stepZoom(direction) {
     // 整页 → 先回到「适应宽度」，再一档档放大，避免每次只挪一点点。
     if (zoomMode === 'page') {
-      if (direction > 0) { zoomMode = 'width'; applyZoom({ animate: true }); }
+      if (direction > 0) { zoomMode = 'width'; applyZoom(); }
       return;
     }
     const current = zoomMode === 'custom' ? zoomFactor : 1;
@@ -115,7 +92,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     if (!next) return;
     zoomMode = 'custom';
     zoomFactor = next;
-    applyZoom({ animate: true });
+    applyZoom();
   }
 
   /** 滚轮 / 双指缩放：直接按目标宽度连续缩放，并尽量保持当前滚动位置。 */
@@ -133,7 +110,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
 
   function toggleZoomMode() {
     zoomMode = zoomMode === 'page' ? 'width' : 'page';
-    applyZoom({ animate: true });
+    applyZoom();
   }
 
   const isFullscreen = () => modal.classList.contains('is-fullscreen');
