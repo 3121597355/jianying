@@ -26,11 +26,12 @@ export function setupExportPreview({ getFileName, toast } = {}) {
   let runId = 0;
   let lastFocus = null;
   let lastPageCss = null;
-  // 「整页」= 一屏看完一整页；「适应」= 适应宽度；其余是相对适应宽度的自由缩放。
+  // 「整页」和「适应」各自独立缩放：整页的 100% = 一屏放下整页，适应的 100% = 适应宽度。
   const ZOOM_LADDER = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4];
   const MIN_ZOOM = ZOOM_LADDER[0], MAX_ZOOM = ZOOM_LADDER.at(-1);
-  let zoomMode = 'page';
-  let zoomFactor = 1;
+  let zoomMode = 'page'; // 'page' 整页 | 'width' 适应宽度
+  let pageZoom = 1;      // 整页尺寸的倍数
+  let widthZoom = 1;     // 适应宽度的倍数
   let lastWidth = 0;
   let resizeTimer = 0;
   let pinch = null;
@@ -47,8 +48,8 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     return Math.max(160, Math.min(620, pagesEl.clientWidth - padding));
   }
 
-  /** 一屏放下整页时的页面宽度：按可用高度算，再受宽度限制。 */
-  function fitPageWidth() {
+  /** 一屏放下整页时的页面宽度：只按可用高度算，弹窗宽度是跟着它走的。 */
+  function pageBaseWidth() {
     const styles = getComputedStyle(pagesEl);
     const padX = (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.paddingRight) || 0);
     const padY = (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0);
@@ -57,11 +58,13 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     const captionEl = pagesEl.querySelector('.export-page figcaption');
     const caption = (captionEl?.offsetHeight || 20) + 12; // 页码说明 + 上下间距
     const availableH = Math.max(140, pagesEl.clientHeight - padY - caption);
-    const availableW = Math.max(120, pagesEl.clientWidth - padX);
-    return Math.max(120, Math.min(availableW, availableH / aspect));
+    const cap = 920 - padX - 22; // 弹窗最宽 920，留出内边距和滚动条
+    return Math.max(120, Math.min(availableH / aspect, cap));
   }
 
-  const zoomWidth = () => (zoomMode === 'page' ? fitPageWidth() : zoomMode === 'width' ? fitWidth() : fitWidth() * zoomFactor);
+  const zoomFactor = () => (zoomMode === 'page' ? pageZoom : widthZoom);
+  const setZoomFactor = value => { if (zoomMode === 'page') pageZoom = value; else widthZoom = value; };
+  const zoomWidth = () => (zoomMode === 'page' ? pageBaseWidth() * pageZoom : fitWidth() * widthZoom);
 
   /**
    * 「整页」时弹窗跟着简历变成竖屏比例：A4 是纵向的，横着的宽弹窗只会把页面挤得很小。
@@ -91,30 +94,28 @@ export function setupExportPreview({ getFileName, toast } = {}) {
       if (pageFit && dialogEl) dialogEl.style.width = `${fitFrameToPage(width)}px`;
     }
     lastWidth = width;
-    const label = zoomMode === 'page' ? '整页' : zoomMode === 'width' ? '适应' : `${Math.round(zoomFactor * 100)}%`;
+    const factor = zoomFactor();
+    const label = Math.abs(factor - 1) < 1e-3
+      ? (zoomMode === 'page' ? '整页' : '适应')
+      : `${Math.round(factor * 100)}%`;
     if (zoomValueButton) {
       zoomValueButton.textContent = label;
       zoomValueButton.setAttribute('aria-label', `${label}（点击切换整页 / 适应宽度）`);
       zoomValueButton.title = '点击切换：整页看全貌 / 适应宽度看细节';
     }
-    if (zoomOutButton) zoomOutButton.disabled = zoomMode === 'custom' ? zoomFactor <= MIN_ZOOM + 1e-6 : zoomMode === 'page';
-    if (zoomInButton) zoomInButton.disabled = zoomMode === 'custom' && zoomFactor >= MAX_ZOOM - 1e-6;
+    if (zoomOutButton) zoomOutButton.disabled = zoomMode === 'page' ? pageZoom <= 1 + 1e-6 : widthZoom <= MIN_ZOOM + 1e-6;
+    if (zoomInButton) zoomInButton.disabled = factor >= MAX_ZOOM - 1e-6;
   }
 
-  /** 点「＋ / －」按档位缩放；从整页开始时以当前宽度为起点继续放大。 */
+  /** 点「＋ / －」按档位缩放：整页、适应各用各自的基准，不会互相跳。 */
   function stepZoom(direction) {
-    // 整页 → 先回到「适应宽度」，再一档档放大，避免每次只挪一点点。
-    if (zoomMode === 'page') {
-      if (direction > 0) { zoomMode = 'width'; applyZoom(); }
-      return;
-    }
-    const current = zoomMode === 'custom' ? zoomFactor : 1;
+    const current = zoomFactor();
     const next = direction > 0
       ? ZOOM_LADDER.find(value => value > current + 1e-3)
       : [...ZOOM_LADDER].reverse().find(value => value < current - 1e-3);
     if (!next) return;
-    zoomMode = 'custom';
-    zoomFactor = next;
+    if (zoomMode === 'page' && next < 1 - 1e-3) return; // 整页已经是最小
+    setZoomFactor(next);
     applyZoom();
   }
 
@@ -123,8 +124,8 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     if (!Number.isFinite(width) || width <= 0) return;
     const ratioY = pagesEl.scrollHeight ? pagesEl.scrollTop / pagesEl.scrollHeight : 0;
     const ratioX = pagesEl.scrollWidth ? pagesEl.scrollLeft / pagesEl.scrollWidth : 0;
-    zoomMode = 'custom';
-    zoomFactor = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, width / fitWidth()));
+    const base = zoomMode === 'page' ? pageBaseWidth() : fitWidth();
+    setZoomFactor(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, width / base)));
     // 滚轮 / 捏合是连续输入，直接跟手，不再补动画。
     applyZoom();
     pagesEl.scrollTop = ratioY * pagesEl.scrollHeight;
@@ -248,7 +249,8 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     if (!modal.hidden) return;
     lastFocus = document.activeElement;
     zoomMode = portrait() ? 'page' : 'width';
-    zoomFactor = 1;
+    pageZoom = 1;
+    widthZoom = 1;
     modal.classList.remove('is-fullscreen');
     fullscreenButton?.setAttribute('aria-pressed', 'false');
     fullscreenButton?.setAttribute('aria-label', '全屏预览');
