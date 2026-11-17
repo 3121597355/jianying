@@ -16,14 +16,61 @@ export function setupExportPreview({ getFileName, toast } = {}) {
   const metaEl = modal.querySelector('#exportMeta');
   const buttons = [...modal.querySelectorAll('[data-format]')];
   const closeButton = modal.querySelector('.export-close');
+  const zoomValueButton = modal.querySelector('#exportZoomValue');
+  const zoomOutButton = modal.querySelector('[data-zoom="out"]');
+  const zoomInButton = modal.querySelector('[data-zoom="in"]');
+  const fullscreenButton = modal.querySelector('[data-fullscreen]');
   let generated = false;
   let working = false;
   let runId = 0;
   let lastFocus = null;
   let lastPageCss = null;
+  // 1 = 适应宽度；其它值按适应宽度的倍数放大缩小。
+  const ZOOM_STEPS = [0.75, 0.9, 1, 1.25, 1.5, 1.75, 2];
+  let zoomIndex = ZOOM_STEPS.indexOf(1);
+  let resizeTimer = 0;
 
   const setMeta = text => { if (metaEl) metaEl.textContent = text; };
   const setBusy = busy => { working = busy; buttons.forEach(button => { button.disabled = busy; }); };
+
+  /** 适应宽度下的页面宽度（px），放大缩小时以它为基准。 */
+  function fitWidth() {
+    const styles = getComputedStyle(pagesEl);
+    const padding = (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.paddingRight) || 0);
+    return Math.max(160, Math.min(620, pagesEl.clientWidth - padding));
+  }
+
+  function applyZoom() {
+    const pages = [...pagesEl.querySelectorAll('.export-page')];
+    const zoom = ZOOM_STEPS[zoomIndex];
+    const fitted = zoom === 1;
+    const width = fitted ? 0 : Math.round(fitWidth() * zoom);
+    for (const page of pages) page.style.width = fitted ? '' : `${width}px`;
+    pagesEl.classList.toggle('is-zoomed', !fitted);
+    if (zoomValueButton) {
+      zoomValueButton.textContent = fitted ? '适应' : `${Math.round(zoom * 100)}%`;
+      zoomValueButton.setAttribute('aria-label', fitted ? '适应宽度（当前）' : `当前 ${Math.round(zoom * 100)}%，点击恢复适应宽度`);
+    }
+    if (zoomOutButton) zoomOutButton.disabled = zoomIndex === 0;
+    if (zoomInButton) zoomInButton.disabled = zoomIndex === ZOOM_STEPS.length - 1;
+  }
+
+  function setZoom(nextIndex) {
+    zoomIndex = Math.min(ZOOM_STEPS.length - 1, Math.max(0, nextIndex));
+    applyZoom();
+  }
+
+  const isFullscreen = () => modal.classList.contains('is-fullscreen');
+
+  function setFullscreen(on) {
+    modal.classList.toggle('is-fullscreen', on);
+    fullscreenButton?.setAttribute('aria-pressed', String(on));
+    fullscreenButton?.setAttribute('aria-label', on ? '退出全屏预览' : '全屏预览');
+    fullscreenButton?.setAttribute('title', on ? '退出全屏预览' : '全屏预览');
+    applyZoom();
+    if (on) pagesEl.scrollTop = 0;
+    closeButton?.focus({ preventScroll: true });
+  }
   /** 末页内容少于三成时提示取舍，避免用户导出后只剩一行字的第二页。 */
   const idleMeta = (count, lastPageCss) => {
     if (count > 1 && Number.isFinite(lastPageCss) && lastPageCss < PAGE_HEIGHT_CSS * 0.3) {
@@ -62,6 +109,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
       renderPages(result.pages);
       generated = true;
       lastPageCss = result.lastPageCss;
+      applyZoom();
       setMeta(idleMeta(result.count, lastPageCss));
     } catch (error) {
       if (id !== runId) return;
@@ -103,6 +151,11 @@ export function setupExportPreview({ getFileName, toast } = {}) {
   function open() {
     if (!modal.hidden) return;
     lastFocus = document.activeElement;
+    zoomIndex = ZOOM_STEPS.indexOf(1);
+    modal.classList.remove('is-fullscreen');
+    fullscreenButton?.setAttribute('aria-pressed', 'false');
+    fullscreenButton?.setAttribute('aria-label', '全屏预览');
+    fullscreenButton?.setAttribute('title', '全屏预览');
     modal.hidden = false;
     document.body.classList.add('export-open');
     closeButton?.focus({ preventScroll: true });
@@ -113,13 +166,31 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     if (modal.hidden) return;
     runId++;
     modal.hidden = true;
+    modal.classList.remove('is-fullscreen');
+    pagesEl.classList.remove('is-zoomed');
     document.body.classList.remove('export-open');
     lastFocus?.focus?.({ preventScroll: true });
     lastFocus = null;
   }
 
   modal.addEventListener('click', event => {
+    const zoomButton = event.target.closest('[data-zoom]');
+    if (zoomButton) {
+      const action = zoomButton.dataset.zoom;
+      setZoom(action === 'in' ? zoomIndex + 1 : action === 'out' ? zoomIndex - 1 : ZOOM_STEPS.indexOf(1));
+      return;
+    }
+    if (event.target.closest('[data-fullscreen]')) {
+      setFullscreen(!isFullscreen());
+      return;
+    }
     if (event.target.closest('[data-close]')) close();
+  });
+
+  window.addEventListener('resize', () => {
+    if (modal.hidden) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (pagesEl.classList.contains('is-zoomed') || isFullscreen()) applyZoom(); }, 140);
   });
 
   buttons.forEach(button => {
@@ -128,7 +199,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
 
   document.addEventListener('keydown', event => {
     if (modal.hidden) return;
-    if (event.key === 'Escape') { event.preventDefault(); close(); return; }
+    if (event.key === 'Escape') { event.preventDefault(); if (isFullscreen()) setFullscreen(false); else close(); return; }
     if (event.key !== 'Tab') return;
     const items = [...modal.querySelectorAll(FOCUSABLE)].filter(item => item.offsetParent !== null);
     if (!items.length) return;
