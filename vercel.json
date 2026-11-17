@@ -14,21 +14,20 @@
       "excludeFiles": "{private/**,node_modules/onnxruntime-node/bin/napi-v6/win32/**,node_modules/onnxruntime-node/bin/napi-v6/darwin/**,node_modules/onnxruntime-node/bin/napi-v6/linux/arm64/**}"
     }
   },
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/api/server"
-    }
-  ],
-  "headers": [
+      "src": "/(assets|portrait)/(.*)",
+      "headers": {
+        "Cache-Control": "public, max-age=300, stale-while-revalidate=86400"
+      },
+      "continue": true
+    },
     {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
-      ]
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/server"
     }
   ]
 }
