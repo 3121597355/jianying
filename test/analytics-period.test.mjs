@@ -31,6 +31,18 @@ test('nonoverlapping requested dates produce an explicit empty range and no fabr
   assert.doesNotThrow(()=>productAudience(summary,{esc:String,number:String,table:()=>'',panelBox:(_title,_desc,body)=>body,empty:()=>''}));
   const history=buildSummary({events:[event(1)],settings:defaults(),scope:'history',range:{from:'2026-11-17',to:'2026-11-18'}});assert.equal(history.collection.range,null);assert.equal(history.metrics.views,0);
 });
+test('the overview compares the selected window with the one immediately before it',()=>{
+  const at=(date,type='page_view',visitor='previous-window')=>({time:Date.parse(date+'T10:00:00+08:00'),day:date,type,path:'/resume/',visitor,device:'desktop',attribution:null});
+  const events=[at('2026-11-08'),at('2026-11-08','resume_export','previous-a'),at('2026-11-09','page_view','previous-b'),at('2026-11-10','page_view','selected-a'),at('2026-11-10','resume_edit_start','selected-a')];
+  const history=buildSummary({events,visits:[],settings:defaults(),scope:'history',range:{from:'2026-11-10',to:'2026-11-11'}});
+  assert.equal(history.product.metrics.sessions,1);
+  assert.equal(history.product.previous.sessions,3);
+  assert.equal(history.product.previous.completed,1);
+  // Nothing before the reporting boundary may be presented as a comparison.
+  const current=buildSummary({events,visits:[],settings:defaults(),range:{from:'2026-11-16',to:'2026-11-17'}});
+  assert.equal(current.product.metrics.sessions,0);
+  assert.equal(current.product.previous.sessions,0);
+});
 test('scope defaults to current and rejects unsupported values; malformed times do not enter a period',()=>{
   assert.equal(analyticsScope(new URLSearchParams()),'current');assert.equal(analyticsScope(new URLSearchParams('scope=history')),'history');
   assert.throws(()=>analyticsScope(new URLSearchParams('scope=all')),e=>e.status===400);
