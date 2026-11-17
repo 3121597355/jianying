@@ -5,9 +5,12 @@
  */
 import { getResume, getUi, getModule, set, commit, blankItem } from './store.js';
 import { animateIn, animateDisclosure } from './motion.js';
+import {PROJECT_FIELDS,PROJECT_SPACING,projectSpacing,normalizeProjectDetails,projectFieldShown,safeProjectUrl} from './project-fields.js';
+import {bulletProjectContributions,setupProjectEditor} from './project-layout.js';
+import {normalizeBasicFields,MAX_BASIC_FIELDS,BASIC_FIELD_NAME_LIMIT,BASIC_FIELD_VALUE_LIMIT} from './basic-fields.js';
 import {
   SEX, MARRIAGE, POLITICS, DEGREE, WORK_YEARS, MODULES,
-  HOT_CITIES, JOB_LIST, MONTH_OPTIONS, optionalLabel,
+  HOT_CITIES, JOB_LIST, MONTH_OPTIONS, optionalLabel, degreeLabel,
 } from './dict.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -38,6 +41,19 @@ const opt = (v, label, cur) => `<option value="${esc(v)}"${String(v) === String(
 
 /* ------------------------------- 基本信息 ------------------------------- */
 
+function basicCustomFields(input){
+  const rows=normalizeBasicFields(input);
+  return `<section class="basic-custom-fields" aria-label="自定义基本信息">
+    <div class="basic-custom-heading"><strong>自定义信息</strong><span>${rows.length} / ${MAX_BASIC_FIELDS}</span></div>
+    <p class="basic-custom-note">如：个人网站、微信、作品集。内容留空或关闭展示后不会出现在简历里。</p>
+    <div class="basic-custom-list">${rows.map((item,index)=>`<div class="basic-custom-row" data-basic-index="${index}">
+      <div class="basic-custom-row-heading"><span>信息 ${index+1}</span><label><input type="checkbox" data-basic-field="visible" aria-label="展示第${index+1}项自定义信息" ${item.visible?'checked':''}>展示在简历</label><button type="button" data-basic-remove="${index}" aria-label="删除第${index+1}项自定义信息" title="删除此项"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></div>
+      <div class="basic-custom-inputs"><label><span>名称</span><input class="input" data-basic-field="keyValue" aria-label="第${index+1}项自定义名称" maxlength="${BASIC_FIELD_NAME_LIMIT}" placeholder="如：个人网站" value="${esc(item.keyValue)}"></label><label><span>内容</span><input class="input" data-basic-field="value" aria-label="第${index+1}项自定义内容" maxlength="${BASIC_FIELD_VALUE_LIMIT}" placeholder="填写对应内容" value="${esc(item.value)}"></label></div>
+    </div>`).join('')}</div>
+    <button type="button" class="basic-custom-add" data-basic-add ${rows.length>=MAX_BASIC_FIELDS?'disabled':''}>＋ 添加自定义信息</button>
+  </section>`;
+}
+
 function formBasic(r) {
   const b = r.basicInfo;
   const yrs = WORK_YEARS.map((t, i) => opt(i - 1, t, b.workYears)).join('');
@@ -47,13 +63,17 @@ function formBasic(r) {
     <li><b>姓　名</b><input class="input" data-k="basicInfo.name" maxlength="49" placeholder="输入你的姓名" value="${esc(b.name)}"></li>
     <li><b>性　别</b><select class="input" data-k="basicInfo.sex">${SEX.map((t, i) => opt(i, t, b.sex)).join('')}</select></li>
     <li><b>出生年月</b><input class="input" type="month" data-k="basicInfo.birthday" value="${esc(b.birthday)}"></li>
-    <li><b>照片设置</b>
-      <span class="photo_upload" data-act="pickPhoto">${b.photo ? '更换照片' : '上传照片'}</span>
-      ${b.photo ? '<span class="photo_remove" data-act="removePhoto">移除</span>' : ''}
-      <label class="el-checkbox photo_set ${b.photoShow ? 'is-checked' : ''}">
-        <span class="el-checkbox__input ${b.photoShow ? 'is-checked' : ''}"><span class="el-checkbox__inner"></span><input type="checkbox" class="el-checkbox__original" data-k="basicInfo.photoShow" ${b.photoShow ? 'checked' : ''}></span>
-        <span class="el-checkbox__label">展示照片</span>
-      </label>
+    <li class="photo-settings"><b>照片设置</b>
+      <div class="photo-controls">
+        <div class="photo-actions">
+          <button type="button" class="photo_upload" data-act="pickPhoto">${b.photo ? '更换照片' : '上传照片'}</button>
+          ${b.photo ? '<button type="button" class="photo_remove" data-act="removePhoto">移除</button>' : ''}
+        </div>
+        <label class="el-checkbox photo_set ${b.photoShow ? 'is-checked' : ''}">
+          <span class="el-checkbox__input ${b.photoShow ? 'is-checked' : ''}"><span class="el-checkbox__inner"></span><input type="checkbox" class="el-checkbox__original" data-k="basicInfo.photoShow" ${b.photoShow ? 'checked' : ''}></span>
+          <span class="el-checkbox__label">展示照片</span>
+        </label>
+      </div>
       <input type="file" accept="image/*" id="photoFile" style="display:none">
     </li>
     <li><b>工作年限</b><select class="input" data-k="basicInfo.workYears">${yrs}</select></li>
@@ -69,6 +89,7 @@ function formBasic(r) {
     <li class="more-item"><b>政治面貌</b><select class="input" data-k="basicInfo.zhengzhi">${POLITICS.map((t, i) => opt(i, t, Math.max(0, POLITICS.indexOf(optionalLabel(POLITICS, b.zhengzhi))))).join('')}</select></li>
   </ul>
   <div class="line_box mb10"><span class="btn_more" data-act="toggleMore">展开更多信息 <i class="webfont webicon-jiantoudown"></i></span></div>
+  ${basicCustomFields(b.make)}
 </div>`;
 }
 
@@ -125,12 +146,37 @@ const TIME_LABEL = {
 
 function fmtYM(v) { return v ? String(v) : ''; }
 
+function projectField(item,key,body){
+  const field=PROJECT_FIELDS.find(f=>f.key===key),shown=projectFieldShown(item,key);
+  return `<section class="project-field" data-project-field="${key}"><div class="project-field-heading"><strong>${field.label}</strong><label><input type="checkbox" data-project-visible="${key}" aria-label="展示${field.label}" ${shown?'checked':''}>展示在简历</label></div><div class="project-field-body" ${shown?'':'hidden'}>${body}</div></section>`;
+}
+function projectFields(item){
+  const detail=normalizeProjectDetails(item.projectDetails);
+  const textarea=key=>{const field=PROJECT_FIELDS.find(f=>f.key===key);return `<textarea class="input project-textarea" data-k="project.${key}" aria-label="${field.label}" maxlength="${field.max}" rows="3" placeholder="${field.placeholder}">${esc(detail[key])}</textarea>`;};
+  const extra=['techStack','website','repository'].map(key=>{
+    const field=PROJECT_FIELDS.find(f=>f.key===key),isUrl=key!=='techStack';
+    return projectField(item,key,`<input class="input project-extra-input" type="${isUrl?'url':'text'}" data-k="project.${key}" aria-label="${field.label}" maxlength="${field.max}" placeholder="${field.placeholder}" value="${esc(detail[key])}">${isUrl?`<small class="project-url-error" ${!detail[key].trim()||safeProjectUrl(detail[key])?'hidden':''}>请填写 http 或 https 地址；无效链接不会展示。</small>`:''}`);
+  }).join('');
+  return `<div class="project-details-form"><p class="project-writing-note">留空或关闭展示的内容不会出现在简历里。建议简介 1～2 句，贡献 2～4 点，成果写实际交付或真实数据。</p>
+    <details class="project-layout"><summary>内容排版 <span data-project-spacing-label>${projectSpacing(detail).label}间距</span></summary><div class="project-layout-body">
+      <fieldset class="project-spacing"><legend>段落与分点间距</legend><div>${PROJECT_SPACING.map(option=>`<label><input type="radio" name="project-spacing" data-project-spacing="${option.value}" ${detail.layout.spacing===option.value?'checked':''}><span>${option.label}</span></label>`).join('')}</div></fieldset>
+      <button type="button" class="project-bullet-action" data-project-bullets ${projectFieldShown(item,'content')?'':'disabled'}>将个人贡献一键分点</button><p>每个段落作为一点，保留原文和加粗；可用工具栏撤销。舒展间距会增加简历篇幅。</p><span class="project-layout-status" role="status" aria-live="polite"></span>
+    </div></details>
+    ${projectField(item,'summary',textarea('summary'))}
+    ${projectField(item,'content','<div class="jingli_editor"><section class="qm_editor"><div class="ql-editor-slot"></div></section></div>')}
+    ${projectField(item,'outcome',textarea('outcome'))}
+    <details class="project-extras" ${getUi().projectExtrasOpen?'open':''}><summary>补充信息 <span>技术栈、网站与源码链接 · 可选</span></summary><div class="project-extras-body">${extra}</div></details>
+    <details class="project-writing-example"><summary>查看填写示例</summary><div><p><strong>项目简介：</strong>面向团队的任务协作工具，整合任务管理、消息通知和团队空间。</p><p><strong>个人贡献：</strong>负责需求拆解与交互设计，协同研发完成实现、上线验证和用户反馈跟进。</p><p><strong>项目成果：</strong>完成核心流程交付，建立反馈记录与后续迭代机制。</p><p>以上为虚构示例，请按你的真实职责与成果填写。</p></div></details>
+  </div>`;
+}
+
 function formTimeline(r, mod) {
   const L = TIME_LABEL[mod.moduleName] || TIME_LABEL.work;
   const items = mod.data || [];
   const state = getActiveItem(mod.moduleName, items.length);
   const it = items[state] || blankItem(mod.moduleName);
   const isEdu = mod.moduleName === 'jiaoyu';
+  const isProject = mod.moduleName === 'project';
 
   const nav = items.map((x, i) => {
     const sub = [isEdu ? x.major : x.job, [fmtYM(x.timeStart), x.today ? '至今' : fmtYM(x.timeEnd)].filter(Boolean).join('-')]
@@ -160,8 +206,8 @@ function formTimeline(r, mod) {
       <div class="jingli_fields">
         <ul class="info_list info_hastime clearfix">
           <li><b>${L.f1}</b><input class="input" data-k="item.name" placeholder="${L.ph1}" value="${esc(it.name)}"></li>
-          <li><b>${L.f2}</b><input class="input" data-k="item.${isEdu ? 'major' : 'job'}" placeholder="${L.ph2}" value="${esc(isEdu ? it.major : it.job)}"></li>
-          ${isEdu ? `<li><b>学　历</b><select class="input w122" data-k="item.xueli">${DEGREE.map(t => opt(t, t, it.xueli)).join('')}</select></li>` : ''}
+          <li><b>${L.f2}</b><input class="input" data-k="item.${isEdu ? 'major' : 'job'}" ${isProject?'list="projectRoleList"':''} placeholder="${isProject?'如：项目负责人 / 全栈开发 / 产品负责人':L.ph2}" value="${esc(isEdu ? it.major : it.job)}">${isProject?'<datalist id="projectRoleList"><option value="项目负责人"><option value="全栈开发"><option value="产品负责人"><option value="前端开发"><option value="后端开发"><option value="增长与运营"></datalist>':''}</li>
+          ${isEdu ? `<li><b>学　历</b><select class="input w122" data-k="item.xueli">${DEGREE.map(t => opt(t, t, degreeLabel(it.xueli))).join('')}</select></li>` : ''}
           <li class="ml0 timeline-dates"><b>${isEdu ? '就读时间' : '起止时间'}</b>
             <input class="input input_time" type="month" data-k="item.timeStart" value="${esc(it.timeStart)}">
             <span> - </span>
@@ -170,9 +216,9 @@ function formTimeline(r, mod) {
           </li>
         </ul>
       </div>
-      <div class="jingli_editor">
+      ${isProject?projectFields(it):`<div class="jingli_editor">
         <section class="qm_editor"><div class="ql-editor-slot"></div></section>
-      </div>
+      </div>`}
       <div class="jingli_actions">
         <button class="el-button el-button--danger el-button--mini" data-del-current>
           <i class="el-icon-delete"></i><span>${items.length > 1 ? `删除这条${esc(mod.moduleValue || '记录')}` : '清空这条记录'}</span>
@@ -280,7 +326,7 @@ export function renderForm(host) {
 
   const slot = host.querySelector('.ql-editor-slot');
   if (slot) {
-    makeEditor(slot.parentElement, rich, value => {
+    const editor=makeEditor(slot.parentElement, rich, value => {
       const m = getModule(def.name);
       set(rr => {
         const mm = rr.moduleData.find(x => x.moduleName === def.name);
@@ -293,6 +339,13 @@ export function renderForm(host) {
         }
       });
     });
+    if(def.name==='project'){
+      setupProjectEditor(editor);
+      host.querySelector('[data-project-bullets]')?.addEventListener('click',()=>{
+        const applied=bulletProjectContributions(editor);
+        host.querySelector('.project-layout-status').textContent=applied?'已分点，文字和加粗已保留。':'先填写个人贡献，再进行分点。';
+      });
+    }
   }
   bind(host, def);
   animateIn(host);
@@ -323,8 +376,44 @@ function delCurrent(def, index) {
   commit({ structural: true });
 }
 
+function bindBasicCustomFields(host){
+    const section=host.querySelector('.basic-custom-fields');
+    const refreshCustomFields=focusIndex=>{
+      host.querySelector('.basic-custom-fields').outerHTML=basicCustomFields(getResume().basicInfo.make);
+      const section=host.querySelector('.basic-custom-fields');
+      window.__markScope?.(section);
+      bindBasicCustomFields(host);
+      const target=section.querySelector(`[data-basic-index="${focusIndex}"] [data-basic-field="keyValue"]`)||section.querySelector('[data-basic-add]');
+      target.focus({preventScroll:true});
+      target.scrollIntoView({block:'nearest'});
+    };
+    const updateField=event=>{
+      const input=event.target.closest('[data-basic-field]');
+      if(!input||!section.contains(input))return;
+      if((input.type==='checkbox')!==(event.type==='change'))return;
+      const index=Number(input.closest('[data-basic-index]').dataset.basicIndex),key=input.dataset.basicField;
+      set(rr=>{rr.basicInfo.make=normalizeBasicFields(rr.basicInfo.make);if(rr.basicInfo.make[index])rr.basicInfo.make[index][key]=input.type==='checkbox'?input.checked:input.value;});
+    };
+    section.addEventListener('input',updateField);
+    section.addEventListener('change',updateField);
+    section.addEventListener('click',event=>{
+      const add=event.target.closest('[data-basic-add]'),remove=event.target.closest('[data-basic-remove]');
+      if(add){
+        const rows=normalizeBasicFields(getResume().basicInfo.make);
+        if(rows.length>=MAX_BASIC_FIELDS)return;
+        set(rr=>{rr.basicInfo.make=[...rows,{keyValue:'',value:'',visible:true}];});
+        refreshCustomFields(rows.length);
+      }else if(remove){
+        const index=Number(remove.dataset.basicRemove);
+        set(rr=>{rr.basicInfo.make=normalizeBasicFields(rr.basicInfo.make);rr.basicInfo.make.splice(index,1);});
+        refreshCustomFields(Math.min(index,getResume().basicInfo.make.length-1));
+      }
+    });
+}
+
 function bind(host, def) {
   const r = getResume();
+  if(def.kind==='basic')bindBasicCustomFields(host);
 
   // 通用输入
   host.querySelectorAll('[data-k]').forEach(node => {
@@ -347,6 +436,9 @@ function bind(host, def) {
           else m[p[1]] = val;
         } else if (k === 'make.moduleValue') {
           rr.moduleData.find(x => x.moduleName === 'make').moduleValue = val;
+        } else if (k.startsWith('project.')) {
+          const m=rr.moduleData.find(x=>x.moduleName===def.name),item=m.data[getActiveItem(def.name,m.data.length)];
+          if(item){item.projectDetails=normalizeProjectDetails(item.projectDetails);item.projectDetails[k.split('.')[1]]=val;}
         } else if (k.startsWith('item.')) {
           const m = rr.moduleData.find(x => x.moduleName === def.name);
           const idx = getActiveItem(def.name, m.data.length);
@@ -370,9 +462,26 @@ function bind(host, def) {
       if (k === 'basicInfo.photoShow') {
         node.closest('.el-checkbox')?.classList.toggle('is-checked', !!val);
       }
+      if(k==='project.website'||k==='project.repository'){
+        const invalid=Boolean(String(val).trim()&&!safeProjectUrl(val));
+        node.setAttribute('aria-invalid',String(invalid));
+        node.closest('.project-field-body').querySelector('.project-url-error').hidden=!invalid;
+      }
     };
     node.addEventListener(node.tagName === 'SELECT' || node.type === 'checkbox' || node.type === 'month' ? 'change' : 'input', h);
   });
+
+  host.querySelectorAll('[data-project-visible]').forEach(node=>node.addEventListener('change',()=>{
+    set(rr=>{const m=rr.moduleData.find(x=>x.moduleName===def.name),item=m.data[getActiveItem(def.name,m.data.length)];if(item){item.projectDetails=normalizeProjectDetails(item.projectDetails);item.projectDetails.visible[node.dataset.projectVisible]=node.checked;}});
+    node.closest('.project-field').querySelector('.project-field-body').hidden=!node.checked;
+    if(node.dataset.projectVisible==='content')host.querySelector('[data-project-bullets]').disabled=!node.checked;
+  }));
+  host.querySelectorAll('[data-project-spacing]').forEach(node=>node.addEventListener('change',()=>{
+    if(!node.checked)return;
+    set(rr=>{const m=rr.moduleData.find(x=>x.moduleName===def.name),item=m.data[getActiveItem(def.name,m.data.length)];if(item){item.projectDetails=normalizeProjectDetails(item.projectDetails);item.projectDetails.layout.spacing=node.dataset.projectSpacing;}});
+    host.querySelector('[data-project-spacing-label]').textContent=PROJECT_SPACING.find(option=>option.value===node.dataset.projectSpacing).label+'间距';
+  }));
+  host.querySelector('.project-extras')?.addEventListener('toggle',event=>{getUi().projectExtrasOpen=event.currentTarget.open;commit({uiOnly:true});});
 
   // 展开更多
   host.querySelector('[data-act="toggleMore"]')?.addEventListener('click', e => {

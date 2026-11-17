@@ -1,0 +1,30 @@
+@media screen {
+  .editor-help-tools { display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px; min-width:0; }
+  .editor-sample-note { color:var(--ui-muted); font-size:11px; font-weight:400; line-height:1.5; }
+  .editor-help-trigger { display:flex; align-items:center; gap:5px; min-height:32px; border:0; padding:4px 6px; background:transparent; color:var(--ui-muted); font:inherit; font-size:12px; white-space:nowrap; cursor:pointer; }
+  .editor-help-trigger > span { display:grid; place-items:center; width:16px; height:16px; border:1px solid currentColor; border-radius:50%; font-size:11px; }
+  .editor-help-trigger:hover { color:var(--ui-accent); }
+  .editor-quick-guide { position:fixed; z-index:90; box-sizing:border-box; width:300px; max-width:calc(100vw - 24px); padding:12px 16px 14px; border:1px solid var(--ui-accent-line); border-radius:14px; background:var(--ui-surface); color:var(--ui-text); box-shadow:0 8px 30px rgb(0 0 0 / .1); font-family:inherit; }
+  .editor-quick-guide header,.editor-quick-guide footer { display:flex; align-items:center; gap:8px; }
+  .editor-quick-guide header { justify-content:space-between; }
+  .guide-count { color:var(--ui-muted); font-size:11px; }
+  .editor-quick-guide h2 { margin:4px 0 6px; font-size:15px; font-weight:600; line-height:1.6; }
+  .editor-quick-guide p { margin:0 0 14px; color:var(--ui-muted); font-size:12px; line-height:1.8; }
+  .editor-quick-guide button { min-height:36px; padding:6px 10px; border:1px solid var(--ui-line); border-radius:7px; color:var(--ui-text); background:var(--ui-surface); font:inherit; font-size:12px; cursor:pointer; touch-action:manipulation; }
+  .editor-quick-guide [data-guide-close] { width:36px; border:0; padding:0; font-size:22px; color:var(--ui-muted); }
+  .editor-quick-guide footer { justify-content:flex-end; }
+  .editor-quick-guide [data-guide-next] { background:var(--ui-primary); color:var(--ui-on-primary); border-color:var(--ui-primary); }
+  .editor-quick-guide [data-guide-blank] { margin-right:auto; padding:6px 0; border:0; color:var(--ui-muted); font-size:11px; }
+  .editor-quick-guide button:focus-visible,.editor-help-trigger:focus-visible { outline:2px solid var(--ui-accent); outline-offset:3px; }
+  .editor-guide-target { outline:2px solid var(--ui-accent); outline-offset:-2px; }
+  .editor-guide-active #resumeEditorPanel .edit_top { transition:none !important; }
+  .editor-sample-note[hidden],.editor-quick-guide[hidden],.editor-quick-guide button[hidden] { display:none; }
+}
+@media screen and (max-width:860px), screen and (max-width:1024px) and (max-height:500px) {
+  .editor-help-tools { gap:8px; }
+  .editor-help-trigger,.editor-quick-guide button { min-height:44px; }
+  .editor-quick-guide { width:320px; padding:10px 14px 12px; }
+  .editor-quick-guide p { margin-bottom:10px; }
+}
+@media screen and (max-width:360px) { .editor-sample-note { max-width:84px; } }
+@media print { .editor-help-tools,.editor-quick-guide { display:none !important; } }

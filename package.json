@@ -9,17 +9,22 @@
     "start:public": "node serve.mjs 8099 --public",
     "test": "node --test portrait/test/*.test.mjs test/*.test.mjs",
     "setup-model": "node portrait/setup-model.mjs",
-    "build:vercel": "node scripts/vercel-build.mjs"
+    "build:vercel": "node scripts/vercel-build.mjs",
+    "seo:submit": "node scripts/submit-indexnow.mjs"
   },
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "dependencies": {
     "onnxruntime-node": "^1.24.3",
     "pg": "^8.23.1",
+    "sanitize-html": "^2.18.2",
     "sharp": "^0.35.5"
   },
   "overrides": {
     "adm-zip": "0.6.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }

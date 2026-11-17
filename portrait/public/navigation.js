@@ -1,9 +1,10 @@
 import {RESUME_ENTRY_TARGETS} from '../../assets/js/workspace-nav.js';
+const plansTarget='/plans/?return=%2Fportrait%2F';
 /** Keep the first return destination while the photo draft is being saved. */
 export function createReturnNavigation({ save, navigate, isBusy, onBusy, onPending = () => {} }) {
   let pending = false;
   return async destination => {
-    if (!['/', ...RESUME_ENTRY_TARGETS].includes(destination) || pending) return false;
+    if (!['/', ...RESUME_ENTRY_TARGETS, plansTarget].includes(destination) || pending) return false;
     if (isBusy()) { onBusy(); return false; }
     pending = true;
     onPending(true);

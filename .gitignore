@@ -22,3 +22,8 @@ assets/qa-*.html
 .vercel/
 
 vercel-public/
+.qa-*.mjs
+sanitizer.bundle.cjs
+
+# 内部文档与质检记录
+/docs/

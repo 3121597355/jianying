@@ -1,3 +1,4 @@
+import {ANALYTICS_PAGES} from './public-pages.js';
 // Foreground-visible time only. No field values, pointer paths or keyboard contents are read.
 export function createVisitTracker({document,window,now,makeId,send,onRestore=()=>{},route}){
   let id=makeId(),sequence=0,visibleMs=0,visibleSince=document.visibilityState==='visible'?now():null,nextPath='',stopped=false;
@@ -9,7 +10,7 @@ export function createVisitTracker({document,window,now,makeId,send,onRestore=()
   }
   function leave(){checkpoint('end',true);stopped=true;visibleSince=null;}
   function restore(event){if(!event.persisted)return;id=makeId();sequence=0;visibleMs=0;nextPath='';stopped=false;visibleSince=document.visibilityState==='visible'?now():null;checkpoint();onRestore();}
-  function navigation(event){const anchor=event.target?.closest?.('a[href]');if(!anchor||event.defaultPrevented||event.button>0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||anchor.download||anchor.target&&anchor.target!=='_self')return;try{const target=new URL(anchor.href,window.location.href);if(target.origin!==window.location.origin)return;const normalized=({'/index.html':'/','/resume':'/resume/','/resume.html':'/resume/','/portrait':'/portrait/'})[target.pathname]||target.pathname;if(['/','/resume/','/portrait/'].includes(normalized)&&!(target.pathname===window.location.pathname&&target.search===window.location.search&&target.hash))nextPath=normalized;}catch{}}
+  function navigation(event){const anchor=event.target?.closest?.('a[href]');if(!anchor||event.defaultPrevented||event.button>0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||anchor.download||anchor.target&&anchor.target!=='_self')return;try{const target=new URL(anchor.href,window.location.href);if(target.origin!==window.location.origin)return;const normalized=({'/index.html':'/','/resume':'/resume/','/resume.html':'/resume/','/portrait':'/portrait/'})[target.pathname]||target.pathname;if(Object.hasOwn(ANALYTICS_PAGES,normalized)&&!(target.pathname===window.location.pathname&&target.search===window.location.search&&target.hash))nextPath=normalized;}catch{}}
   document.addEventListener('visibilitychange',visibility);
   document.addEventListener('click',navigation);
   window.addEventListener('pagehide',leave);

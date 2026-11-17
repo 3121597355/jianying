@@ -2,10 +2,39 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {TEMPLATES,renderByTpl} from '../assets/js/templates.js';
 import {chooseTemplate} from '../assets/js/template-choice.js';
-import {createTemplateSample,hasResumeContent} from '../assets/js/template-samples.js';
+import {createTemplateSample,hasResumeContent,isTemplateSample,templateSampleKind} from '../assets/js/template-samples.js';
+import {createDefault} from '../assets/js/resume-defaults.js';
+import {initializeEditorDraft} from '../assets/js/editor-start.js';
 import {MODULES} from '../assets/js/dict.js';
 
-const blank=()=>({setData:{title:'个人简历',slogan:'PERSONAL PROFILE'},basicInfo:{name:'',workYears:-1,photoShow:true},moduleData:MODULES.filter(def=>def.name!=='basic').map(def=>({moduleName:def.name,moduleValue:def.label,visible:true,content:'',data:[]}))});
+const blank=createDefault;
+test('real empty drafts do not count project layout settings as written content',()=>{
+  const resume=blank();assert.equal(hasResumeContent(resume),false);
+  const project=resume.moduleData.find(mod=>mod.moduleName==='project');
+  project.data[0].projectDetails.layout.spacing='airy';
+  project.data[0].projectDetails.visible.summary=false;
+  assert.equal(hasResumeContent(resume),false);
+  project.data[0].projectDetails.summary='用户保留的项目简介';
+  assert.equal(hasResumeContent(resume),true);
+  const previous=structuredClone(resume.moduleData);assert.equal(chooseTemplate(resume,2002),false);assert.deepEqual(resume.moduleData,previous);
+  for(const change of [r=>r.coverData.name='用户封面',r=>r.zijianData.content='<p>未写完的自荐信</p>']){const r=blank();change(r);assert.equal(chooseTemplate(r,2001),false);}
+});
+test('first visits and legacy empty drafts start with a complete, editable, independent example',()=>{
+  for(const saved of [undefined,{resumeData:blank(),ui:{}}]){
+    const result=initializeEditorDraft(saved);assert.equal(result.seeded,true);assert.equal(result.ui.tab,'basic');assert.equal(isTemplateSample(result.resumeData),true);
+    assert(result.resumeData.coverData);assert(result.resumeData.zijianData);
+    assert(renderByTpl(result.resumeData).includes('企业协作平台体验升级'));
+    result.resumeData.basicInfo.name='真实姓名';assert.equal(isTemplateSample(result.resumeData),false);
+    assert.equal(initializeEditorDraft().resumeData.basicInfo.name,'林予安');
+    if(saved)assert.equal(saved.resumeData.basicInfo.name,'');
+  }
+});
+test('written drafts, hidden details and deliberately blank starts survive entry unchanged',()=>{
+  const resume=blank();resume.moduleData.find(mod=>mod.moduleName==='project').data[0].projectDetails.website='https://user.example/project';
+  const saved={resumeData:resume,ui:{tab:'project',editOpen:false}};const initial=initializeEditorDraft(saved);
+  assert.equal(initial.seeded,false);assert.deepEqual(initial.resumeData,resume);assert.equal(initial.ui.tab,'project');
+  const intentional=initializeEditorDraft({resumeData:blank(),ui:{startBlank:true}});assert.equal(intentional.seeded,false);assert.equal(intentional.resumeData.basicInfo.name,'');
+});
 test('every empty template choice loads the same editable example shown by the gallery',()=>{
   for(const template of TEMPLATES){
     const resume=blank();assert.equal(hasResumeContent(resume),false);
@@ -30,4 +59,18 @@ test('explicit sample start replaces prior personal fields and sample instances 
   chooseTemplate(resume,2001,{useSample:true});assert.deepEqual(resume.basicInfo,createTemplateSample(2001).basicInfo);
   resume.basicInfo.name='修改示例';resume.moduleData[1].data[0].name='修改公司';
   const fresh=createTemplateSample(2001);assert.equal(fresh.basicInfo.name,'林予安');assert.equal(fresh.moduleData[1].data[0].name,'星桥科技');
+});
+test('guide examples start fresh, preserve written drafts, and keep their content when switching templates',()=>{
+  for(const example of ['graduate','developer']){
+    const initial=initializeEditorDraft(undefined,{example});assert.equal(templateSampleKind(initial.resumeData),example);
+    const resume=initial.resumeData;assert(renderByTpl(resume).includes('校园活动报名'));assert.equal(resume.moduleData.find(mod=>mod.moduleName==='work').visible,false);
+    chooseTemplate(resume,2002,{useSample:isTemplateSample(resume)});assert.equal(templateSampleKind(resume),example);
+    chooseTemplate(resume,2001,{useSample:isTemplateSample(resume)});assert.equal(templateSampleKind(resume),example);
+    resume.basicInfo.name='已写姓名';assert.equal(isTemplateSample(resume),false);
+    const saved={resumeData:resume,ui:{tab:'project'}},again=initializeEditorDraft(saved,{example:example==='graduate'?'developer':'graduate'});
+    assert.equal(again.seeded,false);assert.deepEqual(again.resumeData,resume);assert.equal(again.ui.tab,'project');
+    assert.equal(initializeEditorDraft(undefined,{example}).resumeData.basicInfo.name,'陈同学');
+  }
+  assert.equal(templateSampleKind(initializeEditorDraft(undefined,{example:'<script>'}).resumeData),'professional');
+  assert.equal(initializeEditorDraft({resumeData:blank(),ui:{startBlank:true}},{example:'graduate'}).seeded,false);
 });

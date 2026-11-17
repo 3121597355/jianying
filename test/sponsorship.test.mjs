@@ -1,0 +1,61 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {once} from 'node:events';
+import path from 'node:path';
+import {createResumeServer} from '../serve.mjs';
+import {amountFen,normalizeReceipt,receiptsRevision,mutateReceipts,buildSupportReport,receiptsCsv,createSponsorship} from '../sponsorship.mjs';
+import {sponsorshipView} from '../assets/js/admin-sponsorship.js';
+
+const date=new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+const entry={date,method:'wechat',amount:'6.90',refund:'0.00',reference:'fixture-transaction',nickname:'合成支持者',note:'仅用于测试'};
+test('money uses integer fen and refuses invalid amounts, over-refunds and invalid dates',()=>{
+  assert.equal(amountFen('6.9'),690);assert.equal(amountFen('0.01'),1);assert.equal(amountFen('100000.00'),10000000);
+  for(const value of ['0','-1','1.999','NaN','Infinity','1e3','100000.01','1,000',1])assert.throws(()=>amountFen(value));
+  assert.throws(()=>normalizeReceipt({...entry,refund:'7'}));assert.throws(()=>normalizeReceipt({...entry,date:'2026-02-30'}));assert.throws(()=>normalizeReceipt({...entry,date:'2099-01-01'}));
+});
+test('receipt revisions prevent concurrent overwrites, duplicate references and retain voided records',()=>{
+  const first=mutateReceipts([],{revision:receiptsRevision([]),entry});
+  assert.throws(()=>mutateReceipts(first,{revision:receiptsRevision([]),entry}),e=>e.status===409);
+  assert.throws(()=>mutateReceipts(first,{revision:receiptsRevision(first),entry}),e=>e.status===409);
+  const changed=mutateReceipts(first,{revision:receiptsRevision(first),entry:{...entry,refund:'1.90'}},first[0].id);
+  const report=buildSupportReport({entries:changed,range:{from:date,to:date}});assert.equal(report.total.netFen,500);assert.equal(report.period.grossFen,690);assert.equal(report.period.refundFen,190);
+  const voided=mutateReceipts(changed,{revision:receiptsRevision(changed),entry:{...entry,voided:true}},first[0].id);
+  assert.equal(voided.length,1);assert.equal(buildSupportReport({entries:voided,range:{from:date,to:date}}).total.netFen,0);
+  assert.equal(voided[0].createdAt,first[0].createdAt);
+});
+test('intent views and repeated clicks are separate from revenue and CSV neutralizes spreadsheet formulas',()=>{
+  const entries=mutateReceipts([],{revision:receiptsRevision([]),entry:{...entry,nickname:'=HYPERLINK("https://evil.example")',note:' +SUM(A1:A2)'}});
+  const report=buildSupportReport({entries,range:{from:date,to:date},events:[{day:date,type:'page_view',path:'/plans/',visitor:'a'},{day:date,type:'page_view',path:'/plans/',visitor:'a'},{day:date,type:'page_view',path:'/resume/',visitor:'b'},{day:date,type:'support_wechat_open'},{day:date,type:'support_wechat_open'},{day:date,type:'support_platform_open'}]});
+  assert.equal(report.intent.views,2);assert.equal(report.intent.visitors,1);assert.equal(report.intent.wechatOpens,2);assert.equal(report.total.count,1);assert.equal(report.total.netFen,690);
+  const csv=receiptsCsv(entries);assert(csv.includes('"\'=HYPERLINK'));assert(csv.includes('"\'+SUM'));assert(csv.includes('6.90'));
+  const malicious=structuredClone(report);malicious.entries[0].note='<script>alert(1)</script>';assert(!sponsorshipView(malicious).includes('<script>'));assert(sponsorshipView(malicious).includes('&lt;script&gt;'));
+});
+test('private sponsorship ledger persists, rejects cross-site/CSRF writes and is never in public analytics',async t=>{
+  const directory=await mkdtemp(path.join(import.meta.dirname,'fixture-sponsorship-'));
+  const server=await createResumeServer({adminOptions:{analyticsTestMode:true,dataDir:directory,initialAdmin:{username:'fixture_admin',password:'fixture-password-2026'}},portraitOptions:{publicMode:true,configPath:path.join(directory,'unused.json')},memberOptions:{directory:path.join(directory,'members'),databaseUrl:''}});
+  server.listen(0,'127.0.0.1');await once(server,'listening');
+  t.after(async()=>{await new Promise(resolve=>{server.close(resolve);server.closeAllConnections();});const target=path.resolve(directory);assert(target.startsWith(path.resolve(import.meta.dirname)+path.sep));await rm(target,{recursive:true,force:true});});
+  const base='http://127.0.0.1:'+server.address().port;
+  const request=(route,method='GET',value,headers={})=>fetch(base+route,{method,headers:{...(value?{'Content-Type':'application/json'}:{}),...headers},...(value?{body:JSON.stringify(value)}:{})});
+  const login=await request('/api/auth/login','POST',{username:'fixture_admin',password:'fixture-password-2026'}),status=await login.json(),cookie=login.headers.get('set-cookie').split(';')[0];
+  const admin=(route,method='GET',value,headers={})=>request(route,method,value,{Cookie:cookie,'X-Editor-Token':status.csrf,...headers});
+  assert.equal((await request('/api/admin/sponsorship')).status,401);assert.equal((await request('/api/admin/sponsorship/export')).status,401);
+  let report=await(await admin('/api/admin/sponsorship')).json();
+  assert.equal((await request('/api/admin/sponsorship','POST',{revision:report.revision,entry},{Cookie:cookie})).status,403);
+  assert.equal((await admin('/api/admin/sponsorship','POST',{revision:report.revision,entry},{Origin:'https://evil.example'})).status,403);
+  assert.equal((await admin('/api/admin/sponsorship','POST',{revision:report.revision,entry})).status,201);
+  assert.equal((await admin('/api/admin/sponsorship','POST',{revision:report.revision,entry})).status,409);
+  report=await(await admin('/api/admin/sponsorship')).json();assert.equal(report.total.netFen,690);const id=report.entries[0].id;
+  const restored=createSponsorship(directory);assert.equal(restored.get()[0].amountFen,690);
+  assert.equal((await admin('/api/admin/sponsorship/'+id,'PUT',{revision:report.revision,entry:{...entry,refund:'6.90'}})).status,200);
+  report=await(await admin('/api/admin/sponsorship')).json();assert.equal(report.total.netFen,0);assert.equal(report.total.count,1);
+  const anonymous='fixture-anonymous-visitor';assert.equal((await request('/api/analytics/event','POST',{type:'page_view',path:'/plans/',visitor:anonymous})).status,204);
+  assert.equal((await request('/api/analytics/event','POST',{type:'support_wechat_open',path:'/plans/',visitor:anonymous,amount:'100',nickname:'DO_NOT_RECORD'})).status,204);
+  const logs=await readFile(path.join(directory,'events.jsonl'),'utf8');assert(!logs.includes('DO_NOT_RECORD'));assert(!logs.includes('amount'));
+  const publicSettings=await(await request('/api/site-config')).text();assert(!publicSettings.includes('fixture-transaction'));assert(!publicSettings.includes('合成支持者'));
+  const exportResponse=await admin('/api/admin/sponsorship/export');assert.equal(exportResponse.status,200);assert((await exportResponse.text()).includes('6.90'));
+  const stats=await(await admin('/api/admin/summary')).text();assert(!stats.includes('fixture-transaction'));
+  assert.equal((await admin('/api/admin/sponsorship/'+id,'PUT',{revision:report.revision,entry:{...entry,voided:true}})).status,200);
+  report=await(await admin('/api/admin/sponsorship')).json();assert.equal(report.total.count,0);assert.equal(report.entries.length,1);assert.equal(report.intent.views,1);assert.equal(report.intent.wechatOpens,1);
+});

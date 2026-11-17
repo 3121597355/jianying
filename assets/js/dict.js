@@ -30,7 +30,10 @@ export function optionalLabel(options, value) {
   const index = /^\d+$/.test(raw) ? Number(raw) : options.indexOf(raw);
   return index > 0 ? options[index] || '' : '';
 }
-export const DEGREE = ['不填', '高中', '中专', '大专', '本科', '硕士', '博士', 'MBA', '其他'];
+export const DEGREE = ['不填', '高中', '中专', '专科', '本科', '硕士', '博士', 'MBA', '其他'];
+/** 旧草稿把学历存为“大专”，展示与选择统一为“专科”，不改写已保存内容。 */
+const DEGREE_ALIASES = { 大专: '专科' };
+export const degreeLabel = value => DEGREE_ALIASES[String(value ?? '').trim()] || String(value ?? '').trim();
 
 export const WORK_YEARS = [
   '不填', '应届生', '半年经验', '1年经验', '2年经验', '3年经验', '4年经验', '5年经验',

@@ -5,6 +5,7 @@
 
 import { loadVendor } from './vendor-loader.js';
 import {track} from './analytics.js';
+import {safeProjectUrl} from './project-fields.js';
 
 const PAGE_W_PT = 595.28;   // A4 宽（pt）
 const PAGE_H_PT = 841.89;   // A4 高（pt）
@@ -93,6 +94,14 @@ export async function downloadResumePDF(opts = {}) {
 
     const pxPerPage = PAGE_H_PX * scale;
     const pages = Math.max(1, Math.ceil(canvas.height / pxPerPage));
+    // Raster images lose anchors. Preserve each displayed line of project links as a PDF annotation.
+    const bounds=clone.getBoundingClientRect();
+    const links=[...clone.querySelectorAll('.resume-project-link a[href],.resume-project-heading-link a[href]')].flatMap(anchor=>{
+      const url=safeProjectUrl(anchor.getAttribute('href'));
+      if(!url)return [];
+      return [...anchor.getClientRects()].map(rect=>({url,x:rect.left-bounds.left,y:rect.top-bounds.top,width:rect.width,height:rect.height}));
+    });
+    const pointsPerPixel=PAGE_W_PT/BASE_W_PX;
 
     for (let i = 0; i < pages; i++) {
       const sy = i * pxPerPage;
@@ -112,6 +121,12 @@ export async function downloadResumePDF(opts = {}) {
       // 按宽度等比放置：820px 内容对应 A4 宽，高度自然换算
       const hPt = (sh / scale) * (PAGE_W_PT / BASE_W_PX);
       pdf.addImage(data, 'JPEG', 0, 0, PAGE_W_PT, hPt, undefined, 'FAST');
+      for(const link of links){
+        const left=Math.max(0,link.x),right=Math.min(BASE_W_PX,link.x+link.width);
+        const top=Math.max(i*PAGE_H_PX,link.y),bottom=Math.min(i*PAGE_H_PX+sh/scale,link.y+link.height);
+        const topPt=(top-i*PAGE_H_PX)*pointsPerPixel,bottomPt=Math.min(PAGE_H_PT,(bottom-i*PAGE_H_PX)*pointsPerPixel);
+        if(right>left&&bottomPt>topPt)pdf.link(left*pointsPerPixel,topPt,(right-left)*pointsPerPixel,bottomPt-topPt,{url:link.url});
+      }
     }
 
     onProgress(0.92);
@@ -120,6 +135,7 @@ export async function downloadResumePDF(opts = {}) {
     const fileName = `${name ? name + '-' : ''}个人简历.pdf`;
     pdf.save(fileName);
     track('resume_export');
+    window.dispatchEvent(new Event('resume-file-generated'));
 
     onProgress(1);
     return { pages, fileName };

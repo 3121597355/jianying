@@ -15,3 +15,7 @@ uploads
 drafts
 vercel-public
 assets/qa-*.html
+.qa-*.mjs
+docs
+portrait/models/*.onnx
+sanitizer.bundle.cjs

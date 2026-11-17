@@ -65,6 +65,15 @@ test('homepage and editor have distinct routes with absolute assets and the same
   assert.equal(redirect.status,308); assert.equal(redirect.headers.get('location'),'/resume/');
 });
 
+test('support replaces package pricing, remains reachable and excluded from indexing',async t=>{
+  const s=await setup(t),response=await fetch(s.base+'/plans/'),page=await response.text();
+  assert.equal(response.status,200);assert.match(response.headers.get('x-robots-tag'),/noindex/);assert.match(response.headers.get('content-security-policy'),/frame-ancestors 'none'/);
+  assert.match(page,/请我喝一杯/);assert.doesNotMatch(page,/暂未开放购买|plan-price|data-plans/);assert.match(page,/data-return/);
+  for(const route of ['/plans','/plans.html']){const redirect=await fetch(s.base+route,{redirect:'manual'});assert.equal(redirect.status,308);assert.equal(redirect.headers.get('location'),'/plans/');}
+  assert.equal((await fetch(s.base+'/assets/js/plans.js')).status,200);
+  const thanks=await fetch(s.base+'/plans/thanks/'),thanksPage=await thanks.text();assert.equal(thanks.status,200);assert.match(thanks.headers.get('x-robots-tag'),/noindex/);assert.match(thanksPage,/谢谢老板/);assert.match(thanksPage,/账单为准/);assert(!thanksPage.includes('支付成功'));
+  const alias=await fetch(s.base+'/plans/thanks?return=%2Fportrait%2F',{redirect:'manual'});assert.equal(alias.status,308);assert.equal(alias.headers.get('location'),'/plans/thanks/?return=%2Fportrait%2F');
+});
 test('all entry pages offer mobile PNG and Apple icons and conventional icon URLs resolve', async t => {
   const s = await setup(t);
   for (const route of ['/', '/resume/', '/portrait/', '/admin.html']) {

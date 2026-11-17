@@ -5,12 +5,12 @@
   "installCommand": "npm ci --ignore-scripts",
   "outputDirectory": "vercel-public",
   "regions": [
-    "sin1"
+    "hkg1"
   ],
   "functions": {
     "api/server.mjs": {
       "maxDuration": 60,
-      "includeFiles": "{*.html,changelog-seed.json,assets/**,portrait/public/**,portrait/models/*.onnx}",
+      "includeFiles": "{*.html,sanitizer.bundle.cjs,changelog-seed.json,assets/**,portrait/public/**,portrait/models/*.onnx}",
       "excludeFiles": "{private/**,node_modules/onnxruntime-node/bin/napi-v6/win32/**,node_modules/onnxruntime-node/bin/napi-v6/darwin/**,node_modules/onnxruntime-node/bin/napi-v6/linux/arm64/**}"
     }
   },

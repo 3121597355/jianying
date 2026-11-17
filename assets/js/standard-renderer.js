@@ -1,5 +1,7 @@
-import {FONTS,SEX,MARRIAGE,POLITICS,WORK_YEARS,optionalLabel} from './dict.js';
+import {FONTS,SEX,MARRIAGE,POLITICS,WORK_YEARS,optionalLabel,degreeLabel} from './dict.js';
 import {getModuleOrder} from './module-order.js';
+import {renderProjectBody,projectWebsiteLink} from './project-fields.js';
+import {visibleBasicFields} from './basic-fields.js';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const number=(value,min,max,fallback)=>Math.min(max,Math.max(min,Number(value)||fallback));
@@ -26,21 +28,23 @@ export function renderStandard(resume,{layout}={}){
   const rich=content=>content?`<div class="ql-editor" style="font-size:${size}px;line-height:${leading};margin-top:7px">${content}</div>`:'';
   const section=(mod,content)=>mod?.visible&&content?`<section id="${escape(mod.moduleName)}" class="resume_content" style="margin-top:${gap}px">${heading(mod.moduleValue||'')}${content}</section>`:'';
   const timeline=mod=>{
-    const rows=(Array.isArray(mod.data)?mod.data:[]).filter(item=>item&&(item.name||item.job||item.major||item.content||item.timeStart||item.timeEnd));
-    return rows.map(item=>{
-      const labels=[item.name,mod.moduleName==='jiaoyu'?item.major:item.job,mod.moduleName==='jiaoyu'&&item.xueli!=='不填'?item.xueli:''].filter(Boolean);
-      return `<div class="content_list" data-item-index="${mod.data.indexOf(item)}" style="margin-top:${Math.round(gap/2)}px"><ul class="list_top"><li class="name">${labels.map(escape).join(' <i>·</i> ')}</li><li class="time">${escape(dates(item))}</li></ul>${rich(item.content)}</div>`;
+    const rows=(Array.isArray(mod.data)?mod.data:[]).filter(item=>item).map(item=>({item,body:mod.moduleName==='project'?renderProjectBody(item):item.content,website:mod.moduleName==='project'?projectWebsiteLink(item):null})).filter(({item,body,website})=>item.name||item.job||item.major||body||website||item.timeStart||item.timeEnd);
+    return rows.map(({item,body,website})=>{
+      const degree=mod.moduleName==='jiaoyu'?degreeLabel(item.xueli):'';
+      const labels=[item.name,mod.moduleName==='jiaoyu'?item.major:item.job,degree!=='不填'?degree:''].filter(Boolean);
+      const address=website?`<span class="resume-project-heading-link">${labels.length?' <i aria-hidden="true">·</i> ':''}<span class="resume-project-address-label">项目地址：</span><a href="${escape(website.url)}" target="_blank" rel="noopener noreferrer" title="打开项目地址">${escape(website.label)}</a></span>`:'';
+      return `<div class="content_list" data-item-index="${mod.data.indexOf(item)}" style="margin-top:${Math.round(gap/2)}px"><ul class="list_top"><li class="name">${labels.map(escape).join(' <i>·</i> ')}${address}</li><li class="time">${escape(dates(item))}</li></ul>${rich(body)}</div>`;
     }).join('');
   };
   const header=()=>{
     if(bands){
       const experience=basic.workYears!==''&&basic.workYears!==null&&basic.workYears!==undefined&&Number(basic.workYears)>=0?WORK_YEARS[Number(basic.workYears)+1]:'';
-      const fields=[['姓名',basic.name||'你的姓名'],[basic.isAge===false?'出生年月':'年龄',basic.isAge===false?basic.birthday:age(basic.birthday)],['性别',optionalLabel(SEX,basic.sex)],['工作年限',experience],['电话',basic.mobile],['邮箱',basic.email],['民族',basic.minzu],['籍贯',basic.jiguan],['政治面貌',optionalLabel(POLITICS,basic.zhengzhi)],['婚姻状况',optionalLabel(MARRIAGE,basic.hunyin)],['身高',basic.height?`${basic.height}cm`:''],['体重',basic.weight?`${basic.weight}kg`:''],...(Array.isArray(basic.make)?basic.make:[]).filter(item=>item?.value).map(item=>[item.keyValue||'',item.value])];
-      const rows=fields.filter(([,value])=>value!==''&&value!==null&&value!==undefined).map(([label,value])=>`<dd><span class="profile-label">${escape(label)}</span><span${label==='姓名'?' id="myname"':''}>${escape(value)}</span></dd>`).join('');
+      const fields=[['姓名',basic.name||'你的姓名'],[basic.isAge===false?'出生年月':'年龄',basic.isAge===false?basic.birthday:age(basic.birthday)],['性别',optionalLabel(SEX,basic.sex)],['工作年限',experience],['电话',basic.mobile],['邮箱',basic.email],['民族',basic.minzu],['籍贯',basic.jiguan],['政治面貌',optionalLabel(POLITICS,basic.zhengzhi)],['婚姻状况',optionalLabel(MARRIAGE,basic.hunyin)],['身高',basic.height?`${basic.height}cm`:''],['体重',basic.weight?`${basic.weight}kg`:''],...visibleBasicFields(basic.make).map(item=>[item.keyValue.trim(),item.value.trim(),true])];
+      const rows=fields.filter(([,value])=>value!==''&&value!==null&&value!==undefined).map(([label,value,custom])=>`<dd${custom?' class="profile-custom-field"':''}>${label?`<span class="profile-label">${escape(label)}</span>`:''}<span${label==='姓名'&&!custom?' id="myname"':''}>${escape(value)}</span></dd>`).join('');
       const photo=basic.photoShow?`<div class="photo_box${basic.photo?'':' is-default'}" data-photo-slot title="点击更换照片">${basic.photo?`<img src="${escape(basic.photo)}" alt="照片">`:'<span class="standard-photo-placeholder">添加照片</span>'}</div>`:'';
       return `<section id="basicInfo" class="resume_content standard-basic" style="margin-top:${gap}px">${heading('基本信息')}<div class="basic_info_box${basic.photoShow?' has-photo':''}"><dl class="basic_info_grid">${rows}</dl>${photo}</div></section>`;
     }
-    const extra=(Array.isArray(basic.make)?basic.make:[]).filter(item=>item?.value).map(item=>`${item.keyValue||''}：${item.value}`);
+    const extra=visibleBasicFields(basic.make).map(item=>`${item.keyValue.trim()?item.keyValue.trim()+'：':''}${item.value.trim()}`);
     const profile=[basic.isAge===false?basic.birthday:age(basic.birthday),optionalLabel(SEX,basic.sex),basic.minzu,optionalLabel(MARRIAGE,basic.hunyin),basic.height?`${basic.height}cm`:'',basic.weight?`${basic.weight}kg`:'',optionalLabel(POLITICS,basic.zhengzhi),basic.jiguan,Number(basic.workYears)>=0?WORK_YEARS[Number(basic.workYears)+1]:'',...extra];
     const goal=merged&&intent?.visible?intent.data||{}:{};
     const photo=basic.photoShow?`<div class="photo_box${basic.photo?'':' is-default'}" data-photo-slot title="点击更换照片" style="right:${padding}px">${basic.photo?`<img src="${escape(basic.photo)}" alt="照片">`:'<span class="standard-photo-placeholder">添加照片</span>'}</div>`:'';

@@ -6,18 +6,76 @@ import path from 'node:path';
 import {createResumeServer} from '../serve.mjs';
 import {createChangelog} from '../changelog.mjs';
 import {changelogView} from '../assets/js/admin-changelog.js';
+import createAuth from '../admin-auth.cjs';
 
 async function setup(t){
   const dataDir=await mkdtemp(path.join(import.meta.dirname,'fixture-admin-'));
-  const server=await createResumeServer({adminOptions:{dataDir},portraitOptions:{publicMode:true,configPath:path.join(dataDir,'unused.json')}});server.listen(0,'127.0.0.1');await once(server,'listening');
+  const server=await createResumeServer({adminOptions:{analyticsTestMode:true,dataDir,initialAdmin:{username:'fixture_admin',password:'fixture-password-only-2026'}},memberOptions:{directory:path.join(dataDir,'members'),databaseUrl:''},portraitOptions:{publicMode:true,configPath:path.join(dataDir,'unused.json')}});server.listen(0,'127.0.0.1');await once(server,'listening');
   t.after(async()=>{await new Promise(resolve=>{server.close(resolve);server.closeAllConnections();});const target=path.resolve(dataDir);assert(target.startsWith(path.resolve(import.meta.dirname)+path.sep));await rm(target,{recursive:true,force:true});});
   const base=`http://127.0.0.1:${server.address().port}`;
   const request=(route,method='GET',value,extra={})=>fetch(base+route,{method,headers:{...(value?{'Content-Type':'application/json'}:{}),...extra},...(value?{body:JSON.stringify(value)}:{})});
-  const code=(await readFile(path.join(dataDir,'管理员首次设置码.txt'),'utf8')).match(/[A-F0-9]{6}(?:-[A-F0-9]{6}){5}/)[0];
-  const created=await request('/api/auth/setup','POST',{username:'fixture_admin',password:'fixture-password-only-2026',code});assert.equal(created.status,200);const status=await created.json(),cookie=created.headers.get('set-cookie').split(';')[0];
+  const created=await request('/api/auth/login','POST',{username:'fixture_admin',password:'fixture-password-only-2026'});assert.equal(created.status,200);const status=await created.json(),cookie=created.headers.get('set-cookie').split(';')[0];
   const admin=(route,method='GET',value,extra={})=>request(route,method,value,{Cookie:cookie,'X-Editor-Token':status.csrf,...extra});
   return {base,request,admin,dataDir,cookie,status};
 }
+test('support card text, order, images and layout persist and invalid image edits leave settings intact',async t=>{
+  const s=await setup(t),original=await(await s.admin('/api/admin/settings')).json();
+  const image='data:image/png;base64,aGVsbG8=';
+  original.settings.support.wechat=image;original.settings.support.alipay=image;
+  original.settings.support.offers.reverse();original.settings.support.offers[0].image=image;original.settings.support.offers[0].name='喝杯咖啡';
+  original.settings.support.page={title:'请我喝杯茶',description:'',columns:2,align:'center',imageFit:'contain'};
+  const savedResponse=await s.admin('/api/admin/settings','PUT',original);assert.equal(savedResponse.status,200);const saved=await savedResponse.json();
+  const publicSettings=await(await s.request('/api/site-config')).json();
+  assert.equal(publicSettings.support.page.title,'请我喝杯茶');assert.equal(publicSettings.support.page.columns,2);assert.equal(publicSettings.support.offers[0].name,'喝杯咖啡');assert.equal(publicSettings.support.offers[0].image,image);assert.equal(publicSettings.support.wechat,image);assert.equal(publicSettings.support.alipay,image);
+  const disk=JSON.parse(await readFile(path.join(s.dataDir,'site-settings.json'),'utf8'));assert.deepEqual(disk.support,publicSettings.support);
+  saved.settings.support.offers[0].image='data:image/svg+xml;base64,PHN2Zz4=';assert.equal((await s.admin('/api/admin/settings','PUT',saved)).status,400);
+  assert.deepEqual((await(await s.request('/api/site-config')).json()).support,publicSettings.support);
+});
+test('administrators are initialized server-side and web registration cannot replace their credentials',async t=>{
+  const s=await setup(t);
+  const initial=JSON.parse(await readFile(path.join(s.dataDir,'admin-auth.json'),'utf8'));
+  assert.equal(initial.admin.username,'fixture_admin');assert(!JSON.stringify(initial).includes('fixture-password-only-2026'));
+  assert.equal((await s.request('/api/auth/setup','POST',{username:'intruder',password:'new-password-only-2026'})).status,410);
+  createAuth(s.dataDir,{username:'replacement',password:'replacement-password-only-2026'});
+  assert.deepEqual(JSON.parse(await readFile(path.join(s.dataDir,'admin-auth.json'),'utf8')),initial);
+  const status=await(await s.request('/api/auth/status')).json();assert.equal(status.configured,true);assert.equal(status.setupRequired,undefined);
+  assert.equal((await s.request('/api/auth/login','POST',{username:'replacement',password:'replacement-password-only-2026'})).status,401);
+  assert.equal((await s.request('/api/auth/login','POST',{username:'fixture_admin',password:'fixture-password-only-2026'})).status,200);
+  const page=await(await s.request('/admin.html')).text();assert(!page.includes('setup-code'));assert(!page.includes('confirm-password'));assert(page.includes('管理员登录'));
+});
+test('generated local initial credentials survive restarts and become obsolete after a password change',{skip:process.env.ADMIN_PASSWORD!==undefined},async t=>{
+  const directory=await mkdtemp(path.join(import.meta.dirname,'fixture-admin-initial-'));
+  t.after(async()=>{const target=path.resolve(directory);assert(target.startsWith(path.resolve(import.meta.dirname)+path.sep));await rm(target,{recursive:true,force:true});});
+  const auth=createAuth(directory,{username:'qa_generated'});
+  const loginFile=path.join(directory,'管理员初始登录信息.txt'),loginInfo=await readFile(loginFile,'utf8');
+  const initialPassword=loginInfo.match(/密码：([^\r\n]+)/)[1];assert(initialPassword.length>=32);
+  const encoded=await readFile(path.join(directory,'admin-auth.json'),'utf8');assert(!encoded.includes(initialPassword));
+  createAuth(directory,{username:'qa_generated'});assert.equal(await readFile(loginFile,'utf8'),loginInfo);
+  const req={headers:{},socket:{remoteAddress:'127.0.0.1'}},headers={},res={setHeader:(name,value)=>headers[name]=value};
+  const session=await auth.login(req,res,{username:'qa_generated',password:initialPassword});
+  req.headers={cookie:headers['Set-Cookie'].split(';')[0],'x-editor-token':session.csrf};
+  await auth.changePassword(req,{currentPassword:initialPassword,password:'updated-password-only-2026'});
+  assert(!(await readFile(loginFile,'utf8')).includes(initialPassword));
+  const reopened=createAuth(directory);await assert.rejects(()=>reopened.login({headers:{},socket:{remoteAddress:'127.0.0.1'}},res,{username:'qa_generated',password:initialPassword}),{status:401});
+  await reopened.login({headers:{},socket:{remoteAddress:'127.0.0.1'}},res,{username:'qa_generated',password:'updated-password-only-2026'});
+});
+test('member statistics and AI configuration require independent administrator authorization and hide private data',async t=>{
+  const s=await setup(t);
+  assert.equal((await s.request('/api/admin/members')).status,401);assert.equal((await s.request('/api/admin/resume-ai')).status,401);
+  const userResponse=await s.request('/api/member/register','POST',{username:'qa_user_for_admin',password:'qa-user-password-2026',acceptPrivacy:true},{Origin:s.base});assert.equal(userResponse.status,201);const user=await userResponse.json(),cookie=userResponse.headers.get('set-cookie').split(';')[0];
+  assert.equal((await s.request('/api/admin/members','GET',undefined,{Cookie:cookie})).status,401);
+  const settings={baseUrl:'https://provider.example/v1',model:'test-model',apiKey:'qa-private-model-key',enabled:false,dailyLimit:3};
+  assert.equal((await s.request('/api/admin/resume-ai','PUT',settings,{Cookie:s.cookie})).status,403);
+  const configured=await s.admin('/api/admin/resume-ai','PUT',settings);assert.equal(configured.status,200);assert(!JSON.stringify(await configured.json()).includes(settings.apiKey));
+  const document={setData:{tplId:2001},basicInfo:{name:'NEVER_SHOW_PRIVATE_NAME'},moduleData:[]};
+  assert.equal((await s.request('/api/member/resumes','POST',{resume:document},{Origin:s.base,Cookie:cookie,'X-Member-Token':user.csrf})).status,201);
+  const summary=await(await s.admin('/api/admin/members?days=7')).json();assert.equal(summary.totalAccounts,1);assert.equal(summary.cloudResumes,1);assert.equal(summary.activeAccounts,1);assert(!JSON.stringify(summary).includes('NEVER_SHOW_PRIVATE_NAME'));assert(!JSON.stringify(summary).includes(settings.apiKey));
+  assert.equal(summary.workspace.accountsWithResumes,1);assert.equal(summary.workspace.multiResumeAccounts,0);
+  for(const kind of ['base','job'])assert.equal((await s.request('/api/member/resumes','POST',{resume:document,kind},{Origin:s.base,Cookie:cookie,'X-Member-Token':user.csrf})).status,201);
+  const multi=await(await s.admin('/api/admin/members?days=7')).json();assert.equal(multi.cloudResumes,3);assert.equal(multi.workspace.multiResumeAccounts,1);assert.equal(multi.workspace.baseResumes,2);assert.equal(multi.workspace.jobResumes,1);assert.deepEqual(multi.workspace.distribution.map(item=>item.accounts),[0,0,1,0]);assert(!JSON.stringify(multi).includes('NEVER_SHOW_PRIVATE_NAME'));
+  const page=await s.request('/account/');assert.equal(page.status,200);assert.match(page.headers.get('x-robots-tag'),/noindex/);assert.match(page.headers.get('content-security-policy'),/frame-ancestors 'none'/);
+  for(const route of ['/members.mjs','/account-store.mjs','/private/members/accounts.json'])assert.equal((await s.request(route)).status,404);
+});
 test('changelog CRUD persists entries, protects concurrent changes, and escapes rendered text',async t=>{
   const s=await setup(t);assert.equal((await s.request('/api/admin/changelog')).status,401);
   for(const route of ['/changelog-seed.json','/changelog.mjs','/private/admin/changelog.json'])assert.equal((await s.request(route)).status,404);
@@ -46,7 +104,7 @@ test('admin authentication, CSRF, origin checks and private files protect manage
   assert.equal((await s.request('/api/admin/summary')).status,401);
   assert.equal((await s.request('/admin.html')).status,200);
   assert.match((await s.request('/admin.html')).headers.get('content-security-policy'),/frame-ancestors 'none'/);
-  for(const route of ['/admin.mjs','/admin-auth.cjs','/private/admin/admin-auth.json','/private/admin/events.jsonl','/private/admin/管理员首次设置码.txt'])assert.equal((await s.request(route)).status,404);
+  for(const route of ['/admin.mjs','/admin-auth.cjs','/private/admin/admin-auth.json','/private/admin/events.jsonl','/private/admin/管理员初始登录信息.txt','/private/admin/管理员首次设置码.txt'])assert.equal((await s.request(route)).status,404);
   const loaded=await (await s.admin('/api/admin/settings')).json();
   assert.equal((await s.request('/api/admin/settings','PUT',loaded,{Cookie:s.cookie})).status,403);
   assert.equal((await s.admin('/api/admin/settings','PUT',loaded,{Origin:'https://attacker.example'})).status,403);
@@ -70,10 +128,10 @@ test('anonymous statistics retain only allowlisted fields, exclude admins, and h
   assert.equal((await s.request('/api/analytics/event','POST',{...event,type:'resume_export'})).status,204);
   assert.equal((await s.request('/api/analytics/event','POST',{...event,path:'/private/resume'})).status,400);
   const raw=await readFile(path.join(s.dataDir,'events.jsonl'),'utf8');for(const value of ['private-name','private-photo','private-resume','private','fixture-browser-20261110','127.0.0.1'])assert(!raw.includes(value));
-  const stats=await(await s.admin('/api/admin/summary?days=7')).json();assert.equal(stats.metrics.views,1);assert.equal(stats.metrics.visitors,1);assert.equal(stats.metrics.exports,1);assert.equal(stats.sources[0].label,'example.com');assert.equal(stats.series.length,7);
+  const stats=await(await s.admin('/api/admin/summary?days=7')).json();assert.equal(stats.metrics.views,1);assert.equal(stats.metrics.visitors,1);assert.equal(stats.metrics.exports,1);assert.equal(stats.sources[0].label,'example.com');assert.equal(stats.series.length,(Date.parse(stats.collection.range.to)-Date.parse(stats.collection.range.from))/86400000+1);
   assert.equal((await s.admin('/api/admin/summary?from=2026-02-30&to=2026-03-01')).status,400);
   const config=await(await s.admin('/api/admin/settings')).json();config.settings.analytics.enabled=false;assert.equal((await s.admin('/api/admin/settings','PUT',config)).status,200);assert.equal((await s.request('/api/analytics/event','POST',event)).status,204);assert.equal((await(await s.admin('/api/admin/summary')).json()).metrics.views,1);
-  const csv=await s.admin('/api/admin/export?days=7');assert.match(csv.headers.get('content-type'),/text\/csv/);assert.match(await csv.text(),/日期,页面访问,功能操作/);
+  const csv=await s.admin('/api/admin/export?days=7');assert.match(csv.headers.get('content-type'),/text\/csv/);assert.match(await csv.text(),/"日期","页面访问","功能操作"/);
 });
 test('API keys read only anonymous statistics and password changes invalidate other sessions',async t=>{
   const s=await setup(t);const second=await s.request('/api/auth/login','POST',{username:'fixture_admin',password:'fixture-password-only-2026'});assert.equal(second.status,200);const secondCookie=second.headers.get('set-cookie').split(';')[0];

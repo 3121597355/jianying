@@ -1,7 +1,9 @@
 import {mkdir,cp,rm} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {build} from 'esbuild';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+await build({absWorkingDir:root,entryPoints:['sanitize-html'],bundle:true,platform:'node',format:'cjs',target:'node24',outfile:path.join(root,'sanitizer.bundle.cjs'),legalComments:'inline'});
 const target=path.join(root,'vercel-public');
 if(!target.startsWith(root+path.sep)||path.basename(target)!=='vercel-public')throw Error('Unsafe build directory');
 await rm(target,{recursive:true,force:true});await mkdir(target,{recursive:true});

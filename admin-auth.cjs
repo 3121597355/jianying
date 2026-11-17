@@ -12,9 +12,9 @@ const equal = (a, b) => {
 };
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 
-module.exports = function createAuth(dataDir) {
+module.exports = function createAuth(dataDir, initialAdmin = {}) {
   const file = path.join(dataDir, 'admin-auth.json');
-  const setupFile = path.join(dataDir, '管理员首次设置码.txt');
+  const initialLoginFile = path.join(dataDir, '管理员初始登录信息.txt');
   const sessions = new Map(), attempts = new Map();
   let state;
   function save() {
@@ -22,10 +22,18 @@ module.exports = function createAuth(dataDir) {
     fs.renameSync(file + '.tmp', file);
   }
   if (fs.existsSync(file)) state = JSON.parse(fs.readFileSync(file, 'utf8'));
-  else {
-    const code = crypto.randomBytes(18).toString('hex').toUpperCase().match(/.{1,6}/g).join('-');
-    state = { version: 1, admin: null, setupHash: digest(code), keys: [] };
-    fs.writeFileSync(setupFile, '管理员首次设置码（仅首次创建账户使用）\r\n\r\n' + code + '\r\n\r\n打开 admin.html，输入此设置码并设置自己的账户与密码。请勿公开此文件。\r\n', { mode: 0o600 });
+  else state = { version: 1, admin: null, keys: [] };
+  // Initialize only on the server; an existing administrator is never replaced.
+  if (!state.admin) {
+    const username = initialAdmin.username || process.env.ADMIN_USERNAME || 'admin';
+    const configuredPassword = initialAdmin.password ?? process.env.ADMIN_PASSWORD;
+    const initialPassword = configuredPassword ?? crypto.randomBytes(24).toString('base64url');
+    if (typeof username !== 'string' || !/^[a-zA-Z0-9_.-]{3,40}$/.test(username)) throw fail('管理员账户名需要为 3～40 位字母、数字、点、横线或下划线。');
+    if (typeof initialPassword !== 'string' || initialPassword.length < 10 || initialPassword.length > 128) throw fail('管理员密码需要为 10～128 个字符。');
+    const salt = crypto.randomBytes(16).toString('hex');
+    state.admin = { username, salt, hash: crypto.scryptSync(initialPassword, salt, 64).toString('hex'), createdAt: new Date().toISOString() };
+    delete state.setupHash;
+    if (configuredPassword === undefined) fs.writeFileSync(initialLoginFile, '管理员初始登录信息（仅保存在本机，请勿公开）\r\n\r\n账户：' + username + '\r\n密码：' + initialPassword + '\r\n\r\n打开 /admin.html 登录，可在后台“账户安全”修改密码。已创建的账户不会随重启重置。\r\n', { mode: 0o600 });
     save();
   }
   function throttle(req) {
@@ -70,19 +78,6 @@ module.exports = function createAuth(dataDir) {
     if (typeof value !== 'string' || value.length > 128 || !state.admin) return false;
     return equal((await scrypt(value, state.admin.salt, 64)).toString('hex'), state.admin.hash);
   }
-  async function setup(req, res, input) {
-    const attemptKey = throttle(req);
-    if (state.admin) throw fail('管理员账户已经创建，请登录。', 409);
-    if (typeof input.code !== 'string' || !equal(digest(input.code.trim().toUpperCase()), state.setupHash)) throw fail('首次设置码不正确。', 403);
-    if (typeof input.username !== 'string' || !/^[a-zA-Z0-9_.-]{3,40}$/.test(input.username)) throw fail('账户名需要为 3～40 位字母、数字、点、横线或下划线。');
-    const credentials = await password(input.password);
-    if (state.admin) throw fail('管理员账户已经创建，请登录。', 409);
-    state.admin = { username: input.username, ...credentials, createdAt: new Date().toISOString() };
-    state.setupHash = ''; save();
-    if (fs.existsSync(setupFile)) fs.unlinkSync(setupFile);
-    attempts.delete(attemptKey);
-    return makeSession(req, res);
-  }
   async function login(req, res, input) {
     const attemptKey = throttle(req);
     if (!state.admin || input.username !== state.admin.username || !await checkPassword(input.password)) throw fail('账户或密码不正确。', 401);
@@ -98,6 +93,7 @@ module.exports = function createAuth(dataDir) {
     if (!await checkPassword(input.currentPassword)) throw fail('当前密码不正确。', 403);
     Object.assign(state.admin, await password(input.password), { changedAt: new Date().toISOString() }); save();
     for (const id of sessions.keys()) if (id !== current.id) sessions.delete(id);
+    if (fs.existsSync(initialLoginFile)) fs.writeFileSync(initialLoginFile, '初始密码已失效，请使用你在后台修改后的密码登录。\r\n', { mode: 0o600 });
   }
   function keys() { return state.keys.map(({ hash, ...key }) => key); }
   function createKey(name) {
@@ -116,5 +112,5 @@ module.exports = function createAuth(dataDir) {
     if (!key.lastUsedAt || Date.now() - Date.parse(key.lastUsedAt) > 60000) { key.lastUsedAt = new Date().toISOString(); save(); }
     return key;
   }
-  return { session, requireSession, requireCsrf, setup, login, logout, changePassword, keys, createKey, revokeKey, apiKey, setupRequired: () => !state.admin };
+  return { session, requireSession, requireCsrf, login, logout, changePassword, keys, createKey, revokeKey, apiKey, configured: () => Boolean(state.admin) };
 };

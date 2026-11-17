@@ -1,4 +1,19 @@
 /* Standard single-column A4 layouts; all colors here belong to the document. */
+.standard-resume .resume-project-field { margin:0 0 2px; }
+.standard-resume .resume-project-contribution { margin:0 0 2px; }
+.standard-resume .resume-project-body > :is(.resume-project-field,.resume-project-contribution) { margin:0; }
+.standard-resume .resume-project-body > * + :is(.resume-project-field,.resume-project-contribution) { margin-top:var(--project-section-gap); }
+.standard-resume .resume-project-label { display:block; margin-bottom:3px; font-weight:600; color:#303b48; }
+.standard-resume .resume-project-field > strong { font-weight:600; color:#303b48; }
+.standard-resume .resume-project-content > :is(p,ul,ol,blockquote) { margin:0; }
+.standard-resume .resume-project-content > :nth-child(n+2),
+.standard-resume .resume-project-content :is(ul,ol) > li + li { margin-top:var(--project-paragraph-gap); }
+.standard-resume .resume-project-content li:first-child { margin-top:0; }
+.standard-resume .resume-project-link { overflow-wrap:anywhere; }
+.standard-resume .resume-project-link a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
+.standard-resume .resume-project-heading-link { font-weight:400; }
+.standard-resume .resume-project-address-label { color:#68727e; }
+.standard-resume .resume-project-heading-link a { color:#4b5563; font-weight:400; text-decoration:underline; text-underline-offset:2px; overflow-wrap:anywhere; }
 .standard-resume .resume_box { width:820px; min-height:1160px; padding-bottom:38px; font-size:var(--standard-font); line-height:var(--standard-line); color:#272d35; background:#fff; }
 .standard-resume .basic_info_box { position:relative; min-height:166px; }
 .standard-resume .basic_info { text-align:left; padding-right:126px; }
@@ -53,6 +68,7 @@
 .standard-bands .basic_info_grid dd { display:flex; align-items:baseline; min-width:0; line-height:1.7; overflow-wrap:anywhere; }
 .standard-bands .profile-label { flex:0 0 5em; margin-right:7px; color:#535f6a; white-space:nowrap; }
 .standard-bands .profile-label::after { content:'：'; }
+.standard-bands .profile-custom-field .profile-label { white-space:normal; overflow-wrap:anywhere; }
 .standard-bands .basic_info_grid dd > span:last-child { min-width:0; }
 .standard-bands .photo_box { top:0; right:0; width:94px; height:126px; }
 .standard-bands .list_top { flex-direction:row-reverse; gap:20px; }

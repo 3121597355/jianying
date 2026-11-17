@@ -7,12 +7,25 @@ import {createResumeServer} from '../serve.mjs';
 import {defaults,buildSummary} from '../admin.mjs';
 import {captureAttribution,sanitizeAttribution,campaignLink} from '../assets/js/attribution.js';
 import {buildAcquisition} from '../acquisition.mjs';
+import {siteOrigin,renderSeo,searchDocument,SITE_ORIGIN,PUBLIC_PAGES} from '../seo.mjs';
+
+test('temporary public origin is used consistently by canonical, previews and search documents',()=>{
+  const origin='https://jianying-omega.vercel.app';
+  const html=renderSeo('<html><head><title>一纸简历</title></head></html>','/resume/',origin);
+  assert(html.includes(`rel="canonical" href="${origin}/resume/"`));
+  assert(html.includes(`content="${origin}/assets/img/brand/icon.png"`));
+  assert(!html.includes('yizhijianli.cn'));
+  assert(searchDocument('/robots.txt',origin).body.includes(origin+'/sitemap.xml'));
+  assert(!searchDocument('/sitemap.xml',origin).body.includes('yizhijianli.cn'));
+  assert.equal(siteOrigin(origin+'/'),origin);
+  for(const value of ['javascript:alert(1)','https://user:password@example.org','https://example.org/path','https://example.org/?x=1']) assert.throws(()=>siteOrigin(value));
+});
 
 test('public search responses, canonical redirects and private-page directives work over HTTP',async t=>{
   const dataDir=await mkdtemp(path.join(import.meta.dirname,'fixture-seo-'));
   const settings=defaults();settings.site.title='自定义标题 & "测试"';settings.site.description='保留自定义描述 <说明>。';
   await writeFile(path.join(dataDir,'site-settings.json'),JSON.stringify(settings));
-  const server=await createResumeServer({adminOptions:{dataDir},portraitOptions:{publicMode:true}});
+  const server=await createResumeServer({adminOptions:{analyticsTestMode:true,dataDir},portraitOptions:{publicMode:true}});
   server.listen(0,'127.0.0.1');await once(server,'listening');
   t.after(async()=>{await new Promise(resolve=>{server.close(resolve);server.closeAllConnections();});assert(path.resolve(dataDir).startsWith(path.resolve(import.meta.dirname)+path.sep));await rm(dataDir,{recursive:true,force:true});});
   const base=`http://127.0.0.1:${server.address().port}`;
@@ -20,11 +33,11 @@ test('public search responses, canonical redirects and private-page directives w
     const response=await fetch(base+route+'?utm_source=wechat');assert.equal(response.status,200);
     const html=await response.text();
     assert.equal((html.match(/rel="canonical"/g)||[]).length,1);
-    assert(html.includes(`rel="canonical" href="https://yizhijianli.cn${route}"`));
+    assert(html.includes(`rel="canonical" href="${SITE_ORIGIN}${route}"`));
     assert.match(html,/<meta name="description" content="[^"]+">/);
     assert.match(html,/<h1[ >]/);
     const schema=JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
-    assert.equal(schema.url,'https://yizhijianli.cn'+route);
+    assert.equal(schema.url,SITE_ORIGIN+route);
     if(route==='/'){assert.equal(schema.description,settings.site.description);assert(html.includes('content="自定义标题 &amp; &quot;测试&quot;"'));}
     assert.equal((await fetch(base+route,{method:'HEAD'})).status,200);
   }
@@ -33,8 +46,8 @@ test('public search responses, canonical redirects and private-page directives w
     assert.equal(r.status,308);assert.equal(r.headers.get('location'),canonical+'?utm_source=wechat&template=2001');
   }
   const exportModule=await fetch(base+'/portrait/export-image.js');assert.equal(exportModule.status,200);assert.match(exportModule.headers.get('content-type'),/javascript/);
-  const robots=await fetch(base+'/robots.txt');assert.equal(robots.status,200);assert.match(await robots.text(),/Sitemap: https:\/\/yizhijianli.cn\/sitemap.xml/);
-  const sitemap=await fetch(base+'/sitemap.xml');assert.equal(sitemap.status,200);assert.match(sitemap.headers.get('content-type'),/xml/);const xml=await sitemap.text();assert.equal((xml.match(/<loc>/g)||[]).length,4);assert(!xml.includes('/admin'));
+  const robots=await fetch(base+'/robots.txt');assert.equal(robots.status,200);assert((await robots.text()).includes(`Sitemap: ${SITE_ORIGIN}/sitemap.xml`));
+  const sitemap=await fetch(base+'/sitemap.xml');assert.equal(sitemap.status,200);assert.match(sitemap.headers.get('content-type'),/xml/);const xml=await sitemap.text();assert.equal((xml.match(/<loc>/g)||[]).length,PUBLIC_PAGES.length);assert(!xml.includes('/admin'));
   assert.equal((await fetch(base+'/sitemap.xml',{method:'HEAD'})).headers.get('content-type'),'application/xml; charset=utf-8');
   for(const route of ['/admin.html','/api/auth/status','/portrait/api/health','/?adminPreview=1'])assert.match((await fetch(base+route)).headers.get('x-robots-tag'),/noindex/);
   assert.equal((await fetch(base+'/private/admin/site-settings.json')).status,404);

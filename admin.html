@@ -7,32 +7,33 @@
   <link rel="shortcut icon" href="/favicon.ico?v=20261112-favicon">
 <link rel="icon" type="image/png" sizes="64x64" href="/assets/img/brand/favicon.png?v=20261112-favicon">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=20261112-favicon">
-  <link rel="stylesheet" href="/assets/css/admin.css"><script type="module" src="/assets/js/admin.js"></script>
-</head>
+  <link rel="stylesheet" href="/assets/css/admin.css"><script type="module" src="/assets/js/admin.js?v=20261116-analytics-period"></script>
+<link rel="stylesheet" href="/assets/css/mobile.css?v=20261116-mobile"></head>
 <body>
   <div id="loading" class="loading" role="status">正在连接网站后台…</div>
   <main id="login-view" class="login-view" hidden>
     <section class="login-card" aria-labelledby="login-title">
-      <a class="login-brand" href="/"><span class="monogram"><img src="/assets/img/brand/icon.png?v=20261112-favicon" alt="" width="28" height="28"></span><span>一纸简历</span></a>
-      <p class="eyebrow">管理员工作空间</p><h1 id="login-title">欢迎回来。</h1><p id="login-description" class="muted">管理网站内容，查看简历与证件照的使用情况。</p>
+      <a class="login-brand" href="/?adminPreview=1"><span class="monogram"><img src="/assets/img/brand/icon.png?v=20261112-favicon" alt="" width="28" height="28"></span><span>一纸简历</span></a>
+      <p class="eyebrow">管理员工作空间</p><h1 id="login-title">管理员登录</h1><p id="login-description" class="muted">管理网站内容，查看简历与证件照的使用情况。</p>
       <form id="login-form">
-        <label id="setup-code-field" hidden>首次设置码<input id="setup-code" autocomplete="off" maxlength="80"><small>从项目目录的 private/admin/管理员首次设置码.txt 复制，仅首次使用。</small></label>
         <label>管理员账户<input id="username" autocomplete="username" required minlength="3" maxlength="40" value="admin"></label>
         <label>密码<input id="password" type="password" autocomplete="current-password" required maxlength="128"></label>
-        <label id="confirm-password-field" hidden>确认密码<input id="confirm-password" type="password" autocomplete="new-password" maxlength="128"></label>
         <p id="login-error" class="form-error" role="alert" hidden></p>
         <button class="primary full" id="login-submit" type="submit">登录后台 <span aria-hidden="true">→</span></button>
       </form>
-      <a class="back-site" href="/">← 返回网站</a>
+      <a class="back-site" href="/?adminPreview=1">← 返回网站</a>
     </section>
   </main>
   <div id="admin-shell" class="admin-shell" hidden>
     <aside class="sidebar">
       <a class="sidebar-brand" href="/admin.html"><span class="monogram"><img src="/assets/img/brand/icon.png?v=20261112-favicon" alt="" width="28" height="28"></span><span>一纸简历<small>管理员后台</small></span></a>
-      <nav aria-label="后台栏目">
+      <button type="button" class="mobile-admin-nav-toggle" id="admin-nav-toggle" aria-expanded="false" aria-controls="admin-navigation">后台栏目 <span aria-hidden="true">⌄</span></button>
+      <nav id="admin-navigation" aria-label="后台栏目">
         <button data-panel="overview" class="active"><span aria-hidden="true">◫</span>数据概览</button>
         <button data-panel="features"><span aria-hidden="true">▤</span>功能表现</button>
         <button data-panel="audience"><span aria-hidden="true">◎</span>访问来源</button>
+        <button data-panel="members"><span aria-hidden="true">♙</span>账户与简历</button>
+        <button data-panel="sponsorship"><span aria-hidden="true">♡</span>赞助统计</button>
         <button data-panel="engagement"><span aria-hidden="true">◷</span>停留与离开</button>
         <div class="nav-divider"></div>
         <button data-panel="templates"><span aria-hidden="true">▦</span>模板管理</button>
@@ -41,16 +42,18 @@
         <button data-panel="content"><span aria-hidden="true">✎</span>网站内容</button>
         <button data-panel="changelog"><span aria-hidden="true">≡</span>更新日志</button>
       </nav>
-      <div class="sidebar-bottom"><span class="admin-identity"><i></i><span id="admin-name">管理员</span></span><button id="logout">退出登录</button><a href="/">← 返回网站</a></div>
+      <div class="sidebar-bottom"><span class="admin-identity"><i></i><span id="admin-name">管理员</span></span><button id="logout">退出登录</button><a href="/?adminPreview=1">← 返回网站</a></div>
     </aside>
     <div class="workspace">
-      <header class="topbar"><span id="breadcrumb">网站 / 数据概览</span><div><span class="protected"><i></i>管理员访问</span><button id="theme-toggle" class="theme-button" aria-label="切换深色模式">◐</button><a href="/" target="_blank" rel="noopener">查看网站 <span aria-hidden="true">↗</span></a></div></header>
+      <header class="topbar"><span id="breadcrumb">网站 / 数据概览</span><div><span class="protected"><i></i>管理员访问</span><button id="theme-toggle" class="theme-button" aria-label="切换深色模式">◐</button><a href="/?adminPreview=1" target="_blank" rel="noopener">查看网站 <span aria-hidden="true">↗</span></a></div></header>
       <main id="dashboard-main">
         <div class="page-heading"><div><p class="eyebrow" id="page-eyebrow">网站数据</p><h1 id="page-title">数据概览</h1><p id="page-description" class="muted">了解简历与证件照的使用情况。</p></div><div class="heading-actions"><button id="refresh-data" class="secondary">刷新</button><a id="export-data" class="secondary" href="/api/admin/export?days=30">导出 CSV <span aria-hidden="true">↓</span></a></div></div>
+        <div id="analytics-period-toolbar" class="analytics-period-toolbar" hidden><div class="analytics-period-options" role="group" aria-label="数据统计周期"><button type="button" data-scope="current" class="active" aria-pressed="true">新周期</button><button type="button" data-scope="history" aria-pressed="false">历史数据</button></div><p id="analytics-period-description"></p></div>
         <div id="date-toolbar" class="date-toolbar"><div class="date-presets" role="group" aria-label="统计日期范围"><button data-days="7">近 7 天</button><button data-days="30" class="active">近 30 天</button><button data-days="90">近 90 天</button></div><form id="date-form"><label class="sr-only" for="date-from">开始日期</label><input id="date-from" type="date" required><span>—</span><label class="sr-only" for="date-to">结束日期</label><input id="date-to" type="date" required><button class="date-query" type="submit">查询</button></form></div>
+        <div id="analytics-period-notice" class="analytics-period-notice" hidden role="status"></div>
         <div id="dashboard-error" class="error-banner" role="alert" hidden></div>
         <section id="dashboard-content" aria-live="polite"></section>
-        <footer class="dashboard-footer"><span>匿名统计 · 管理员与编辑预览不计入 · 不收集简历正文和照片</span><span id="updated-at"></span></footer>
+        <footer class="dashboard-footer"><span>匿名会话非真人数 · 调试访问按标记排除 · 不收集简历正文和照片</span><span id="updated-at"></span></footer>
       </main>
     </div>
   </div>

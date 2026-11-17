@@ -54,7 +54,7 @@ export function buildSettingsPanel() {
   });
   selectTab(getUi().settingsTab, false);
   const motion=panel.querySelector('#setting-motion');
-  motion.value=getUi().motionMode||'system';
+  motion.value=getUi().motionMode||'soft';
   motion.onchange=()=>{getUi().motionMode=motion.value;applyMotionPreference(motion.value);commit();};
 
   const paintColor = () => {

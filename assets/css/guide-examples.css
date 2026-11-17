@@ -1,0 +1,10 @@
+.article-entry-note {margin:-16px 0 28px;font-size:12px;color:var(--ui-muted)}
+.guide-preview {margin:0 0 34px;padding:28px;background:var(--ui-soft);border:1px solid var(--ui-line);border-radius:12px;text-align:center}
+.guide-preview img {display:block;width:100%;max-width:420px;margin:auto;background:#fff;box-shadow:0 8px 28px #1111110c}
+.guide-preview figcaption {margin-top:18px;font-size:12px;color:var(--ui-muted);text-align:left}
+.guide-comparison {display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:20px 0}
+.guide-comparison>div {min-width:0;padding:22px;border:1px solid var(--ui-line);border-radius:10px}
+.guide-comparison>div:last-child {background:var(--ui-soft)}
+.guide-comparison h3 {margin:0 0 12px;font-size:16px}
+.guide-comparison p {margin-bottom:0!important;font-size:14px}
+@media(max-width:700px){.guide-preview{padding:16px}.guide-preview figcaption{margin-top:14px}.guide-comparison{grid-template-columns:1fr;gap:12px}}

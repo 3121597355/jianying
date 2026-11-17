@@ -63,7 +63,7 @@
   :root[data-theme=dark] #resumeEditorPanel .close { background:var(--ui-soft); border-color:var(--ui-accent-line); color:var(--ui-accent); }
   :root[data-theme=dark] #resumeEditorPanel .edit_tab > li:hover { background:var(--ui-accent-soft); }
   :root[data-theme=dark] .edit_resume #resumeEditorPanel .edit_box .edit_top .edit_tab > li.active { color:var(--ui-accent) !important; border-bottom-color:var(--ui-accent) !important; }
-  @media(max-width:860px) {
+  @media (max-width:860px), (max-width:1024px) and (max-height:500px) {
     .resume-workspace.editor-collapsed .editor-heading { display:none; }
     .edit_resume #resumeEditorPanel .edit_box[data-v-236d5b80] { transition:none; }
     .edit_resume #resumeEditorPanel .close[data-v-236d5b80] { display:none; }

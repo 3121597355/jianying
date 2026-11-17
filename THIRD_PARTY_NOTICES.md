@@ -5,6 +5,8 @@
 | 组件 | 用途 | 许可证与来源 |
 | --- | --- | --- |
 | Quill 2.0.3 | 富文本编辑 | BSD-3-Clause；[源码](https://github.com/slab/quill)，见 LICENSES/Quill-BSD-3-Clause.txt、assets/vendor/quill.js.LICENSE.txt |
+| sanitize-html | 云端简历富文本清理 | MIT；[源码](https://github.com/apostrophecms/sanitize-html)，见安装包 LICENSE |
+| esbuild | 云端构建时打包富文本清理库，兼容 Vercel 模块加载 | MIT；[源码](https://github.com/evanw/esbuild)，见安装包 LICENSE；构建保留依赖声明 |
 | html2canvas 1.4.1 | 简历 PDF 栅格化 | MIT；[源码](https://github.com/niklasvh/html2canvas)，见 LICENSES/html2canvas-MIT.txt |
 | jsPDF 2.5.1 | PDF 文件生成 | MIT；[源码](https://github.com/parallax/jsPDF)，见 LICENSES/jsPDF-MIT.txt；内嵌组件的声明保留在分发文件中 |
 | ONNX Runtime | CPU 模型推理 | MIT；[源码](https://github.com/microsoft/onnxruntime)，见安装包 LICENSE |

@@ -46,3 +46,15 @@ test('shared toolbar opens the exact settings or template destination after savi
     assert.deepEqual(events,['saved',destination]);
   }
 });
+test('photo package link saves before leaving and accepts only the fixed internal return path',async()=>{
+  let finishSave;
+  const events=[];
+  const go=createReturnNavigation({save:()=>new Promise(resolve=>{finishSave=resolve;}),navigate:url=>events.push(url),isBusy:()=>false,onBusy:()=>{}});
+  assert.equal(await go('/plans/?return=https://example.com/'),false);
+  const target='/plans/?return=%2Fportrait%2F',pending=go(target);
+  assert.deepEqual(events,[]);
+  assert.equal(await go('/resume/'),false);
+  finishSave(true);
+  assert.equal(await pending,true);
+  assert.deepEqual(events,[target]);
+});

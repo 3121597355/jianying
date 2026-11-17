@@ -4,16 +4,17 @@ const foldTiming = {duration:480, easing:'cubic-bezier(.4,0,.2,1)'};
 const animations = new WeakMap();
 const runningAnimations = new Set();
 const media = matchMedia('(prefers-reduced-motion: reduce)');
-let motionMode = 'system';
+// 站内默认开启动效：只有用户主动选择「减弱」时才降级，不跟随系统设置。
+let motionMode = 'soft';
 export function applyMotionPreference(mode) {
-  motionMode=['system','soft','reduce'].includes(mode)?mode:'system';
+  motionMode=['system','soft','reduce'].includes(mode)?mode:'soft';
   document.documentElement.dataset.motion=motionMode==='system'?(media.matches?'reduce':'soft'):motionMode;
   if (document.documentElement.dataset.motion==='reduce') {
     runningAnimations.forEach(animation=>animation.cancel());
     runningAnimations.clear();
   }
 }
-try {motionMode=JSON.parse(localStorage.getItem('qmj-clone:ui')||'{}').motionMode||'system';} catch {}
+try {motionMode=JSON.parse(localStorage.getItem('qmj-clone:ui')||'{}').motionMode||'soft';} catch {}
 applyMotionPreference(motionMode);
 media.addEventListener('change',()=>applyMotionPreference(motionMode));
 const reduced = () => document.documentElement.dataset.motion==='reduce';

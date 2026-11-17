@@ -5,6 +5,24 @@ import path from 'node:path';
 import {once} from 'node:events';
 import {defaults} from '../admin.mjs';
 import {createResumeServer} from '../serve.mjs';
+import {upgradeSiteBrand} from '../site-brand.mjs';
+
+test('paper principle upgrades shipped copy, preserves custom settings and is idempotent',()=>{
+  const original=defaults();
+  original.site.kicker='开源 · 简洁 · 一站式';
+  original.site.headline='简历与证件照，\n一站准备好。';
+  original.site.description='免费编辑简历、导出 PDF、制作证件照。\n无需注册，打开就能用。';
+  original.templates.reverse();original.analytics.enabled=false;
+  const migrated=upgradeSiteBrand(original);
+  assert.equal(migrated.site.kicker,defaults().site.kicker);
+  assert.equal(migrated.site.description,defaults().site.description);
+  assert.equal(migrated.site.headline,defaults().site.headline);
+  assert.deepEqual(migrated.templates,original.templates);
+  assert.equal(migrated.analytics.enabled,false);
+  assert.equal(upgradeSiteBrand(migrated),migrated);
+  const custom={...original,site:{...original.site,kicker:'管理员的关键词',headline:'管理员的主标题',description:'管理员的介绍'}};
+  assert.equal(upgradeSiteBrand(custom),custom);
+});
 
 test('saved old brand upgrades in the homepage and settings while keeping configured templates and analytics',async t=>{
   const dataDir=await mkdtemp(path.join(import.meta.dirname,'fixture-brand-'));

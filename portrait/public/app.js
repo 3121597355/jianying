@@ -1,7 +1,9 @@
+import {configurePersonalAi,personalConnection,requestPersonalAi} from '/assets/js/personal-ai.js';
 import {presets,sizes,buildPrompt} from './presets.js';
 import {quickIds,drawQuickBackground} from './quick-background.js';
 import {createReturnNavigation} from './navigation.js';
 import {portraitNavigationMarkup} from '/assets/js/workspace-nav.js';
+import {setupMobilePortraitTools} from '/assets/js/mobile-layout.js';
 import {createDemo} from '/assets/js/store.js';
 import '/assets/js/motion.js';
 import {track} from '/assets/js/analytics.js';
@@ -12,6 +14,7 @@ const state={config:null,token:'',category:'证件底色',presetId:'white',sizeI
 let draftReady=false,draftTimer,draftVersion=0,draftDatabase,savedDraftSource,savedDraftResult;
 const imageBlobCache=new WeakMap();
 document.querySelector('.site-nav').innerHTML=portraitNavigationMarkup();
+setupMobilePortraitTools();
 setupIntegratedTheme();
 const figure='<svg class="swatch-figure" viewBox="0 0 50 62" aria-hidden="true"><circle cx="25" cy="19" r="12"/><path d="M2 62V48C2 30 48 30 48 48V62Z"/></svg>';
 let modelListVersion=0,availableModels=[];
@@ -85,7 +88,7 @@ function renderPresets(){const box=$('presetGrid');box.replaceChildren();for(con
   const p=presets.find(p=>p.id===state.presetId);$('customColorRow').hidden=p.id!=='custom';
 }
 function renderSizes(){const box=$('sizePresets');box.replaceChildren();for(const size of sizes){const b=button('',`size-card${state.sizeId===size.id?' active':''}`,()=>{state.sizeId=size.id;resetCrop();renderSizes();renderCrop();updateButtons();});const label=document.createElement('span');label.textContent=size.name;const note=document.createElement('small');note.textContent=size.note;b.append(label,note);b.setAttribute('aria-pressed',String(size.id===state.sizeId));box.append(b);}const size=sizes.find(s=>s.id===state.sizeId);$('dimensionNote').textContent=size.width?`${size.width} × ${size.height} px · 300 DPI`:'保持原始构图';}
-function updateConfigUI(){const c=state.config;$('settingsButton').hidden=!!c?.publicMode;$('configBanner').hidden=!!c?.publicMode||!!c?.configured;$('processingMode').querySelector('[value=cloud]').hidden=!!c?.publicMode;$('processingMode').querySelector('[value=cloud]').disabled=!!c?.publicMode;$('connectionDot').classList.toggle('ready',!!c?.configured);$('configBanner').hidden=!!c?.publicMode||!!c?.configured;$('configBanner').querySelector('b').textContent='AI 精修尚未连接';$('bannerText').textContent=' · 快速换底不受影响，可免费使用。';$('settingsButton').title=c?.configured?c.model:'AI 精修为可选扩展，未连接不影响快速换底';updateButtons();}
+function updateConfigUI(){const c=state.config;$('settingsButton').hidden=false;$('configBanner').hidden=!!c?.publicMode||!!c?.configured;$('processingMode').querySelector('[value=cloud]').hidden=false;$('processingMode').querySelector('[value=cloud]').disabled=false;$('connectionDot').classList.toggle('ready',!!c?.configured);$('configBanner').hidden=!!c?.publicMode||!!c?.configured;$('configBanner').querySelector('b').textContent='AI 精修尚未连接';$('bannerText').textContent=' · 快速换底不受影响，可免费使用。';$('settingsButton').title=c?.configured?c.model:'AI 精修为可选扩展，未连接不影响快速换底';updateButtons();}
 function updateButtons(){
   const hasImage=!!(state.result||state.original),quick=useQuick();
   $('useResumePhoto').disabled=!hasImage||state.busy;
@@ -102,7 +105,7 @@ function updateButtons(){
   $('quality').disabled=quick||state.busy;$('resolution').disabled=quick||state.busy;
   $('downloadButton').disabled=!hasImage||state.busy;$('downloadButton').textContent=state.result?'↓ 下载照片':'↓ 下载原图裁切';$('printButton').disabled=!hasImage||state.busy||['original','square'].includes(state.sizeId);$('replacePhoto').disabled=state.busy;$('removePhoto').disabled=state.busy;$('uploadButton').disabled=state.busy;$('settingsButton').disabled=state.busy;$('bannerSettings').disabled=state.busy;$('viewResult').disabled=!state.result;$('viewCompare').disabled=!state.result;
 }
-async function openSettings(){if(state.busy||state.config?.publicMode)return;const c=state.config;$('baseUrl').value=c?.baseUrl||'';$('modelName').value=c?.model||'image2.5sub';$('apiKey').value='';$('keyStatus').textContent=c?.hasKey?'已保存':'';$('requestMode').value=c?.mode||'multipart';$('imageField').value=c?.imageField||'image[]';$('connectionMessage').hidden=true;renderModelChoices([]);$('modelStatus').textContent='填写连接后读取模型';$('settingsDialog').showModal();if(c?.baseUrl&&c?.hasKey)void loadModels();}
+async function openSettings(){if(state.busy)return;if(state.config?.publicMode){configurePersonalAi('portrait',()=>{const connection=personalConnection('portrait');state.config.configured=!!connection;state.config.model=connection?.model||'';updateConfigUI();});return;}const c=state.config;$('baseUrl').value=c?.baseUrl||'';$('modelName').value=c?.model||'image2.5sub';$('apiKey').value='';$('keyStatus').textContent=c?.hasKey?'已保存':'';$('requestMode').value=c?.mode||'multipart';$('imageField').value=c?.imageField||'image[]';$('connectionMessage').hidden=true;renderModelChoices([]);$('modelStatus').textContent='填写连接后读取模型';$('settingsDialog').showModal();if(c?.baseUrl&&c?.hasKey)void loadModels();}
 async function saveSettings(check=false){if(!$('settingsForm').reportValidity())return;if(check)return loadModels({check:true});const controls=[$('checkConnection'),$('settingsForm').querySelector('[type=submit]')];controls.forEach(b=>b.disabled=true);const result=$('connectionMessage');modelListVersion++;try{result.hidden=true;state.config=await api('/api/config',{method:'PATCH',body:connectionDraft()});$('apiKey').value='';$('keyStatus').textContent=state.config.hasKey?'已保存':'';updateConfigUI();$('settingsDialog').close();toast('已保存');}catch(e){result.hidden=false;result.textContent=e.message;}finally{controls.forEach(b=>b.disabled=false);$('refreshModels').disabled=false;}}
 async function readImage(src){const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('图片无法读取，请换一张照片。'));img.src=src;});if(!img.naturalWidth||img.naturalWidth*img.naturalHeight>40_000_000)throw new Error('照片分辨率过高，请使用不超过 4000 万像素的图片。');return img;}
 function fileDataURL(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('照片读取失败。'));reader.readAsDataURL(file);});}
@@ -131,10 +134,19 @@ function drawPhoto(canvas,img,width,height,flatten=false){canvas.width=width;can
 function renderCrop(){const size=sizes.find(s=>s.id===state.sizeId),img=imageSource();$('cropControls').hidden=!img||!size.width;if(img&&size.width){const factor=Math.min(180/size.width,230/size.height);drawPhoto($('cropCanvas'),img,Math.round(size.width*factor),Math.round(size.height*factor));}}
 function setBusy(value){state.busy=value;$('processingOverlay').hidden=!value;updateButtons();}
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-async function generate(){if(!state.original||state.busy)return;if(useQuick())return generateLocal();if(!state.config?.configured){openSettings();return;}const source=state.original,options=getPromptOptions();setProcessingCopy(false);setBusy(true);message('');const started=Date.now();$('processingTime').textContent='正在提交照片…';const timer=setInterval(()=>{$('processingTime').textContent=`已等待 ${Math.floor((Date.now()-started)/1000)} 秒 · 等待云端返回`;},1000);let pollErrors=0;
+async function generate(){if(!state.original||state.busy)return;if(useQuick())return generateLocal();if(state.config?.publicMode)return generatePersonal();if(!state.config?.configured){openSettings();return;}const source=state.original,options=getPromptOptions();setProcessingCopy(false);setBusy(true);message('');const started=Date.now();$('processingTime').textContent='正在提交照片…';const timer=setInterval(()=>{$('processingTime').textContent=`已等待 ${Math.floor((Date.now()-started)/1000)} 秒 · 等待云端返回`;},1000);let pollErrors=0;
   try{const job=await api('/api/jobs',{method:'POST',body:{...options,image:source.data,quality:$('quality').value,resolution:$('resolution').value}});state.jobId=job.id;while(true){await delay(1500);let status;try{status=await api(`/api/jobs/${job.id}`);pollErrors=0;}catch(e){if(++pollErrors>=5)throw new Error('暂时无法读取处理进度。服务商可能仍在处理，请检查平台记录后再重新提交。');continue;}if(status.status==='cancelled'){message('已停止等待。服务商可能仍在处理此请求，请检查平台记录。');break;}if(status.status==='failed')throw new Error(status.error);if(status.status==='done'){const response=await fetch(apiUrl(`/api/jobs/${job.id}/image`));if(!response.ok)throw new Error('结果下载失败，请稍后再试。');const url=URL.createObjectURL(await response.blob());let img;try{img=await readImage(url);}catch(e){URL.revokeObjectURL(url);throw e;}const item={id:job.id,img,url,source,presetId:options.presetId,options,name:presets.find(p=>p.id===options.presetId).name,warning:status.warning};state.history.unshift(item);if(state.history.length>8){const old=state.history.pop();URL.revokeObjectURL(old.url);}state.result=item;state.original=source;state.view='result';resetCrop();renderImage();renderCrop();renderHistory();message(status.warning||'生成完成');toast('新背景已生成');break;}}
   }catch(e){message(e.message,true);}finally{clearInterval(timer);state.jobId=null;setBusy(false);}
 }
+async function generatePersonal(){
+  if(!personalConnection('portrait')){openSettings();return;}
+  const source=state.original,options=getPromptOptions();if(!confirm('照片将发送给你配置的 AI 服务，按服务商规则计费。确认进行精修？'))return;
+  state.localController=new AbortController();setBusy(true);setProcessingCopy(false);message('');$('processingTime').textContent='正在提交至个人 AI 服务…';
+  try{const data=await requestPersonalAi('portrait',{...options,image:source.data},{signal:state.localController.signal});const imageBlob=await (await fetch(data.image)).blob(),url=URL.createObjectURL(imageBlob);let img;try{img=await readImage(url);}catch(error){URL.revokeObjectURL(url);throw error;}const item={id:crypto.randomUUID(),img,url,source,presetId:options.presetId,options,name:presets.find(p=>p.id===options.presetId)?.name||'AI 精修',warning:''};state.history.unshift(item);if(state.history.length>8)URL.revokeObjectURL(state.history.pop().url);state.result=item;state.original=source;state.view='result';resetCrop();renderImage();renderCrop();renderHistory();message('个人 AI 精修已完成，请对比检查人物与细节。');toast('精修完成');}
+  catch(error){message(error.name==='AbortError'?'已停止等待，服务商可能仍会处理并计费，请先查看调用记录。':error.message,true);}
+  finally{state.localController=null;setBusy(false);}
+}
+
 async function cancelGeneration(){if(state.localController){state.localController.abort();return;}if(!state.jobId){toast('请求正在提交，请稍候再停止');return;}$('cancelButton').disabled=true;try{await api(`/api/jobs/${state.jobId}/cancel`,{method:'POST',body:{}});}catch(e){toast(e.message);}finally{$('cancelButton').disabled=false;}}
 function renderHistory(){const grid=$('historyGrid');grid.replaceChildren();$('historySection').hidden=!state.history.length;for(const item of state.history){const b=document.createElement('button');b.className=`history-card${state.result?.id===item.id?' active':''}`;b.setAttribute('aria-label',`查看${item.name}生成结果`);const img=new Image();img.src=item.url;img.alt=`${item.name}生成结果`;const label=document.createElement('span');label.textContent=item.name;b.append(img,label);b.addEventListener('click',()=>{if(state.busy)return;state.result=item;state.original=item.source;state.view='result';state.presetId=item.presetId;state.category=presets.find(p=>p.id===item.presetId).category;$('edgeTrim').value=item.options.edge||0;$('decontam').value=item.options.decontam||0;paintEdges();$('customPrompt').value=item.options.customPrompt;$('colorPicker').value=item.options.customColor;$('colorHex').value=item.options.customColor.toUpperCase();renderCategories();renderPresets();refreshPrompt();resetCrop();renderImage();renderCrop();renderHistory();updateButtons();message(item.warning||'已载入本次生成结果。');});grid.append(b);}}
 function printLayout(size){const candidates=[[1800,1200],[1200,1800]].map(([w,h])=>{const margin=20,gap=20;const cols=Math.floor((w-2*margin+gap)/(size.width+gap)),rows=Math.floor((h-2*margin+gap)/(size.height+gap));return {w,h,cols,rows,gap,count:cols*rows};});return candidates.sort((a,b)=>b.count-a.count)[0];}
@@ -177,7 +189,7 @@ await restorePhotoDraft();
 draftReady=true;
 document.querySelector('main').addEventListener('input',schedulePhotoSave);
 document.querySelector('main').addEventListener('change',schedulePhotoSave);
-document.querySelector('main').addEventListener('click',schedulePhotoSave);
+document.querySelector('main').addEventListener('click',event=>{if(!event.target.closest('[data-return]'))schedulePhotoSave();});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')void persistPhotoDraft();});
 const returnLinks=[...document.querySelectorAll('[data-return]')];
 const returnToPage=createReturnNavigation({
@@ -268,3 +280,5 @@ async function applyResumePhoto(){
     location.assign('/resume/?portrait=applied');
   }catch{toast('照片未能写入简历，请先下载照片后手动上传。');}finally{button.disabled=false;}
 }
+
+document.querySelector('[data-personal-connect]')?.addEventListener('click',openSettings);

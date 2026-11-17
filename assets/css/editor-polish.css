@@ -2,7 +2,18 @@
 @media screen {
   #resumeHost :is(.basic_info_box,.resume_content) { cursor:pointer; outline-offset:6px; }
   #resumeHost :is(.basic_info_box,.resume_content):hover { outline:1px dashed #ccd6e2; }
-  #resumeEditorPanel .edit_top { overflow:hidden; }
+  #resumeEditorPanel .mobile-module-bar { display:flex; align-items:center; gap:10px; flex:none; padding:10px 12px; background:var(--ui-surface); border-bottom:1px solid var(--ui-line); }
+  #resumeEditorPanel .mobile-module-bar label { color:var(--ui-muted); font-size:12px; white-space:nowrap; }
+  #resumeEditorPanel .mobile-module-bar select { flex:1; min-width:0; height:40px; padding:0 10px; border:1px solid var(--ui-line); border-radius:8px; background:var(--ui-soft); color:var(--ui-text); font:inherit; }
+  #resumeEditorPanel .mobile-module-bar button { display:flex; align-items:center; justify-content:center; gap:6px; min-height:40px; padding:0 10px; border:1px solid var(--ui-line); border-radius:8px; background:var(--ui-surface); color:var(--ui-muted); font:inherit; font-size:12px; white-space:nowrap; touch-action:manipulation; }
+  #resumeEditorPanel .mobile-module-bar button:hover { color:var(--ui-accent); background:var(--ui-accent-soft); }
+  #resumeEditorPanel .mobile-module-bar :is(select,button):focus-visible { outline:2px solid var(--ui-accent); outline-offset:2px; }
+  #resumeEditorPanel .mobile-module-bar svg { width:16px; height:16px; flex:none; }
+  .edit_resume #resumeEditorPanel .edit_top[data-v-236d5b80] { display:grid; grid-template-rows:1fr; min-height:0; overflow:hidden; transition:grid-template-rows 260ms cubic-bezier(.22,1,.36,1); }
+  .edit_resume #resumeEditorPanel.modules-collapsed .edit_top[data-v-236d5b80] { grid-template-rows:0fr; }
+  #resumeEditorPanel .module-tabs-content { min-height:0; overflow:hidden; }
+  @media(prefers-reduced-motion:reduce) { .edit_resume #resumeEditorPanel .edit_top[data-v-236d5b80] { transition:none; } }
+  :root[data-motion=reduce] #resumeEditorPanel .edit_top { transition:none; }
   #resumeEditorPanel .edit_tab { grid-template-columns:repeat(auto-fit,minmax(138px,1fr)); padding:8px; gap:6px; max-height:clamp(150px,28dvh,242px); overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
   .edit_resume #resumeEditorPanel .edit_top .edit_tab > li[data-v-236d5b80] { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:9px 22px 34px; min-height:72px; border:1px solid transparent; border-radius:7px; line-height:20px; font-size:13px; }
   #resumeEditorPanel .edit_tab > li > b { display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500; }
@@ -28,6 +39,8 @@
   .module-drag-ghost { position:fixed; z-index:1000; display:grid; place-items:center; box-sizing:border-box; padding:12px; border:1px solid var(--ui-accent); border-radius:9px; background:var(--ui-surface); color:var(--ui-accent); box-shadow:0 10px 28px #0002; font:500 14px/1.5 "Microsoft YaHei",sans-serif; pointer-events:none; opacity:.96; will-change:transform; }
   .module-sort-status { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
   @media(max-width:860px) {
+    #resumeEditorPanel .mobile-module-bar :is(select,button) { min-height:44px; }
+    #resumeEditorPanel .mobile-module-bar select { font-size:16px; }
     #resumeEditorPanel .edit_tab .module-drag-handle { top:2px; left:0; width:44px; height:44px; opacity:.75; }
   }
   #resumeEditorPanel #formHost .info_list { display:grid; grid-template-columns:minmax(0,1fr); gap:16px 24px; }
@@ -35,8 +48,18 @@
   .edit_resume #resumeEditorPanel #formHost .info_list > li[data-v-236d5b80] { width:100%; min-width:0; margin:0; gap:10px; min-height:42px; }
   #resumeEditorPanel #formHost .info_list > li > b { flex:0 0 68px; font-size:13px; line-height:20px; }
   .edit_resume #resumeEditorPanel #formHost .info_list > li > .input:not(.w60):not(.input_time)[data-v-236d5b80] { width:auto; flex:1; min-width:0; height:42px; }
-  #resumeEditorPanel #formHost .info_list > li:has(.photo_upload) { flex-wrap:wrap; }
-  #resumeEditorPanel #formHost .info_list > li:has(.photo_upload) .photo_set { margin-left:0; }
+  #resumeEditorPanel #formHost .info_list > li.photo-settings { align-items:flex-start; flex-wrap:nowrap; }
+  #resumeEditorPanel #formHost .photo-settings > b { padding-top:12px; }
+  #resumeEditorPanel .photo-controls { display:grid; gap:4px; flex:1; min-width:0; }
+  #resumeEditorPanel .photo-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+  #resumeEditorPanel .photo-actions > button { display:inline-flex; align-items:center; justify-content:center; min-height:44px; margin:0; padding:0 14px; border:1px solid var(--ui-line); border-radius:6px; font:inherit; font-size:13px; line-height:20px; cursor:pointer; touch-action:manipulation; }
+  #resumeEditorPanel .photo-actions > .photo_upload { border-color:var(--ui-primary); background:var(--ui-primary); color:var(--ui-on-primary); }
+  #resumeEditorPanel .photo-actions > .photo_remove { background:var(--ui-surface); color:#bc525b; text-decoration:none; }
+  #resumeEditorPanel .photo-actions > .photo_remove:hover { background:var(--ui-soft); }
+  #resumeEditorPanel .photo-actions > button:focus-visible { outline:2px solid var(--ui-accent); outline-offset:3px; }
+  #resumeEditorPanel .photo-controls .photo_set { display:inline-flex; align-items:center; justify-self:start; gap:8px; min-height:36px; margin:0; padding:0; font-size:13px; }
+  #resumeEditorPanel .photo_set .el-checkbox__original { width:16px; height:16px; margin:0; cursor:pointer; }
+  :root[data-theme=dark] #resumeEditorPanel .photo-actions > .photo_remove { color:#ed9ca4; }
   #resumeEditorPanel #formHost .info_list.hide_more > .more-item { display:none; }
   #resumeEditorPanel #formHost .timeline-dates { grid-column:1 / -1; flex-wrap:wrap; }
   #resumeEditorPanel .jingli_nav_list > li { position:relative; padding-right:72px !important; }
@@ -47,11 +70,79 @@
   #resumeEditorPanel .jingli_nav_op_row:hover:not(:disabled) { color:var(--ui-accent); background:var(--ui-accent-soft); }
   #resumeEditorPanel #formHost .info_tip { font-size:12px; line-height:1.8; margin-bottom:20px; }
   #resumeEditorPanel .edit_b { scroll-padding-top:16px; }
+  #resumeEditorPanel .project-details-form { display:grid; gap:18px; margin-top:20px; }
+  #resumeEditorPanel .basic-custom-fields { display:grid; gap:12px; margin-top:20px; padding-top:20px; border-top:1px solid var(--ui-line); }
+  #resumeEditorPanel .basic-custom-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--ui-text); font-size:13px; }
+  #resumeEditorPanel .basic-custom-heading strong { font-weight:600; }
+  #resumeEditorPanel .basic-custom-heading>span,#resumeEditorPanel .basic-custom-note { color:var(--ui-muted); font-size:12px; }
+  #resumeEditorPanel .basic-custom-note { margin:0; line-height:1.7; }
+  #resumeEditorPanel .basic-custom-list { display:grid; gap:10px; }
+  #resumeEditorPanel .basic-custom-list:empty { display:none; }
+  #resumeEditorPanel .basic-custom-row { min-width:0; padding:10px 12px 12px; border:1px solid var(--ui-line); border-radius:8px; }
+  #resumeEditorPanel .basic-custom-row-heading { display:flex; align-items:center; gap:10px; margin-bottom:8px; color:var(--ui-muted); font-size:12px; }
+  #resumeEditorPanel .basic-custom-row-heading>span { flex:1; }
+  #resumeEditorPanel .basic-custom-row-heading label { display:flex; align-items:center; gap:6px; min-height:32px; white-space:nowrap; cursor:pointer; }
+  #resumeEditorPanel .basic-custom-row-heading input { width:16px; height:16px; margin:0; accent-color:var(--ui-accent); }
+  #resumeEditorPanel .basic-custom-row-heading button { display:grid; place-items:center; flex:none; width:32px; height:32px; border:0; border-radius:5px; background:transparent; color:var(--ui-muted); cursor:pointer; }
+  #resumeEditorPanel .basic-custom-row-heading button:hover { background:var(--ui-soft); color:var(--ui-text); }
+  #resumeEditorPanel .basic-custom-row-heading svg { width:16px; height:16px; pointer-events:none; }
+  #resumeEditorPanel .basic-custom-inputs { display:grid; grid-template-columns:minmax(100px,.65fr) minmax(0,1.35fr); gap:10px; }
+  #resumeEditorPanel .basic-custom-inputs label { display:grid; gap:6px; min-width:0; color:var(--ui-muted); font-size:12px; }
+  #resumeEditorPanel .basic-custom-inputs .input { box-sizing:border-box; width:100%; min-width:0; height:44px; padding:0 11px; border:1px solid var(--ui-line); border-radius:7px; background:var(--ui-soft); color:var(--ui-text); font:inherit; font-size:14px; }
+  #resumeEditorPanel .basic-custom-add { min-height:44px; padding:8px 12px; border:1px dashed var(--ui-line); border-radius:7px; background:var(--ui-surface); color:var(--ui-muted); font:inherit; font-size:13px; cursor:pointer; }
+  #resumeEditorPanel .basic-custom-add:hover { border-color:var(--ui-accent); color:var(--ui-accent); }
+  #resumeEditorPanel .basic-custom-add:disabled { opacity:.45; cursor:default; }
+  #resumeEditorPanel .basic-custom-fields :is(input,button):focus-visible { outline:2px solid var(--ui-accent); outline-offset:2px; }
+  #resumeEditorPanel .project-writing-note { margin:0; color:var(--ui-muted); font-size:12px; line-height:1.8; }
+  #resumeEditorPanel .project-field { min-width:0; }
+  #resumeEditorPanel .project-field-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; font-size:13px; color:var(--ui-text); }
+  #resumeEditorPanel .project-field-heading strong { font-weight:600; }
+  #resumeEditorPanel .project-field-heading label { display:flex; align-items:center; gap:7px; min-height:28px; color:var(--ui-muted); font-size:12px; cursor:pointer; white-space:nowrap; }
+  #resumeEditorPanel .project-field-heading input { width:16px; height:16px; margin:0; accent-color:var(--ui-accent); }
+  #resumeEditorPanel .project-field-body[hidden] { display:none; }
+  #resumeEditorPanel .project-textarea,#resumeEditorPanel .project-extra-input { display:block; box-sizing:border-box; width:100%; max-width:100%; height:auto; padding:11px 12px; border:1px solid var(--ui-line); border-radius:7px; background:var(--ui-soft); color:var(--ui-text); font:inherit; font-size:14px; line-height:1.7; }
+  #resumeEditorPanel .project-textarea { min-height:96px; resize:vertical; }
+  #resumeEditorPanel .project-extra-input { min-height:44px; }
+  #resumeEditorPanel .project-url-error { display:block; margin-top:6px; color:var(--ui-muted); font-size:12px; line-height:1.7; }
+  #resumeEditorPanel .project-url-error[hidden] { display:none; }
+  #resumeEditorPanel :is(.project-extras,.project-writing-example) { border:1px solid var(--ui-line); border-radius:8px; }
+  #resumeEditorPanel :is(.project-extras,.project-writing-example)>summary { padding:12px; color:var(--ui-text); font-size:13px; line-height:1.7; cursor:pointer; }
+  #resumeEditorPanel .project-extras summary span { margin-left:8px; color:var(--ui-muted); font-size:12px; }
+  #resumeEditorPanel .project-extras-body { display:grid; gap:16px; padding:0 12px 14px; }
+  #resumeEditorPanel .project-writing-example>div { padding:0 12px 12px; color:var(--ui-muted); font-size:12px; line-height:1.8; }
+  #resumeEditorPanel .project-writing-example p { margin:0 0 8px; }
+  #resumeEditorPanel .project-layout { border:1px solid var(--ui-line); border-radius:8px; }
+  #resumeEditorPanel .project-layout>summary { padding:11px 12px; color:var(--ui-text); font-size:13px; line-height:1.7; cursor:pointer; }
+  #resumeEditorPanel .project-layout summary span { float:right; color:var(--ui-muted); font-size:12px; }
+  #resumeEditorPanel .project-layout-body { display:grid; gap:12px; padding:0 12px 14px; }
+  #resumeEditorPanel .project-spacing { min-width:0; margin:0; padding:0; border:0; }
+  #resumeEditorPanel .project-spacing legend { margin-bottom:8px; color:var(--ui-muted); font-size:12px; }
+  #resumeEditorPanel .project-spacing>div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+  #resumeEditorPanel .project-spacing label { position:relative; cursor:pointer; }
+  #resumeEditorPanel .project-spacing input { position:absolute; opacity:0; width:1px; height:1px; }
+  #resumeEditorPanel .project-spacing span { display:grid; place-items:center; min-height:40px; border:1px solid var(--ui-line); border-radius:6px; color:var(--ui-muted); font-size:13px; }
+  #resumeEditorPanel .project-spacing input:checked+span { border-color:var(--ui-accent); background:var(--ui-accent-soft); color:var(--ui-accent); }
+  #resumeEditorPanel .project-spacing input:focus-visible+span { outline:2px solid var(--ui-accent); outline-offset:2px; }
+  #resumeEditorPanel .project-bullet-action { min-height:40px; padding:8px 12px; border:1px solid var(--ui-line); border-radius:6px; background:var(--ui-surface); color:var(--ui-text); font:inherit; font-size:13px; cursor:pointer; }
+  #resumeEditorPanel .project-bullet-action:hover { border-color:var(--ui-accent); color:var(--ui-accent); }
+  #resumeEditorPanel .project-bullet-action:disabled { opacity:.45; cursor:default; }
+  #resumeEditorPanel .project-layout-body p { margin:0; color:var(--ui-muted); font-size:12px; line-height:1.7; }
+  #resumeEditorPanel .project-layout-status { color:var(--ui-accent); font-size:12px; line-height:1.7; }
+  #resumeEditorPanel .project-layout-status:empty { display:none; }
+  #resumeEditorPanel .project-quill .ql-container { height:auto; min-height:240px; }
+  #resumeEditorPanel .project-quill .ql-editor { height:auto; min-height:240px; overflow:visible; font-size:14px; line-height:1.75; }
+  #resumeEditorPanel .project-quill .ql-editor :is(p,li)+:is(p,li) { margin-top:6px; }
+  #resumeEditorPanel .project-quill .ql-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:4px; padding:8px; }
+  #resumeEditorPanel .project-quill .ql-toolbar .ql-formats { margin:0; }
+  #resumeEditorPanel .project-quill:not(.formats-expanded) .project-format-advanced { display:none; }
+  #resumeEditorPanel .project-quill .ql-toolbar .project-format-toggle { width:auto; height:auto; min-height:30px; margin-left:auto; padding:4px 8px; border-radius:5px; color:var(--ui-muted); font:inherit; font-size:12px; }
+  #resumeEditorPanel .project-format-toggle:focus-visible,#resumeEditorPanel .project-bullet-action:focus-visible { outline:2px solid var(--ui-accent); outline-offset:2px; }
   .qm-template-dialog .el-dialog { display:flex; flex-direction:column; width:960px !important; max-width:calc(100vw - 40px); max-height:calc(100dvh - 48px); margin:24px auto !important; overflow:hidden; }
   .qm-template-dialog .el-dialog__header { flex:0 0 auto; padding:20px 24px; }
   .qm-template-dialog .el-dialog__body { flex:1; min-height:0; max-height:none; padding:20px 24px 24px; overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
   .qm-template-dialog .template-topline { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; }
   .qm-template-dialog .template-topline .info_tip { margin:0; }
+  .qm-template-dialog .template-topline strong { display:block; margin-bottom:6px; font-size:15px; color:var(--ui-text); }
   .qm-template-dialog .tpl_pick { grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
   .qm-template-dialog .tpl_card { display:flex; flex-direction:column; align-items:center; padding:12px; border:1px solid var(--ui-line); border-radius:10px; background:var(--ui-soft); color:var(--ui-text); }
   .qm-template-dialog .tpl_card.active { border-color:var(--ui-accent); box-shadow:0 0 0 2px var(--ui-accent-line); background:var(--ui-accent-soft); }
@@ -59,6 +150,9 @@
   .qm-template-dialog .tpl_card > strong { margin-top:10px; font-size:11px; color:var(--ui-muted); font-weight:500; }
   .qm-template-dialog .tpl_card > span { margin:4px 0; font-size:14px; font-weight:600; }
   .qm-template-dialog .tpl_card > em { margin:0; font-size:11px; line-height:1.7; color:var(--ui-muted); font-style:normal; }
+  .qm-template-dialog .tpl_card > .template-card-action { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; min-height:40px; margin:14px 0 0; padding:8px 5px; border:1px solid var(--ui-accent-line); border-radius:7px; background:var(--ui-surface); color:var(--ui-accent); font-size:12px; font-weight:600; transition:background 160ms ease,color 160ms ease; }
+  .qm-template-dialog .template-card-action svg { width:16px; height:16px; flex:none; }
+  .qm-template-dialog .tpl_card:is(.active,:hover,:focus-visible) > .template-card-action { background:var(--ui-accent); color:#fff; border-color:var(--ui-accent); }
   .qm-template-dialog .template-option { display:flex; flex-direction:column; min-width:0; }
   .qm-template-dialog .template-option .tpl_card { width:100%; flex:1; }
   .qm-template-dialog .template-use-sample { padding:8px 6px; border:0; border-radius:6px; background:transparent; color:var(--ui-muted); font-size:12px; }
@@ -77,6 +171,18 @@
     .qm-template-dialog .tpl_thumb { height:180px; aspect-ratio:auto; background:#fff; }
   }
   @media(max-width:860px) {
+    #resumeEditorPanel .basic-custom-inputs { grid-template-columns:minmax(0,1fr); }
+    #resumeEditorPanel .basic-custom-inputs .input { font-size:16px; }
+    #resumeEditorPanel .basic-custom-row-heading label { min-height:44px; }
+    #resumeEditorPanel .basic-custom-row-heading button { width:44px; height:44px; }
+    #resumeEditorPanel .project-quill .ql-editor { font-size:16px; }
+    #resumeEditorPanel .project-quill .ql-toolbar button { width:36px; height:36px; }
+    #resumeEditorPanel .project-quill .ql-toolbar .project-format-toggle { min-height:44px; }
+    #resumeEditorPanel .project-spacing span,#resumeEditorPanel .project-bullet-action { min-height:44px; }
+    #resumeEditorPanel .project-field-heading label { min-height:44px; }
+    #resumeEditorPanel :is(.project-textarea,.project-extra-input) { font-size:16px; }
+    #resumeEditorPanel .project-extras summary span { display:block; margin-left:16px; }
+    #resumeEditorPanel .photo-controls .photo_set { min-height:44px; }
     #resumeEditorPanel .edit_tab { grid-template-columns:repeat(3,minmax(0,1fr)); max-height:180px; }
     .qm-template-dialog .tpl_pick { grid-template-columns:repeat(3,minmax(0,1fr)); }
   }
@@ -87,8 +193,11 @@
     .qm-template-dialog .tpl_pick { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
     .qm-template-dialog .tpl_card { padding:9px; }
     .qm-template-dialog .tpl_card > em { display:none; }
+    .qm-template-dialog .tpl_card > .template-card-action { min-height:44px; font-size:12px; }
   }
   @media(max-width:420px) {
     #resumeEditorPanel .edit_tab { grid-template-columns:repeat(2,minmax(0,1fr)); }
   }
 }
+
+.template-card-action{margin-top:auto}.tpl_card>em{min-height:3em}

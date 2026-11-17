@@ -22,6 +22,19 @@
   .startup-brand img { width:34px; height:34px; }
   .startup-message { text-align:center; padding:24px; }
   .startup-error { display:none; }
+  .startup-loading { display:inline-flex; align-items:center; gap:10px; }
+  .startup-dots { display:inline-flex; gap:5px; }
+  .startup-dots i { width:6px; height:6px; border-radius:50%; background:var(--ui-accent,#2f6feb); opacity:.3; animation:startup-pulse 1.1s ease-in-out infinite; }
+  .startup-dots i:nth-child(2) { animation-delay:.14s; }
+  .startup-dots i:nth-child(3) { animation-delay:.28s; }
+  @keyframes startup-pulse { 0%,100% { opacity:.28; transform:translateY(0); } 50% { opacity:1; transform:translateY(-2px); } }
+  .startup-progress { position:fixed; top:69px; left:0; right:0; height:2px; overflow:hidden; }
+  .startup-progress::after { content:''; position:absolute; top:0; bottom:0; width:34%; border-radius:2px; background:var(--ui-accent,#2f6feb); animation:startup-slide 1.2s cubic-bezier(.45,.05,.55,.95) infinite; }
+  @keyframes startup-slide { 0% { transform:translateX(-110%); } 100% { transform:translateX(330%); } }
+  @media (prefers-reduced-motion: reduce) {
+    .startup-dots i { animation:none; opacity:.7; }
+    .startup-progress::after { animation:none; width:100%; opacity:.3; }
+  }
   .startup-error p { margin:0 0 16px; }
   .startup-error a { color:var(--ui-text,#1b1c20); margin:0 12px; text-underline-offset:4px; }
   html[data-editor-state=error] .startup-loading { display:none; }
@@ -31,24 +44,66 @@
 <link rel="stylesheet" href="/assets/css/palette.css">
 <link rel="stylesheet" href="/assets/vendor/quill.snow.css">
 <link rel="stylesheet" href="/assets/css/editor-base.css">
-<link rel="stylesheet" href="/assets/css/tpl-standard.css?v=20261112-blue">
+<link rel="stylesheet" href="/assets/css/tpl-standard.css?v=20261114-project-link-label">
 <link rel="stylesheet" href="/assets/css/editor.css">
-<link rel="stylesheet" href="/assets/css/workspace.css">
+<link rel="stylesheet" href="/assets/css/workspace.css?v=20261117-getlist-zindex">
 <link rel="stylesheet" href="/assets/css/theme.css">
 <link rel="stylesheet" href="/assets/css/interaction.css">
 <link rel="stylesheet" href="/assets/css/settings.css?v=20261112-settings">
 <link rel="stylesheet" href="/assets/css/experience.css">
 <link rel="stylesheet" href="/assets/css/interface.css?v=20261112-settings">
-<link rel="stylesheet" href="/assets/css/editor-polish.css?v=20261112-touch">
+<link rel="stylesheet" href="/assets/css/editor-polish.css?v=20261115-guide-details">
 <link rel="stylesheet" href="/assets/css/mobile-editor.css?v=20261112-settings">
+<link rel="stylesheet" href="/assets/css/editor-guide.css?v=20261115-heading">
+<link rel="stylesheet" href="/assets/css/member.css?v=20261115-github">
 <link rel="preload" href="/assets/vendor/quill.js" as="script">
-<link rel="modulepreload" href="/assets/js/app.js?v=20261112-favicon">
-</head>
+<!-- editor-modulepreload:start -->
+<link rel="modulepreload" href="/assets/js/vendor-loader.js">
+<link rel="modulepreload" href="/assets/js/app.js?v=20261115-guide-details">
+<link rel="modulepreload" href="/assets/js/store.js">
+<link rel="modulepreload" href="/assets/js/templates.js">
+<link rel="modulepreload" href="/assets/js/tpl-standard.js">
+<link rel="modulepreload" href="/assets/js/standard-renderer.js">
+<link rel="modulepreload" href="/assets/js/dict.js">
+<link rel="modulepreload" href="/assets/js/module-order.js">
+<link rel="modulepreload" href="/assets/js/project-fields.js">
+<link rel="modulepreload" href="/assets/js/basic-fields.js">
+<link rel="modulepreload" href="/assets/js/tpl-extended.js">
+<link rel="modulepreload" href="/assets/js/site-settings.js">
+<link rel="modulepreload" href="/assets/js/editor-state.js">
+<link rel="modulepreload" href="/assets/js/template-choice.js">
+<link rel="modulepreload" href="/assets/js/resume-defaults.js">
+<link rel="modulepreload" href="/assets/js/template-samples.js">
+<link rel="modulepreload" href="/assets/js/editor-start.js">
+<link rel="modulepreload" href="/assets/js/forms.js">
+<link rel="modulepreload" href="/assets/js/motion.js">
+<link rel="modulepreload" href="/assets/js/project-layout.js">
+<link rel="modulepreload" href="/assets/js/pdf.js">
+<link rel="modulepreload" href="/assets/js/analytics.js">
+<link rel="modulepreload" href="/assets/js/visit-tracker.js">
+<link rel="modulepreload" href="/assets/js/public-pages.js">
+<link rel="modulepreload" href="/assets/js/attribution.js">
+<link rel="modulepreload" href="/assets/js/analytics-policy.js">
+<link rel="modulepreload" href="/assets/js/settings.js?v=20261112-settings">
+<link rel="modulepreload" href="/assets/js/module-drag.js?v=20261112-touch">
+<link rel="modulepreload" href="/assets/js/personal-templates.js">
+<link rel="modulepreload" href="/assets/js/workspace-nav.js">
+<link rel="modulepreload" href="/assets/js/editor-guide.js">
+<link rel="modulepreload" href="/assets/js/mobile-layout.js">
+<link rel="modulepreload" href="/assets/js/editor-member.js?v=20261115-github">
+<link rel="modulepreload" href="/assets/js/github-nav.js?v=20261115-github">
+<link rel="modulepreload" href="/assets/js/site-config.js">
+<link rel="modulepreload" href="/assets/js/personal-ai.js">
+<link rel="modulepreload" href="/assets/js/member-client.js">
+<link rel="modulepreload" href="/assets/js/resume-create.js">
+<!-- editor-modulepreload:end -->
+<link rel="stylesheet" href="/assets/css/mobile.css?v=20261116-mobile"></head>
 <body>
 <div class="editor-startup" id="editorStartup">
   <a class="startup-brand" href="/" aria-label="返回首页"><img src="/assets/img/brand/icon.png?v=20261112-favicon" alt=""><span>一纸简历</span></a>
+  <div class="startup-progress" aria-hidden="true"></div>
   <div class="startup-message" role="status" aria-live="polite">
-    <span class="startup-loading">正在准备简历编辑器…</span>
+    <span class="startup-loading"><span class="startup-dots" aria-hidden="true"><i></i><i></i><i></i></span>正在准备简历编辑器…</span>
     <div class="startup-error"><p>编辑器暂时未能加载，请重试。已保存的草稿会保留。</p><a href="/resume/">重新加载</a><a href="/">返回首页</a></div>
   </div>
 </div>
@@ -76,6 +131,6 @@
   </main>
 </section>
 <script>setTimeout(function () { if (document.documentElement.dataset.editorState === 'loading') document.documentElement.dataset.editorState = 'error'; }, 15000);</script>
-<script type="module" src="/assets/js/editor-entry.js?v=20261112-favicon" onerror="document.documentElement.dataset.editorState='error'"></script>
+<script type="module" src="/assets/js/editor-entry.js?v=20261115-guide-details" onerror="document.documentElement.dataset.editorState='error'"></script>
 </body>
 </html>

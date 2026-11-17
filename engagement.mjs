@@ -1,6 +1,7 @@
+import {ANALYTICS_PAGES} from './assets/js/public-pages.js';
 const dayOf=time=>new Date(time+8*3600000).toISOString().slice(0,10);
 const hourOf=time=>new Date(time+8*3600000).getUTCHours();
-const names={'/':'介绍页','/resume/':'简历编辑','/portrait/':'证件照'};
+const names=ANALYTICS_PAGES;
 const success=new Set(['resume_export','portrait_export','portrait_apply']);
 const average=values=>values.length?Math.round(values.reduce((a,b)=>a+b,0)/values.length):null;
 const median=values=>{if(!values.length)return null;const sorted=[...values].sort((a,b)=>a-b),middle=Math.floor(sorted.length/2);return Math.round(sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2);};

@@ -18,7 +18,9 @@ import { WORKSPACE_NAV } from './workspace-nav.js';
 import {availableTemplates} from './site-settings.js';
 import {track} from './analytics.js';
 import {chooseTemplate} from './template-choice.js';
-import {hasResumeContent} from './template-samples.js';
+import {hasResumeContent,isTemplateSample} from './template-samples.js';
+import {setupEditorGuide} from './editor-guide.js';
+import {MOBILE_EDITOR_MEDIA} from './mobile-layout.js';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -45,16 +47,16 @@ function initQuill() {
   if (!window.Quill) return false;
   setQuillFactory((host, html) => {
     const box = document.createElement('div');
-    box.className = 'ql-container ql-snow';
+    box.className = 'qm-quill-shell';
     const inner = document.createElement('div');
-    inner.className = 'ql-editor';
+    inner.className = 'qm-quill-content';
     inner.innerHTML = html || '';
     box.appendChild(inner);
     host.appendChild(box);
 
     const q = new window.Quill(inner, {
       theme: 'snow',
-      placeholder: '所修课程、成绩排名、在校的职务、参赛获奖情况等有利于突出个人优势的信息。尽量简洁，突出重点。',
+      placeholder: '写清你的经历、职责和成果，尽量简洁，突出与目标岗位相关的信息。',
       modules: {
         toolbar: { container: [
           [{ undo: true }, { redo: true }],
@@ -79,6 +81,11 @@ function initQuill() {
         const button = tb.querySelector(`.ql-${format}`);
         if (button) { button.setAttribute('aria-label', label); button.title = label; }
       }
+      // Custom history actions need icons; Quill only supplies its built-in format icons.
+      for(const [format,path] of Object.entries({undo:'M7 8H3V4 M3 8a7 7 0 1 1 0 8',redo:'M17 8h4V4 M21 8a7 7 0 1 0 0 8'})){
+        const button=tb.querySelector(`.ql-${format}`);
+        if(button)button.innerHTML=`<svg viewBox="0 0 24 24" aria-hidden="true"><path class="ql-stroke" d="${path}" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      }
     }
     quillReady = true;
     return q;
@@ -91,6 +98,7 @@ function initQuill() {
 let previewFrame = 0;
 let previewHTML = '';
 let fitPreviewLayout = () => {};
+let refreshEditorGuide = () => {};
 function queuePreview() {
   if (previewFrame) return;
   previewFrame = requestAnimationFrame(() => { previewFrame = 0; renderPreview(); });
@@ -106,6 +114,7 @@ function renderPreview() {
   $('.preview-pane')?.classList.toggle('is-empty',empty);
   const guidance=$('.preview-empty');
   if(guidance)guidance.hidden=!empty;
+  refreshEditorGuide();
 
   const box = host.querySelector('.resume_box');
   const h = box ? box.offsetHeight : 0;
@@ -212,13 +221,20 @@ function setupWorkspace() {
 
   const moduleBar = document.createElement('div');
   moduleBar.className = 'mobile-module-bar';
-  moduleBar.innerHTML = '<label for="mobileModuleSelect">编辑栏目</label><select id="mobileModuleSelect" aria-label="选择编辑栏目"></select><button type="button" id="mobileModuleToggle" aria-expanded="false" aria-controls="resumeModuleTabs">管理栏目</button>';
-  panel.querySelector('.edit_top').before(moduleBar);
+  moduleBar.innerHTML = '<label for="mobileModuleSelect">编辑栏目</label><select id="mobileModuleSelect" aria-label="选择编辑栏目"></select><button type="button" id="mobileModuleToggle" aria-expanded="false" aria-controls="resumeModuleChooser"><span></span><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
+  const moduleRegion = panel.querySelector('.edit_top');
+  moduleRegion.id = 'resumeModuleChooser';
+  const moduleContent = document.createElement('div');
+  moduleContent.className = 'module-tabs-content';
+  moduleContent.append(...moduleRegion.childNodes);
+  moduleRegion.append(moduleContent);
+  moduleRegion.before(moduleBar);
   moduleBar.querySelector('select').addEventListener('change', event => selectEditorModule(event.target.value));
   moduleBar.querySelector('button').addEventListener('click', () => {
-    const expanded = panel.classList.toggle('modules-open');
-    moduleBar.querySelector('button').setAttribute('aria-expanded', String(expanded));
+    setModuleChooserOpen(panel.classList.contains('modules-collapsed'), {persist:true});
   });
+  const savedCollapse = getUi().modulesCollapsed;
+  setModuleChooserOpen(typeof savedCollapse === 'boolean' ? !savedCollapse : !window.matchMedia(MOBILE_EDITOR_MEDIA).matches);
 
   const foot = document.createElement('div');
   foot.className = 'editor-footer';
@@ -241,7 +257,7 @@ function setupWorkspace() {
     if (!button) return;
     setEditorOpen(button.dataset.view === 'edit');
     commit({uiOnly:true});
-    if (window.matchMedia('(max-width: 860px)').matches) window.scrollTo({top:0,behavior:'instant'});
+    if (window.matchMedia(MOBILE_EDITOR_MEDIA).matches) window.scrollTo({top:0,behavior:'instant'});
   });
 
   // zoom 只作用于预览外壳；导出的离屏简历继续使用原始 820px 宽度。
@@ -354,6 +370,23 @@ function focusPreview(name = window.__tab, onlyIfOutside = false) {
   scroller.scrollTo({ top: scroller.scrollTop + rect.top - outer.top - 20, behavior: document.documentElement.dataset.motion==='reduce' ? 'instant' : 'smooth' });
 }
 
+function setModuleChooserOpen(open, {persist=false}={}) {
+  const panel = $('#resumeEditorPanel'), button = $('#mobileModuleToggle');
+  if (!panel || !button) return;
+  panel.classList.toggle('modules-collapsed', !open);
+  panel.classList.toggle('modules-open', open);
+  button.setAttribute('aria-expanded', String(open));
+  button.querySelector('span').textContent = open ? '收起栏目' : '展开栏目';
+  button.querySelector('path').setAttribute('d', open ? 'm5 12 5-5 5 5' : 'm5 8 5 5 5-5');
+  const region = $('#resumeModuleChooser');
+  region.inert = !open;
+  region.setAttribute('aria-hidden', String(!open));
+  if (persist) {
+    getUi().modulesCollapsed = !open;
+    commit({uiOnly:true});
+  }
+}
+
 function renderTabs() {
   const r = getResume();
   const tab = window.__tab || 'basic';
@@ -391,15 +424,15 @@ function renderTabs() {
   ul.scrollTop = scrollTop;
 }
 
-function selectEditorModule(name) {
+function selectEditorModule(name,{scroll=true}={}) {
   if (!MODULES.some(def => def.name === name)) return;
   window.__tab = name;
   getUi().tab = name;
   setEditorOpen(true);
   commit({structural:true});
-  if (window.matchMedia('(max-width: 860px)').matches) {
-    $('#resumeEditorPanel')?.classList.remove('modules-open');
-    $('#mobileModuleToggle')?.setAttribute('aria-expanded','false');
+  if(!scroll)return;
+  if (window.matchMedia(MOBILE_EDITOR_MEDIA).matches) {
+    setModuleChooserOpen(false);
     requestAnimationFrame(() => $('#formHost')?.scrollIntoView({block:'start',behavior:document.documentElement.dataset.motion === 'reduce' ? 'instant' : 'smooth'}));
   } else requestAnimationFrame(() => focusPreview(name));
 }
@@ -526,6 +559,7 @@ function modal(title, bodyHtml, onMount) {
 
 function openTplDialog() {
   const cur = getResume().setData.tplId;
+  const startsFromSample=!hasResumeContent(getResume())||isTemplateSample(getResume());
   const personal=listPersonalTemplates(),activePersonal=personal.find(t=>t.id===getUi().customTemplateId&&templateMatches(t,getResume().setData));
   const choices = availableTemplates(TEMPLATES);
   const cards = choices.map(t => `
@@ -534,11 +568,12 @@ function openTplDialog() {
       <strong>${esc(t.code)}</strong>
       <span>${esc(t.name)}</span>
       <em>${esc(t.desc)}</em>
-    </button><button type="button" class="template-use-sample" data-use-sample="${t.id}" aria-label="从${esc(t.name)}示例开始">从示例开始</button></div>`).join('');
+      <span class="template-card-action">${startsFromSample?'使用模板并编辑':'应用此模板'}<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </button>${startsFromSample?'':`<button type="button" class="template-use-sample" data-use-sample="${t.id}" aria-label="从${esc(t.name)}示例重新开始">从示例重新开始</button>`}</div>`).join('');
 
   const customCards=personal.map(t=>{const base=getTemplate(t.style.tplId),active=t===activePersonal;return `<article class="personal-template-card${active?' active':''}"><button type="button" class="personal-template-select" data-personal="${esc(t.id)}" aria-label="使用自定义模板${esc(t.name)}" aria-pressed="${active}"><div class="tpl_thumb"><img src="${esc(base.thumbnail)}" alt="${esc(base.name)}基础版式预览" loading="lazy"><small class="template-base-label">${esc(base.name)}</small></div><strong>${esc(t.name)}</strong><span class="personal-style-summary"><i style="background:${t.style.skin}"></i>${t.style.fontSize}px · ${t.style.lineHeight}倍行距</span></button><div class="personal-template-actions"><button type="button" data-rename-personal="${esc(t.id)}" aria-label="重命名${esc(t.name)}">重命名</button><button type="button" data-remove-personal="${esc(t.id)}" aria-label="移除${esc(t.name)}">移除</button></div></article>`;}).join('');
   modal('更换模板', `
-    <div class="template-topline"><p class="info_tip">${choices.length}套可编辑模板${personal.length?` · ${personal.length}套自定义模板`:''}。空白简历载入示例，已有内容切换时保留。</p><button type="button" class="create-template-top" data-create-personal aria-label="创建自定义模板">＋ 自定义模板</button></div>
+    <div class="template-topline"><div><strong>${startsFromSample?'选一套喜欢的模板，直接开始修改':'换个版式，保留你写好的内容'}</strong><p class="info_tip">${choices.length}套可编辑模板${personal.length?` · ${personal.length}套自定义模板`:''} · ${startsFromSample?'自带完整虚构示例，所见即所得':'只更换样式，不替换个人信息与经历'}</p></div><button type="button" class="create-template-top" data-create-personal aria-label="创建自定义模板">＋ 自定义模板</button></div>
     <div class="tpl_pick">${cards}</div>${personal.length?`<div class="personal-template-heading"><h3>我的模板</h3><span>保存在当前浏览器</span></div><div class="tpl_pick personal-template-grid">${customCards}</div>`:''}`, (w, close) => {
     w.classList.add('qm-template-dialog');
     w.querySelectorAll('[data-tpl]').forEach(card => {
@@ -547,7 +582,8 @@ function openTplDialog() {
         track('template_select',id);
         let seeded=false;
         set(rr => {
-          seeded=chooseTemplate(rr, id);
+          seeded=chooseTemplate(rr, id,{useSample:isTemplateSample(rr)});
+          getUi().startBlank=false;
           getUi().tplChosen = true;
           getUi().customTemplateId = null;
           if(seeded){window.__tab='basic';getUi().tab='basic';}
@@ -561,10 +597,10 @@ function openTplDialog() {
       };
     });
     w.querySelectorAll('[data-use-sample]').forEach(button=>button.onclick=()=>{
-      if(hasResumeContent(getResume())&&!confirm('将当前简历替换为这份模板示例？当前草稿的填写内容会被替换，请先导出需要保留的简历。'))return;
+      if(hasResumeContent(getResume())&&!isTemplateSample(getResume())&&!confirm('将当前简历替换为这份模板示例？当前草稿的填写内容会被替换，请先导出需要保留的简历。'))return;
       const id=Number(button.dataset.useSample);
       window.__tab='basic';getUi().tab='basic';
-      set(resume=>{chooseTemplate(resume,id,{useSample:true});getUi().tplChosen=true;getUi().customTemplateId=null;},{structural:true,tabs:true});
+      set(resume=>{chooseTemplate(resume,id,{useSample:true});getUi().startBlank=false;getUi().tplChosen=true;getUi().customTemplateId=null;},{structural:true,tabs:true});
       track('template_select',id);close();toast('示例已载入，请把虚构履历改成你的真实经历');requestAnimationFrame(()=>focusPreview('basic'));
     });
     w.querySelectorAll('[data-create-personal]').forEach(button=>button.onclick=()=>{close();openCustomTemplateEditor();});
@@ -771,8 +807,8 @@ function bindPrivacy() {
     box.innerHTML = `<button class="el-button el-button--default el-button--mini" data-reset>恢复示例</button>
       <button class="el-button el-button--default el-button--mini" data-blank>清空</button>`;
     $('.editor-footer').appendChild(box);
-    box.querySelector('[data-reset]').onclick = () => { reset('demo'); setActiveItem('jiaoyu', 0); commit({ structural: true }); };
-    box.querySelector('[data-blank]').onclick = () => { reset('blank'); setActiveItem('jiaoyu', 0); commit({ structural: true }); };
+    box.querySelector('[data-reset]').onclick = () => { if(hasResumeContent(getResume())&&!isTemplateSample(getResume())&&!confirm('恢复模板示例会替换当前内容。请先保存需要保留的简历，是否继续？'))return;reset('demo'); };
+    box.querySelector('[data-blank]').onclick = () => { if(hasResumeContent(getResume())&&!isTemplateSample(getResume())&&!confirm('清空当前简历？请先保存需要保留的内容。'))return;reset('blank'); };
   }
 }
 
@@ -796,7 +832,7 @@ export function bootEditor() {
   const entryTemplate = Number(entryParams.get('template'));
   if (availableTemplates(TEMPLATES).some(template=>template.id===entryTemplate)) {
     let seeded=false;
-    set(resume=>{seeded=chooseTemplate(resume,entryTemplate);getUi().tplChosen=true;getUi().customTemplateId=null;if(seeded){window.__tab='basic';getUi().tab='basic';}},{structural:true,tabs:true});
+    set(resume=>{seeded=chooseTemplate(resume,entryTemplate,{useSample:isTemplateSample(resume)});getUi().startBlank=false;getUi().tplChosen=true;getUi().customTemplateId=null;if(seeded){window.__tab='basic';getUi().tab='basic';}},{structural:true,tabs:true});
     track('template_select',entryTemplate);
     toast(seeded?'示例已载入，请把虚构履历改成你的真实经历':'已应用所选模板，简历内容继续保留');
     history.replaceState(null,'',location.pathname);
@@ -817,9 +853,10 @@ export function bootEditor() {
   // page must also expose the form instead of reviving a folded blank preview.
   const showEntryForm=()=>{
     setEditorOpen(true,{animate:false});
-    if(window.matchMedia('(max-width: 860px)').matches)window.scrollTo({top:0,behavior:'instant'});
+    if(window.matchMedia(MOBILE_EDITOR_MEDIA).matches)window.scrollTo({top:0,behavior:'instant'});
   };
   showEntryForm();
+  refreshEditorGuide=setupEditorGuide({isSample:()=>isTemplateSample(getResume()),openEditor:(open=true)=>setEditorOpen(open,{animate:false}),openModules:setModuleChooserOpen,selectModule:name=>selectEditorModule(name,{scroll:false})})||(()=>{});
   window.addEventListener('pageshow',event=>{if(event.persisted)showEntryForm();});
 
   onChange(opts => {
@@ -850,4 +887,6 @@ export function bootEditor() {
   window.addEventListener('keydown', e => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); flushSave(); }
   });
+  // Accounts load independently so an unavailable account service never blocks editing.
+  void import('./editor-member.js?v=20261115-github').then(module=>module.installEditorMember()).catch(error=>console.warn('账户扩展暂时无法加载',error));
 }

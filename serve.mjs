@@ -2,11 +2,17 @@
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {gzipSync} from 'node:zlib';
 import { pathToFileURL } from 'node:url';
 import { createApp } from './portrait/server.mjs';
 import { createAdministration } from './admin.mjs';
 import { renderSeo, searchDocument, SITE_ORIGIN } from './seo.mjs';
-import { maintenanceResponse } from './maintenance.mjs';
+import { maintenanceResponse, needsMaintenance } from './maintenance.mjs';
+import {createPersonalAi} from './personal-ai.mjs';
+import {createMembers} from './members.mjs';
+import {publicOrigins} from './public-origins.mjs';
+import {CONTENT_PAGES} from './assets/js/public-pages.js';
+import {renderContentPage} from './content-pages.mjs';
 
 const ROOT = process.env.VERCEL ? process.cwd() : import.meta.dirname;
 const MIME = {
@@ -15,38 +21,49 @@ const MIME = {
   '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml',
   '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.ico': 'image/x-icon',
 };
+/** 已压缩的静态资源（按 文件+修改时间 缓存），避免每次请求重复压缩。 */
+const compressedCache = new Map();
 
-export async function createResumeServer({ portraitOptions = {}, adminOptions = {} } = {}) {
+export async function createResumeServer({ portraitOptions = {}, adminOptions = {}, memberOptions = {} } = {}) {
   let server;
   const cloud=adminOptions.cloud===true||Boolean(process.env.VERCEL);
-  const allowedOrigins=process.env.VERCEL?[process.env.VERCEL_URL,process.env.VERCEL_PROJECT_PRODUCTION_URL].filter(Boolean).map(host=>'https://'+host):[];
-  const administration=cloud?await (await import('./cloud-administration.mjs')).createCloudAdministration({root:ROOT,allowedOrigins,...adminOptions,hostPort:()=>server?.address()?.port}):createAdministration({root:ROOT,...adminOptions,hostPort:()=>server?.address()?.port});
+  const allowedOrigins=process.env.VERCEL?publicOrigins():[];
+  let memberPromise;
+  const members=()=>memberPromise??=createMembers({root:ROOT,allowedOrigins,...memberOptions,hostedAi:false,hostPort:()=>server?.address()?.port}).catch(error=>{memberPromise=null;throw error;});
+  const memberSummary=params=>members().then(service=>service.summary(params));
+  const memberConfiguration=()=>members().then(service=>service.configuration());
+  const updateMemberConfiguration=input=>members().then(service=>service.updateConfiguration(input));
+  const administration=cloud?await (await import('./cloud-administration.mjs')).createCloudAdministration({root:ROOT,allowedOrigins,...adminOptions,memberSummary,memberConfiguration,updateMemberConfiguration,hostPort:()=>server?.address()?.port}):createAdministration({root:ROOT,...adminOptions,memberSummary,memberConfiguration,updateMemberConfiguration,hostPort:()=>server?.address()?.port});
   const portrait = await createApp({
     ...portraitOptions,
     configPath: portraitOptions.configPath || path.join(ROOT, 'private', 'portrait-config.json'),
     basePath: '/portrait', hostPort: () => server?.address()?.port,
     ...(cloud?{publicMode:true,allowedOrigins,requestToken:process.env.PORTRAIT_REQUEST_SECRET,checkRate:administration.checkPortraitRate}:{}),
   });
+  const handlePersonalAi=createPersonalAi({hostPort:()=>server?.address()?.port,allowedOrigins,publicOrigin:process.env.PUBLIC_ORIGIN||'',checkRate:administration.checkPortraitRate});
   const handlePortrait = portrait.listeners('request')[0];
   server = http.createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     try {
       const url = new URL(req.url, 'http://127.0.0.1');
       const pathname = decodeURIComponent(url.pathname);
-      const maintenance=maintenanceResponse(pathname,process.env.MAINTENANCE_MODE==='1');
+      const maintenance=maintenanceResponse(pathname,needsMaintenance(req));
       if(maintenance){res.writeHead(maintenance.status,maintenance.headers).end(req.method==='HEAD'?undefined:maintenance.body);return;}
       const isRead = req.method === 'GET' || req.method === 'HEAD';
       if (isRead && req.headers.host?.split(':')[0] === 'www.yizhijianli.cn') {
         res.writeHead(308, {Location:SITE_ORIGIN+url.pathname+url.search}).end(); return;
       }
-      const alias = ({'/index.html':'/','/resume.html':'/resume/','/portrait/index.html':'/portrait/','/privacy':'/privacy/','/privacy.html':'/privacy/'})[pathname];
+      const alias = ({'/index.html':'/','/resume.html':'/resume/','/portrait/index.html':'/portrait/','/privacy':'/privacy/','/privacy.html':'/privacy/',...Object.fromEntries(Object.keys(CONTENT_PAGES).map(page=>[page.slice(0,-1),page]))})[pathname];
       if (isRead && alias) {res.writeHead(308,{Location:alias+url.search,'Cache-Control':'no-cache'}).end();return;}
       const searchFile = searchDocument(pathname);
       if (searchFile) {
         if (!isRead) {res.writeHead(405,{Allow:'GET, HEAD'}).end();return;}
+        if(searchFile.noindex)res.setHeader('X-Robots-Tag','noindex, nofollow');
         res.writeHead(200,{'Content-Type':searchFile.type,'Cache-Control':'public, max-age=3600'}).end(req.method==='HEAD'?undefined:searchFile.body);return;
       }
       if(pathname==='/admin'||pathname==='/admin.html'||pathname.startsWith('/api/')||pathname.startsWith('/portrait/api/')||url.searchParams.has('adminPreview'))res.setHeader('X-Robots-Tag','noindex, nofollow');
+      if(await handlePersonalAi(req,res,url))return;
+      if(pathname.startsWith('/api/member/')){await (await members()).handle(req,res,url);return;}
       if(await administration.handle(req,res,new URL(req.url,'http://127.0.0.1')))return;
       if(pathname==='/admin') {res.writeHead(308,{Location:'/admin.html','Cache-Control':'no-store'}).end();return;}
       if (pathname === '/portrait') {
@@ -55,6 +72,10 @@ export async function createResumeServer({ portraitOptions = {}, adminOptions = 
       }
       if (pathname.startsWith('/portrait/')) { await handlePortrait(req, res); return; }
       if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { Allow: 'GET, HEAD' }).end(); return; }
+      if(Object.hasOwn(CONTENT_PAGES,pathname)){
+        const html=renderSeo(renderContentPage(pathname,pathname==='/templates/'?await administration.publicSettings():null),pathname);
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}).end(req.method==='HEAD'?undefined:html);return;
+      }
       const iconFallback = ({ '/favicon.ico':'favicon.ico', '/apple-touch-icon.png':'apple-touch-icon.png', '/apple-touch-icon-precomposed.png':'apple-touch-icon.png' })[pathname];
       if (iconFallback) {
         const icon = await fs.readFile(path.join(ROOT,'assets','img','brand',iconFallback));
@@ -65,28 +86,56 @@ export async function createResumeServer({ portraitOptions = {}, adminOptions = 
       if (pathname === '/resume') {
         res.writeHead(308, { Location: '/resume/'+url.search, 'Cache-Control': 'no-store' }).end(); return;
       }
-      const page = ({ '/': 'index.html', '/resume/': 'resume.html', '/privacy/':'privacy.html', '/admin.html':'admin.html' })[pathname];
+      const page = ({ '/': 'index.html', '/resume/': 'resume.html', '/privacy/':'privacy.html', '/admin.html':'admin.html', '/account/':'account.html', '/plans/':'plans.html', '/plans/thanks/':'support-thanks.html' })[pathname];
+      if(['/account/','/plans/','/plans/thanks/'].includes(pathname)){res.setHeader('X-Robots-Tag','noindex, nofollow');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");}
+      if(pathname==='/plans/thanks'){res.writeHead(308,{Location:'/plans/thanks/'+url.search,'Cache-Control':'no-store'}).end();return;}
+      if(['/account','/plans','/plans.html'].includes(pathname)){res.writeHead(308,{Location:pathname==='/account'?'/account/':'/plans/','Cache-Control':'no-store'}).end();return;}
       const isIndex = Boolean(page);
       const assets = path.join(ROOT, 'assets');
       const file = isIndex ? path.join(ROOT, page) : path.resolve(ROOT, '.' + pathname);
       if (!isIndex && (!pathname.startsWith('/assets/') || !file.startsWith(assets + path.sep) || !MIME[path.extname(file).toLowerCase()])) {
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('未找到此内容。'); return;
       }
+      const fileType = MIME[path.extname(file).toLowerCase()];
+      const stats = await fs.stat(file);
+      const etag = `W/"${stats.size.toString(16)}-${Math.floor(stats.mtimeMs).toString(16)}"`;
+      // 静态资源走协商缓存：编辑器一次要取上百个模块，没有 ETag 时每次打开都整包重下。
+      if (!isIndex && req.headers['if-none-match'] === etag) {
+        res.writeHead(304, { 'ETag': etag, 'Cache-Control': 'no-cache' }); res.end(); return;
+      }
       let body = await fs.readFile(file);
       if(page==='index.html')body=Buffer.from(await administration.renderHomepage(body.toString('utf8')));
       if(page)body=Buffer.from(renderSeo(body.toString('utf8'),pathname));
       if(pathname==='/admin.html') {
-        res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+        res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
         res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','no-referrer');
       }
-      res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()], 'Cache-Control': 'no-cache' });
+      const compressible = /^(text\/|application\/(javascript|json))/.test(fileType || '');
+      const gzipAccepted = /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''));
+      let compressed = false;
+      if (compressible && gzipAccepted && body.length > 1024) {
+        const cacheKey = `${file}:${stats.mtimeMs}`;
+        let cached = compressedCache.get(cacheKey);
+        if (!cached) {
+          cached = gzipSync(body, { level: 6 });
+          if (compressedCache.size > 96) compressedCache.clear();
+          compressedCache.set(cacheKey, cached);
+        }
+        body = cached; compressed = true;
+      }
+      res.writeHead(200, {
+        'Content-Type': fileType,
+        'Cache-Control': 'no-cache',
+        'ETag': etag,
+        ...(compressed ? { 'Content-Encoding': 'gzip', 'Vary': 'Accept-Encoding' } : {}),
+      });
       res.end(req.method === 'HEAD' ? undefined : body);
     } catch (error) {
-      res.writeHead(error instanceof URIError ? 400 : 404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('未找到此内容。');
+      if(!res.headersSent)res.writeHead(req.url.startsWith('/api/member/')?503:error instanceof URIError?400:404, { 'Content-Type': 'text/plain; charset=utf-8','Cache-Control':'no-store' }).end(req.url.startsWith('/api/member/')?'账户服务暂时不可用，请稍后重试。':'未找到此内容。');
     }
   });
   server.requestTimeout = 60_000;
-  server.on('close', () => {portrait.emit('close');void administration.close?.();});
+  server.on('close', () => {portrait.emit('close');void administration.close?.();void memberPromise?.then(service=>service.close()).catch(()=>{});});
   return server;
 }
 
@@ -95,5 +144,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   const port = Number(process.argv[2] || 8099);
   const server = await createResumeServer();
   const publicMode=process.env.PUBLIC_MODE==='1',host=publicMode?(process.env.BIND_HOST||'127.0.0.1'):'127.0.0.1';
-  server.listen(port, host, () => console.log(`一纸简历${publicMode?'（公开免费模式，云端已关闭）':''}已启动：http://${host}:${port}/`));
+  server.listen(port, host, () => console.log(`一纸简历${publicMode?'（公开免费模式）':''}已启动：http://${host}:${port}/`));
 }

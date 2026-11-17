@@ -36,3 +36,7 @@ button,a,input,select,textarea{transition:background-color 140ms ease,border-col
 .dialog-heading .connection-optional-note{order:1}
 
 .panel-title h1{font:inherit;font-weight:650;font-size:16px;line-height:1.5;margin:0}.draft-note>a{color:inherit;margin-right:16px;text-underline-offset:3px}
+.portrait-plan-note{grid-column:1/-1;min-width:0;width:100%;display:grid;gap:4px;border-top:1px solid var(--ui-line);padding-top:10px;margin-top:10px;color:var(--ui-muted);font-size:12px;line-height:1.8}
+.portrait-plan-note>a{display:inline-flex;align-items:center;justify-self:start;min-height:36px;color:var(--ui-accent);touch-action:manipulation}
+.portrait-plan-note>a:hover{text-decoration:underline;text-underline-offset:3px}
+@media(max-width:760px){.portrait-plan-note>a{min-height:44px}}

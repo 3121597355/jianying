@@ -1,0 +1,190 @@
+/* Shared phone refinements. Printed resume pages retain the template styling. */
+.mobile-editor-tools-toggle,.mobile-photo-settings,.mobile-admin-nav-toggle,.mobile-github-link {display:none}
+@media screen and (max-width:860px), screen and (max-width:1024px) and (max-height:500px) {
+  html { -webkit-text-size-adjust:100%;text-size-adjust:100%; }
+  :is(.member-page,.content-main,.info-page,.plans-main) {overflow-wrap:anywhere}
+  :is(.member-dialog,.qm-modal) {overscroll-behavior:contain}
+  .member-dialog {max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow-y:auto}
+  .member-dialog-head {padding:10px 16px}
+  .member-close {width:44px;height:44px;flex-shrink:0}
+  .member-dialog :is(.member-actions,.resume-workspace-actions) {gap:10px}
+  .member-dialog .member-actions>.member-button {flex:1 1 140px}
+  .member-dialog :is(input,select,textarea) {font-size:16px}
+  .member-dialog-body {padding-bottom:max(20px,env(safe-area-inset-bottom))}
+  :root[data-page=portrait] dialog {width:calc(100% - 24px);max-width:560px;max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;padding:20px 16px}
+  :root[data-page=portrait] dialog .icon-button {width:44px;height:44px;flex-shrink:0}
+  :root[data-page=portrait] dialog .dialog-actions {display:flex;flex-wrap:wrap;gap:10px}
+  :root[data-page=portrait] dialog .dialog-actions .button {flex:1 1 130px;min-height:44px}
+
+  .edit_resume .edit_header .edit_header_main .get_list>li.github-editor-item {display:none}
+  .edit_resume .edit_header .edit_header_main .get_list>li.support-editor-item {width:44px;min-width:44px}
+  .edit_resume .get_list .support-nav-link {width:44px;min-width:44px;height:44px;min-height:44px;padding:0!important}
+  .edit_resume .get_list .support-nav-link span {display:none}
+  .edit_resume .edit_header .edit_header_main .get_list>li.member-nav-item:not(.github-editor-item) {width:44px;min-width:44px;height:44px}
+  .edit_resume .get_list :is(.member-nav-link,.member-account-icon) {width:44px;min-width:44px;height:44px;padding:0}
+  .edit_resume .edit_header .edit_header_main .get_list>li.qm-download[data-v-236d5b80] {padding:0;justify-content:center;gap:0}
+  .edit_resume .get_list #dlLabel {display:none}
+  .edit_resume .grouped-settings :is(input:not([type=range]):not([type=color]),select,textarea) {font-size:16px;min-height:44px}
+  .resume-workspace .editor-heading {gap:4px 8px;padding-bottom:8px}
+  .editor-heading>.member-tools-wrap {grid-row:3;grid-column:1/-1}
+  .editor-heading>.editor-help-tools {display:contents}
+  .editor-heading .editor-sample-note {grid-row:2;grid-column:1;padding-left:8px}
+  .editor-heading>.member-cloud-status {grid-row:2;grid-column:2;max-width:168px;font-size:10px;line-height:1.5}
+  .mobile-editor-tools-toggle {display:flex;align-items:center;justify-content:space-between;width:100%;min-height:44px;border:0;border-top:1px solid var(--ui-line);padding:8px;color:var(--ui-muted);background:transparent;font:inherit;font-size:12px;line-height:1.5;cursor:pointer;touch-action:manipulation}
+  .mobile-editor-tools-toggle>span:last-child {font-size:16px;transition:transform .18s}
+  .mobile-editor-tools-toggle[aria-expanded=true]>span:last-child {transform:rotate(180deg)}
+  .editor-heading .member-tools-wrap:not(.mobile-tools-open) .member-tools {display:none}
+  .editor-heading .mobile-tools-open .member-tools {padding:4px 0 10px}
+  .editor-heading .editor-help-trigger {font-size:12px;padding-inline:8px}
+  .mobile-module-bar {padding:8px;gap:8px}
+  .mobile-module-bar label {font-size:11px}
+  .mobile-module-bar button {min-width:76px}
+  .edit_resume #resumeEditorPanel .edit_b[data-v-236d5b80] {padding:16px 12px 0}
+  #resumeEditorPanel .info_list {min-width:0}
+  #resumeEditorPanel .info_list>li {min-width:0}
+  #resumeEditorPanel .info_list>li>div {min-width:0}
+  #resumeEditorPanel .photo_set {flex-wrap:wrap;gap:8px}
+  #resumeEditorPanel .edit_tab .module-drag-handle {width:44px;height:44px;left:0;top:0}
+  #resumeEditorPanel .edit_tab .btn_edit {width:44px;height:44px}
+  #resumeEditorPanel .jingli_nav_list li .jingli_nav_op_row {width:44px!important;height:44px!important;line-height:42px!important}
+  #resumeEditorPanel .ql-toolbar.ql-snow button {width:40px;height:40px;touch-action:manipulation}
+  .editor-quick-guide {max-height:calc(100dvh - 24px);overflow-y:auto;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  .preview-paper {padding:0 6px 20px}
+  .qm-template-dialog .template-list {gap:12px}
+
+  .mobile-photo-settings {display:none}
+  :root[data-page=portrait] :is(input:not([type=range]):not([type=color]),select,textarea) {font-size:16px}
+  :root[data-page=portrait] :is(.text-button,.category-tabs button,.segmented button,.edge-settings summary) {min-height:44px;touch-action:manipulation}
+  :root[data-page=portrait] .preview-tools {flex-wrap:wrap;gap:8px}
+  :root[data-page=portrait] .draft-note {gap:8px;flex-wrap:wrap;justify-content:flex-start;line-height:1.8;padding-bottom:env(safe-area-inset-bottom)}
+  :root[data-page=portrait] .draft-note>a {margin-right:0;min-height:44px;display:flex;align-items:center}
+  :root[data-page=portrait] .crop-controls {grid-template-columns:64px minmax(0,1fr);gap:12px;margin-inline:18px}
+  :root[data-page=portrait] .crop-sliders {display:grid;grid-template-columns:minmax(0,1fr);gap:4px;min-width:0}
+  :root[data-page=portrait] .crop-sliders label {display:grid;grid-template-columns:64px minmax(0,1fr);align-items:center;gap:8px;min-height:44px}
+  :root[data-page=portrait] .crop-sliders input {width:100%;min-width:0;height:32px;margin:0}
+  :root[data-page=portrait] .crop-sliders button {justify-self:end}
+  :root[data-page=portrait] .export-actions {display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  :root[data-page=portrait] .export-actions select {grid-column:1/-1;width:100%;min-height:44px}
+  :root[data-page=portrait] .export-actions .button {min-height:44px;padding:10px 8px;min-width:0}
+  :root[data-page=portrait] .use-resume {min-height:44px}
+  :root[data-page=portrait] .photo-actions {gap:4px}
+  :root[data-page=portrait] .remove-photo {width:44px;height:44px}
+}
+@media screen and (max-width:700px) {
+  .site-header .header-inner {gap:8px}
+  .site-header .header-actions {gap:0}
+  .site-header .header-actions>.github-nav-link {display:none}
+  .site-header nav .mobile-github-link {display:flex;width:auto;justify-content:flex-start}
+  .site-header .header-actions :is(.support-nav-link,.theme-toggle,.menu-toggle,.member-nav-link) {width:44px;min-width:44px;min-height:44px;height:44px;padding:0!important}
+  .site-header .support-nav-link span {display:none}
+  .site-header .brand {min-width:0}
+  .site-header nav {max-width:calc(100vw - 32px)}
+  .template-caption>a,.text-link {min-height:44px}
+  .template-caption p {font-size:12px}
+  .home-guide-grid>a {padding:22px}
+  .content-header-inner {display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:56px 44px;gap:0 8px;padding:0;width:calc(100% - 32px)}
+  .content-brand {grid-area:1/1;font-size:17px;gap:7px}
+  .content-brand img {width:28px;height:28px}
+  .content-header-actions {grid-area:1/2;gap:0;margin:0}
+  .content-header-actions :is(.support-nav-link,.content-theme,.member-nav-link) {width:44px;min-width:44px;height:44px;min-height:44px;padding:0!important}
+  .content-header-actions :is(.support-nav-link,.member-nav-link) span {display:none}
+  .content-header nav {grid-area:2/1/3/3;order:initial;justify-content:center;align-items:center;gap:32px;border-top:1px solid var(--ui-line);padding:0;width:100%;min-height:44px}
+  .content-header nav a {min-height:44px;padding:0 4px}
+  .content-footer nav a {display:inline-flex;align-items:center;min-height:44px}
+  .content-footer nav {gap:4px 18px}
+  .content-use {min-height:44px}
+  .article-layout {padding-top:24px}
+  .article-toc a {display:inline-block;min-height:40px;padding-block:5px}
+  .guide-article section {scroll-margin-top:116px}
+  .info-header {padding:12px 16px;gap:12px;flex-wrap:wrap}
+  .info-header nav {margin-left:auto;gap:16px}
+  .info-header nav a {display:inline-flex;align-items:center;min-height:44px}
+  .info-page {padding:28px 20px 48px}
+  .info-back {min-height:44px;padding-block:8px}
+}
+@media screen and (max-width:600px) {
+  .edit_resume .edit_header .edit_header_main[data-v-236d5b80] {gap:0 4px}
+  .edit_resume .edit_header .edit_header_main .logo.brand-home[data-v-236d5b80] {width:auto;min-width:0;gap:6px}
+  .edit_resume .edit_header .brand-home span {display:block;font-size:16px}
+  .edit_resume .brand-home img {width:28px;height:28px}
+  .edit_resume .edit_header .edit_header_main .get_list[data-v-236d5b80] {gap:0}
+  .edit_resume .get_list .theme-toggle {width:44px;min-width:44px;height:44px}
+  :root[data-page=portrait] .topbar {gap:0 4px}
+  :root[data-page=portrait] .topbar .brand {width:auto;min-width:0;gap:6px}
+  :root[data-page=portrait] .topbar .brand strong {display:block;font-size:16px;letter-spacing:0}
+  :root[data-page=portrait] .top-actions {gap:0}
+  :root[data-page=portrait] .top-actions>.github-nav-link,:root[data-page=portrait] .top-actions>#settingsButton {display:none}
+  :root[data-page=portrait] .top-actions :is(.support-nav-link,.theme-button,.member-nav-link) {width:44px;min-width:44px;height:44px;min-height:44px;padding:0!important}
+  :root[data-page=portrait] .top-actions .support-nav-link span {display:none}
+  :root[data-page=portrait] .site-nav {justify-content:space-between;gap:0}
+  :root[data-page=portrait] .site-nav a,:root[data-page=portrait] .mobile-photo-settings {flex:1 1 0;min-width:0;height:56px}
+  :root[data-page=portrait] .mobile-photo-settings {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:0;background:transparent;color:var(--ui-muted);font:inherit;font-size:12px;line-height:18px;cursor:pointer;touch-action:manipulation}
+  .mobile-photo-settings[hidden] {display:none!important}
+  :root[data-page=portrait] .mobile-photo-settings svg {width:24px;height:26px;fill:none;stroke:currentColor;stroke-width:1.7}
+  .member-page .member-site-head {display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:52px 44px;gap:0 8px;padding:0 16px}
+  .member-page .member-site-head>.member-brand {grid-area:1/1;font-size:17px;gap:6px}
+  .member-page .member-brand img {width:28px;height:28px}
+  .account-header-actions {grid-area:1/2;gap:0}
+  .account-header-actions :is(.github-nav-link,.account-icon-button,.member-nav-link,.support-nav-link) {width:44px;min-width:44px;height:44px;min-height:44px;padding:0!important}
+  .account-header-actions :is(.github-nav-link,.member-nav-link,.support-nav-link) span {display:none}
+  .member-auth-foot :is(a,button) {display:inline-flex;align-items:center;min-height:44px}
+  .member-page .member-site-head>nav {grid-area:2/1/3/3;width:100%;margin:0;border-top:1px solid var(--ui-line);justify-content:center;gap:24px}
+  .member-page .member-site-head>nav a {display:flex;align-items:center;min-height:44px;padding:0 4px}
+  .member-page .member-auth {padding:22px 20px}
+  .support-offer {padding:16px 12px;gap:8px}
+  .support-offer small {font-size:12px}
+  .support-payment-choice {flex-wrap:wrap;gap:8px}
+  .support-channel-tabs button {flex:1;min-width:0}
+  .support-thanks-main {min-height:calc(100dvh - 96px);padding:24px 16px}
+  .thanks-card .member-actions {display:grid;grid-template-columns:1fr;gap:10px}
+  .account-setting-row {flex-wrap:wrap}
+  .account-setting-copy {flex:1 1 180px}
+  .account-setting-row>.member-button {margin-left:auto}
+}
+@media screen and (max-width:360px) {
+  .site-header .header-inner {width:calc(100% - 24px);gap:4px}
+  .site-header .header-inner>.brand {font-size:15px;gap:6px}
+  .site-header .header-inner>.brand img {width:24px;height:24px}
+  .site-header .header-inner>.brand span {display:inline}
+  .mobile-module-bar {flex-wrap:wrap;gap:6px}
+  .mobile-module-bar label {flex-basis:100%;line-height:1.4}
+  .mobile-module-bar select {flex-basis:150px}
+  .content-header nav {gap:24px}
+  .account-header-actions .github-nav-link {display:none}
+  :root[data-page=portrait] .size-presets {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media screen and (max-width:800px), screen and (max-width:1024px) and (max-height:500px) {
+  .login-view input {font-size:16px}
+  .admin-shell {display:block}
+  .admin-shell .sidebar {position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 12px;align-items:center;padding:12px 16px}
+  .admin-shell .sidebar .sidebar-brand {margin:0;min-width:0}
+  .admin-shell .sidebar nav,.admin-shell .sidebar .sidebar-bottom {display:none}
+  .admin-shell .sidebar.mobile-nav-open nav {display:grid;grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:12px}
+  .admin-shell .sidebar.mobile-nav-open .sidebar-bottom {display:flex;grid-column:1/-1;margin-top:12px}
+  .mobile-admin-nav-toggle {display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:12px;touch-action:manipulation}
+  .admin-shell .sidebar nav :is(button,a) {min-height:44px;font-size:12px;padding:8px;gap:6px}
+  .admin-shell .topbar {min-height:52px;padding-block:8px}
+  .admin-shell :is(input,select,textarea) {font-size:16px}
+  .admin-shell .date-toolbar {gap:12px}
+  .admin-shell .date-toolbar form {display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;width:100%}
+  .admin-shell .date-toolbar input {width:100%;min-width:0;min-height:44px;font-size:16px;padding:8px}
+  .admin-shell .date-query {grid-column:1/-1;min-height:44px}
+  .admin-shell :is(.date-presets button,.primary,.secondary,.metric-choice) {min-height:44px}
+  .admin-shell .metric-grid,.admin-shell .metric,.admin-shell .panel {min-width:0}
+}
+@media screen and (max-width:360px) {
+  .admin-shell .sidebar.mobile-nav-open nav {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .admin-shell .date-toolbar form {grid-template-columns:minmax(0,1fr)}
+  .admin-shell .date-toolbar form>span {display:none}
+}
+@media screen and (max-width:1024px) and (max-height:500px) {
+  .workspace-views,.mobile-module-bar {position:static}
+  .member-dialog {max-height:calc(100dvh - 16px);margin-block:8px}
+  .editor-quick-guide {max-height:calc(100dvh - 16px)}
+}
+@media screen and (max-width:860px), screen and (max-width:1024px) and (max-height:500px) {
+  .mobile-keyboard-open .workspace-views,.mobile-keyboard-open .mobile-module-bar {position:static}
+}
+@media (prefers-reduced-motion:reduce) {
+  .mobile-editor-tools-toggle>span:last-child {transition:none}
+}

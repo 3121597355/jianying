@@ -1,0 +1,92 @@
+/* Account workspace only. Editor and portrait controls retain member.css. */
+.member-page {background:var(--ui-page)}
+.member-page .member-site-head {min-height:74px;padding-inline:max(28px,calc((100% - 1200px)/2));background:var(--ui-page)}
+.account-header-actions {display:flex;align-items:center;gap:24px}
+.member-page .member-site-head nav {gap:28px;font-size:13px;color:var(--ui-muted)}
+.member-page .member-site-head>nav {margin-left:auto}
+.member-page .member-site-head nav a:hover,.member-page .member-site-head nav a[aria-current=page] {color:var(--ui-text)}
+.account-icon-button {display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;background:none;color:var(--ui-muted);border:0;border-radius:9px;cursor:pointer;touch-action:manipulation}
+.account-icon-button:hover {color:var(--ui-text);background:var(--ui-soft)}
+.member-page summary:focus-visible {outline:2px solid var(--ui-accent);outline-offset:3px}
+.account-icon {width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.member-page .member-main {max-width:1200px;padding:48px 28px 64px}
+.account-loading {padding:32px;color:var(--ui-muted);text-align:center}
+.account-shell {display:grid;grid-template-columns:208px minmax(0,1fr);gap:48px;align-items:start}
+.account-sidebar {position:sticky;top:30px;min-width:0}
+.account-identity {display:flex;align-items:center;gap:12px;padding:0 10px 28px}
+.account-avatar {display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;background:var(--ui-accent-soft);color:var(--ui-accent);font-size:19px;font-weight:600;flex-shrink:0}
+.account-identity-text {min-width:0}.account-identity strong {display:block;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-identity span:not(.account-avatar) {display:block;font-size:12px;color:var(--ui-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-navigation {display:grid;gap:6px}
+.account-navigation a {display:flex;align-items:center;gap:12px;min-height:46px;padding:10px 14px;border-radius:10px;color:var(--ui-muted);font-size:14px}
+.account-navigation a:hover {background:var(--ui-soft);color:var(--ui-text)}
+.account-navigation a[aria-current=page] {background:var(--ui-accent-soft);color:var(--ui-accent);font-weight:600}
+.account-side-foot {display:grid;gap:8px;margin-top:40px;padding:22px 12px 0;border-top:1px solid var(--ui-line)}
+.account-side-foot a {font-size:12px;color:var(--ui-muted);width:fit-content;padding-block:6px}
+.account-logout {display:flex;gap:10px;align-items:center;min-height:44px;width:fit-content;border:0;background:none;color:var(--ui-muted);font:inherit;font-size:13px;padding:0;cursor:pointer}
+.account-logout:hover {color:var(--ui-text)}
+.account-content {min-width:0}
+.account-heading {display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:30px}
+.account-heading .member-kicker {font-size:11px;letter-spacing:1.4px;color:var(--ui-muted);margin-bottom:6px}
+.account-heading h1 {font-size:28px;font-weight:650;margin-bottom:6px;letter-spacing:-.7px}
+.account-heading p:last-child {margin:0;font-size:13px;color:var(--ui-muted)}
+.account-heading>.member-button {flex-shrink:0;padding-inline:20px}
+.account-toolbar {display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:0 20px}
+.account-filters {display:flex;gap:4px;align-items:center;min-width:0}
+.account-filters button {display:flex;gap:8px;align-items:center;justify-content:center;min-height:44px;padding:9px 12px;border:0;border-radius:8px;background:none;color:var(--ui-muted);font:inherit;font-size:13px;white-space:nowrap;cursor:pointer}
+.account-filters button:hover {background:var(--ui-soft);color:var(--ui-text)}
+.account-filters button[aria-pressed=true] {background:var(--ui-soft);color:var(--ui-text);font-weight:600}
+.account-filters span {font-size:11px;min-width:16px;text-align:center;color:var(--ui-muted);font-weight:400}
+.account-search {display:flex;align-items:center;gap:8px;width:210px;min-height:44px;padding-inline:12px;border:1px solid var(--ui-line);border-radius:9px;color:var(--ui-muted);background:var(--ui-page)}
+.account-search:focus-within {outline:2px solid var(--ui-focus);border-color:var(--ui-accent)}
+.account-search .account-icon {width:17px;height:17px}
+.account-search input {width:100%;min-width:0;height:42px;padding:0;border:0;background:none;color:var(--ui-text);font:inherit;font-size:14px;outline:none}
+.account-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.account-resume {position:relative;display:flex;flex-direction:column;min-width:0;padding:24px;border:1px solid var(--ui-line);border-radius:14px;background:var(--ui-surface);transition:border-color 180ms,box-shadow 180ms}
+.account-resume:hover {border-color:var(--ui-accent-line);box-shadow:0 4px 18px #00000004}
+.account-resume-top {display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+.account-document-icon {display:flex;align-items:center;justify-content:center;width:42px;height:48px;border:1px solid var(--ui-line);border-radius:8px;color:var(--ui-accent);background:var(--ui-accent-soft)}
+.account-document-icon .account-icon {width:22px;height:22px}
+.account-resume .member-label {background:var(--ui-soft);color:var(--ui-muted);padding:3px 8px;border:1px solid var(--ui-line);font-size:11px}
+.account-resume[data-kind=job] .member-label {background:var(--ui-accent-soft);border-color:var(--ui-accent-line);color:var(--ui-accent)}
+.account-resume h2 {font-size:17px;line-height:1.55;font-weight:600;overflow-wrap:anywhere;margin:0 0 6px}
+.account-resume-title:hover {color:var(--ui-accent)}
+.account-resume-job {font-size:12px;color:var(--ui-muted);margin:0 0 8px;overflow-wrap:anywhere}
+.account-resume time {display:block;font-size:12px;color:var(--ui-muted);margin-bottom:22px}
+.account-resume-footer {display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:16px;margin-top:auto;border-top:1px solid var(--ui-line)}
+.account-edit {display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;color:var(--ui-text);font-size:13px;font-weight:600;padding:4px 0}
+.account-edit:hover {color:var(--ui-accent)}.account-edit .account-icon {width:17px;height:17px;transition:transform 160ms}.account-edit:hover .account-icon {transform:translateX(3px)}
+.account-menu {position:relative}
+.account-menu summary {list-style:none}.account-menu summary::-webkit-details-marker {display:none}
+.account-menu[open]>summary {background:var(--ui-soft);color:var(--ui-text)}
+.account-menu-items {position:absolute;bottom:calc(100% + 6px);right:0;z-index:3;min-width:168px;padding:6px;border:1px solid var(--ui-line);border-radius:10px;background:var(--ui-surface);box-shadow:0 8px 32px #00000018}
+.account-menu-items button {display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:10px 12px;border:0;border-radius:6px;background:none;color:var(--ui-text);font:inherit;font-size:13px;cursor:pointer;text-align:left}
+.account-menu-items button:hover {background:var(--ui-soft)}.account-menu-items .danger {color:#c2444c}.account-menu-items button:disabled {opacity:.5;cursor:wait}
+.account-empty {grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:300px;border:1px dashed var(--ui-line);border-radius:14px;padding:40px 24px;background:var(--ui-canvas)}
+.account-empty-mark {display:flex;align-items:center;justify-content:center;width:58px;height:66px;margin-bottom:20px;border:1px solid var(--ui-line);border-radius:10px;background:var(--ui-surface);color:var(--ui-accent);transform:rotate(-5deg)}
+.account-empty-mark .account-icon {width:28px;height:28px}.account-empty h2 {font-size:19px;font-weight:600;margin:0 0 8px}.account-empty p {color:var(--ui-muted);font-size:13px;max-width:350px;margin:0 0 22px}
+.account-empty.search-empty {min-height:260px;background:none}.account-empty.search-empty .account-empty-mark {transform:none;width:48px;height:48px;border-radius:50%;background:var(--ui-soft);color:var(--ui-muted)}
+.account-job-banner {display:flex;align-items:center;justify-content:space-between;gap:24px;padding:22px 24px;margin-top:28px;border:1px solid var(--ui-line);border-radius:14px;background:var(--ui-canvas)}
+.account-job-banner h2 {font-size:15px;font-weight:600;margin:0 0 6px}.account-job-banner p {font-size:12px;color:var(--ui-muted);margin:0}.account-job-banner>a {flex-shrink:0}
+.account-notice {margin-top:14px;min-height:20px;font-size:12px;color:var(--ui-accent)}
+.account-settings-group {border:1px solid var(--ui-line);border-radius:14px;margin-bottom:24px;overflow:hidden}
+.account-settings-label {font-size:12px;color:var(--ui-muted);padding:15px 22px;background:var(--ui-canvas);margin:0;border-bottom:1px solid var(--ui-line)}
+.account-setting-row {display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 22px}
+.account-setting-row+.account-setting-row {border-top:1px solid var(--ui-line)}
+.account-setting-copy {display:flex;align-items:center;gap:16px;min-width:0}.account-setting-copy>.account-icon {color:var(--ui-muted)}
+.account-setting-copy h2 {font-size:14px;font-weight:600;margin:0 0 3px}.account-setting-copy p {font-size:12px;color:var(--ui-muted);margin:0;overflow-wrap:anywhere}
+.account-setting-row>.member-button {flex-shrink:0;min-width:88px}
+.account-danger {margin-top:30px;padding:0 4px}.account-danger>summary {display:flex;align-items:center;justify-content:space-between;min-height:44px;color:var(--ui-muted);font-size:12px;cursor:pointer;list-style:none}.account-danger>summary::-webkit-details-marker {display:none}.account-danger>summary .account-icon {width:16px;height:16px;transition:transform 160ms}.account-danger[open]>summary .account-icon {transform:rotate(90deg)}
+.account-danger .account-setting-row {border:1px solid var(--ui-line);border-radius:12px;margin-top:8px}
+.member-page .member-auth {max-width:432px;padding:32px;margin:24px auto;background:var(--ui-page);box-shadow:0 12px 40px #00000003}
+.member-page .member-auth h1 {font-size:26px}.member-page .member-auth>.member-muted {font-size:13px;margin-bottom:0}.member-page .member-auth .member-kicker {letter-spacing:1px;margin-bottom:10px}
+@media(max-width:1000px){.account-shell {grid-template-columns:176px minmax(0,1fr);gap:28px}.account-resume {padding:20px}.account-toolbar {flex-wrap:wrap}.account-search {flex:1;max-width:260px}.account-heading {gap:16px}}
+@media(max-width:760px){.member-page .member-main {padding:28px 20px 40px}.member-page .member-site-head {padding-inline:20px}.account-header-actions {gap:10px}.member-page .member-site-head nav {gap:16px}.account-shell {grid-template-columns:1fr;gap:28px}.account-sidebar {position:static}.account-identity {padding:0 4px 18px}.account-navigation {grid-template-columns:1fr 1fr;gap:6px;border-bottom:1px solid var(--ui-line);padding-bottom:16px}.account-navigation a {justify-content:center}.account-side-foot {display:none}.account-heading {margin-bottom:22px}.account-heading h1 {font-size:25px}.account-settings-mobile-foot {display:flex;align-items:center;justify-content:space-between;margin-top:24px}.account-settings-mobile-foot>a {color:var(--ui-muted);font-size:12px}.account-toolbar {flex-wrap:nowrap}.account-search {max-width:220px}.account-grid {gap:14px}}
+@media(min-width:761px){.account-settings-mobile-foot {display:none}}
+@media(max-width:520px){.member-page .member-site-head {min-height:66px;padding-inline:16px;gap:8px}.member-page .member-brand {font-size:17px;gap:7px}.member-page .member-brand img {width:28px;height:28px}.member-page .member-site-head nav {gap:14px;font-size:12px}.member-page .member-site-head nav a[aria-current=page] {display:none}.account-header-actions {gap:4px}.account-header-actions .account-icon-button {width:36px;height:44px}.member-page .member-main {padding:24px 16px 40px}.account-shell {gap:24px}.account-avatar {width:40px;height:40px;font-size:17px;border-radius:12px}.account-identity {padding-bottom:16px}.account-heading {align-items:center;gap:12px}.account-heading h1 {font-size:24px}.account-heading>.member-button {padding-inline:14px;font-size:12px}.account-heading p:last-child {font-size:12px}.account-toolbar {flex-wrap:wrap;gap:12px;padding-bottom:16px}.account-filters {width:100%;justify-content:space-between}.account-filters button {flex:1;padding-inline:10px}.account-search {width:100%;max-width:none;flex:auto}.account-search input {font-size:16px}.account-grid {grid-template-columns:1fr}.account-resume {padding:20px}.account-resume-top {margin-bottom:16px}.account-resume-footer {padding-top:12px}.account-job-banner {padding:20px;gap:16px;align-items:flex-start;flex-direction:column}.account-job-banner>a {width:100%}.account-empty {min-height:300px;padding:32px 20px}.account-setting-row {padding:18px 16px;gap:12px}.account-setting-copy {gap:12px;align-items:flex-start}.account-setting-copy>.account-icon {margin-top:2px;width:18px;height:18px}.account-setting-row>.member-button {min-width:72px;padding-inline:12px;font-size:12px}.account-settings-label {padding-inline:16px}.member-page .member-auth {padding:24px;margin:12px auto}}
+@media(prefers-reduced-motion:reduce){.account-resume,.account-edit .account-icon,.account-danger>summary .account-icon {transition:none}}
+@media(max-width:520px){.member-page .member-site-head {display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:52px 44px;padding-block:0;gap:0 12px}.member-page .member-site-head>.member-brand {grid-area:1/1}.account-header-actions {grid-area:1/2;gap:6px}.account-header-actions .account-icon-button {width:44px}.account-header-actions .member-nav-link {width:44px;min-width:44px;padding:0}.account-header-actions .member-nav-link span {display:none}.member-page .member-site-head>nav {grid-area:2/1/3/3;width:100%;justify-content:center;gap:36px;margin-left:0;border-top:1px solid var(--ui-line)}.member-page .member-site-head>nav a {display:flex;align-items:center;min-height:44px;padding:0}}
+.account-heading-actions {display:flex;align-items:center;gap:10px;flex-shrink:0}.account-empty .member-actions {justify-content:center}
+.account-job-actions {display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0}.account-job-actions .member-text-button {font-size:12px}
+@media(max-width:520px){.account-job-actions {width:100%;align-items:stretch}.account-job-actions .member-text-button {text-align:center}}
+@media(max-width:600px){.account-heading:has(.account-heading-actions) {align-items:flex-start;flex-direction:column;gap:16px}.account-heading-actions {width:100%}.account-heading-actions .member-button {flex:1}}
