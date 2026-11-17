@@ -112,6 +112,38 @@ export async function createMembers({root,directory=path.join(root,'private','me
       return {days,range:{from:dayOf(start),to:dayOf(end)},totalAccounts:users.length,newAccounts:users.filter(u=>u.createdAt>=start&&u.createdAt<=end).length,activeAccounts:active.size,completedAccounts:activated.size,cloudResumes:drafts.length,workspace,cloudSaves:count('save'),aiGenerations:count('generate'),adoptions:count('adopt'),exports:count('export'),generationFailures:count('generate_error'),pending:tasks.filter(task=>task.status==='pending'&&task.expires>now()).length,config:publicConfig(),notice:'账号数按当前注册账户去重，不等于真人数；活跃指保存、生成、采用或触发导出。仅汇总记录，不显示用户简历内容。'};
     });
   }
+  // Registered account list for administrators: identifiers, timestamps and operation counts only.
+  // Passwords, recovery hashes, sessions, resume text and photos never leave this function.
+  async function accounts(params=new URLSearchParams()) {
+    const query=(params.get('q')||'').trim().toLowerCase().slice(0,40);
+    const all=params.get('all')==='1';
+    const size=all?1000:Math.max(5,Math.min(100,Number(params.get('size'))||20));
+    const page=Math.max(1,Number(params.get('page'))||1);
+    const sort=['recent','created','resumes'].includes(params.get('sort'))?params.get('sort'):'recent';
+    const rows=await store.transaction(async tx=>{
+      const users=await tx.list('user'),drafts=await tx.list('resume'),activity=await tx.list('activity');
+      const stats=new Map();
+      const statistic=owner=>{let entry=stats.get(owner);if(!entry){entry={first:0,last:0,saves:0,exports:0,generates:0,logins:0};stats.set(owner,entry);}return entry;};
+      for(const row of activity){
+        const entry=statistic(row.owner),counts=row.counts||{};
+        entry.last=Math.max(entry.last,Number(row.last)||0);
+        entry.first=entry.first?Math.min(entry.first,Number(row.first)||entry.first):(Number(row.first)||0);
+        entry.saves+=counts.save||0;entry.exports+=counts.export||0;entry.generates+=counts.generate||0;entry.logins+=counts.login||0;
+      }
+      const counts=new Map();
+      for(const draft of drafts)counts.set(draft.owner,(counts.get(draft.owner)||0)+1);
+      return users.map(user=>{
+        const entry=stats.get(user.username)||{first:0,last:0,saves:0,exports:0,generates:0,logins:0};
+        return {username:user.username,nickname:user.nickname||user.username,createdAt:user.createdAt||0,lastLoginAt:user.lastLoginAt||0,lastActiveAt:Math.max(entry.last,user.lastLoginAt||0),resumeCount:counts.get(user.username)||0,cloudSaves:entry.saves,exports:entry.exports,aiGenerations:entry.generates,logins:entry.logins};
+      });
+    });
+    const matched=query?rows.filter(row=>row.username.toLowerCase().includes(query)||String(row.nickname).toLowerCase().includes(query)):rows;
+    const order={recent:(a,b)=>b.lastActiveAt-a.lastActiveAt||b.createdAt-a.createdAt,created:(a,b)=>b.createdAt-a.createdAt,resumes:(a,b)=>b.resumeCount-a.resumeCount||b.createdAt-a.createdAt}[sort];
+    const sorted=[...matched].sort(order);
+    const pages=all?1:Math.max(1,Math.ceil(sorted.length/size));
+    const current=all?1:Math.min(page,pages);
+    return {total:rows.length,matched:sorted.length,page:current,pages,size,sort,query,accounts:all?sorted:sorted.slice((current-1)*size,current*size),notice:'仅显示账户标识、时间和操作次数；不展示简历正文、照片、密码或恢复码。'};
+  }
   async function handle(req,res,url){
     const route=url.pathname;if(!route.startsWith('/api/member/'))return false;
     try{
@@ -242,5 +274,5 @@ export async function createMembers({root,directory=path.join(root,'private','me
       throw invalid('未找到此账户接口。',404);
     }catch(error){if(!res.headersSent&&!res.destroyed)json(res,error.status||503,{error:error.status?error.message:'账户服务暂时不可用，请稍后重试。',...(error.code==='AI_DAILY_LIMIT'?{code:error.code,quota:error.quota}: {})});return true;}
   }
-  return {handle,summary,configuration,updateConfiguration,close:async()=>{closing=true;for(const controller of controllers)controller.abort();await store.close();},config:publicConfig};
+    return {handle,summary,accounts,configuration,updateConfiguration,close:async()=>{closing=true;for(const controller of controllers)controller.abort();await store.close();},config:publicConfig};
 }

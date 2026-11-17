@@ -31,9 +31,10 @@ export async function createResumeServer({ portraitOptions = {}, adminOptions = 
   let memberPromise;
   const members=()=>memberPromise??=createMembers({root:ROOT,allowedOrigins,...memberOptions,hostedAi:false,hostPort:()=>server?.address()?.port}).catch(error=>{memberPromise=null;throw error;});
   const memberSummary=params=>members().then(service=>service.summary(params));
+  const memberAccounts=params=>members().then(service=>service.accounts(params));
   const memberConfiguration=()=>members().then(service=>service.configuration());
   const updateMemberConfiguration=input=>members().then(service=>service.updateConfiguration(input));
-  const administration=cloud?await (await import('./cloud-administration.mjs')).createCloudAdministration({root:ROOT,allowedOrigins,...adminOptions,memberSummary,memberConfiguration,updateMemberConfiguration,hostPort:()=>server?.address()?.port}):createAdministration({root:ROOT,...adminOptions,memberSummary,memberConfiguration,updateMemberConfiguration,hostPort:()=>server?.address()?.port});
+  const administration=cloud?await (await import('./cloud-administration.mjs')).createCloudAdministration({root:ROOT,allowedOrigins,...adminOptions,memberSummary,memberAccounts,memberConfiguration,updateMemberConfiguration,hostPort:()=>server?.address()?.port}):createAdministration({root:ROOT,...adminOptions,memberSummary,memberAccounts,memberConfiguration,updateMemberConfiguration,hostPort:()=>server?.address()?.port});
   const portrait = await createApp({
     ...portraitOptions,
     configPath: portraitOptions.configPath || path.join(ROOT, 'private', 'portrait-config.json'),

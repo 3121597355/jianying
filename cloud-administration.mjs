@@ -25,7 +25,7 @@ async function body(req,max=3000000){if(!req.headers['content-type']?.startsWith
 async function password(value){if(typeof value!=='string'||value.length<10||value.length>128)throw fail('密码需要为 10～128 个字符。');const salt=crypto.randomBytes(16).toString('hex');return {salt,hash:(await scrypt(value,salt,64)).toString('hex')};}
 async function matches(value,admin){return Boolean(admin&&typeof value==='string'&&value.length<=128&&equal((await scrypt(value,admin.salt,64)).toString('hex'),admin.hash));}
 
-export async function createCloudAdministration({root,databaseUrl=process.env.DATABASE_URL,initialAdmin={username:process.env.ADMIN_USERNAME,password:process.env.ADMIN_PASSWORD},schema='public',hostPort,publicOrigin=process.env.PUBLIC_ORIGIN||'',allowedOrigins=[],memberSummary,memberConfiguration,updateMemberConfiguration,analyticsTestMode=false}){
+export async function createCloudAdministration({root,databaseUrl=process.env.DATABASE_URL,initialAdmin={username:process.env.ADMIN_USERNAME,password:process.env.ADMIN_PASSWORD},schema='public',hostPort,publicOrigin=process.env.PUBLIC_ORIGIN||'',allowedOrigins=[],memberSummary,memberAccounts,memberConfiguration,updateMemberConfiguration,analyticsTestMode=false}){
   if(!databaseUrl)throw new Error('Cloud database is required.');
   if(!/^[a-z][a-z0-9_]{0,39}$/.test(schema))throw new Error('Invalid database schema.');
   const connection=new URL(databaseUrl);connection.searchParams.set('sslmode','verify-full');
@@ -108,6 +108,12 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
       if(route==='/api/auth/password'&&req.method==='POST'){await budget(req,'login',8,15*60000);const input=await body(req,8192);await mutate('auth',async(auth,client)=>{if(!await matches(input.currentPassword,auth.admin))throw fail('当前密码不正确。',403);Object.assign(auth.admin,await password(input.password),{changedAt:new Date().toISOString()});await client.query(`DELETE FROM ${table('sessions')} WHERE id<>$1`,[sessionKey(req)]);});json(res,200,{ok:true});return true;}
       if(route==='/api/admin/summary'&&req.method==='GET'){json(res,200,await summary(url.searchParams));return true;}
       if(route==='/api/admin/members'&&req.method==='GET'){json(res,200,memberSummary?await memberSummary(url.searchParams):{unavailable:true});return true;}
+      if(route==='/api/admin/accounts'&&req.method==='GET'){json(res,200,memberAccounts?await memberAccounts(url.searchParams):{unavailable:true});return true;}
+      if(route==='/api/admin/accounts/export'&&req.method==='GET'){
+        if(!memberAccounts)throw fail('账户数据尚未连接。',503);
+        const data=await memberAccounts(new URLSearchParams('all=1')),stamp=value=>value?new Date(value+8*3600000).toISOString().slice(0,16).replace('T',' '):'';
+        csv(res,'yizhi-accounts.csv',[['用户名','昵称','注册时间','最近活动','云端简历','云端保存','导出次数','AI 生成','登录次数'],...data.accounts.map(item=>[item.username,item.nickname,stamp(item.createdAt),stamp(item.lastActiveAt),item.resumeCount,item.cloudSaves,item.exports,item.aiGenerations,item.logins])]);return true;
+      }
       if(route==='/api/admin/resume-ai'&&req.method==='GET'){json(res,200,memberConfiguration?await memberConfiguration():{unavailable:true});return true;}
       if(route==='/api/admin/resume-ai'&&req.method==='PUT'){if(!updateMemberConfiguration)throw fail('AI 服务未连接。',503);json(res,200,await updateMemberConfiguration(await body(req)));return true;}
       if(route==='/api/admin/settings'&&req.method==='GET'){const settings=await state('settings');json(res,200,{settings,revision:revision(settings)});return true;}

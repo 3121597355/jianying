@@ -80,7 +80,7 @@ export function renderHomepageDocument(html,settings){
 
 export {catalog,defaults,normalizeSettings,dayOf};
 
-export function createAdministration({root,dataDir=path.join(root,'private','admin'),hostPort,initialAdmin,publicOrigin=process.env.PUBLIC_ORIGIN||'',memberSummary,memberConfiguration,updateMemberConfiguration,analyticsTestMode=false}){
+export function createAdministration({root,dataDir=path.join(root,'private','admin'),hostPort,initialAdmin,publicOrigin=process.env.PUBLIC_ORIGIN||'',memberSummary,memberAccounts,memberConfiguration,updateMemberConfiguration,analyticsTestMode=false}){
   fs.mkdirSync(dataDir,{recursive:true});const settingsFile=path.join(dataDir,'site-settings.json'),eventFile=path.join(dataDir,'events.jsonl'),saltFile=path.join(dataDir,'analytics-salt.txt');
   const atomic=(file,value)=>{fs.writeFileSync(file+'.tmp',value,{mode:0o600});fs.renameSync(file+'.tmp',file);};
   const storedSettings=fs.existsSync(settingsFile)?JSON.parse(fs.readFileSync(settingsFile,'utf8')):null;
@@ -158,6 +158,13 @@ export function createAdministration({root,dataDir=path.join(root,'private','adm
       }
       if(url.pathname==='/api/admin/summary'&&req.method==='GET'){json(res,200,summary(url.searchParams));return true;}
       if(url.pathname==='/api/admin/members'&&req.method==='GET'){json(res,200,memberSummary?await memberSummary(url.searchParams):{unavailable:true});return true;}
+      if(url.pathname==='/api/admin/accounts'&&req.method==='GET'){json(res,200,memberAccounts?await memberAccounts(url.searchParams):{unavailable:true});return true;}
+      if(url.pathname==='/api/admin/accounts/export'&&req.method==='GET'){
+        if(!memberAccounts)throw fail('账户数据尚未连接。',503);
+        const data=await memberAccounts(new URLSearchParams('all=1')),stamp=value=>value?new Date(value+8*3600000).toISOString().slice(0,16).replace('T',' '):'';
+        const rows=[['用户名','昵称','注册时间','最近活动','云端简历','云端保存','导出次数','AI 生成','登录次数'],...data.accounts.map(item=>[item.username,item.nickname,stamp(item.createdAt),stamp(item.lastActiveAt),item.resumeCount,item.cloudSaves,item.exports,item.aiGenerations,item.logins])];
+        res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="yizhi-accounts.csv"','Cache-Control':'no-store'}).end('\uFEFF'+rows.map(row=>row.map(value=>'"'+String(value??'').replaceAll('"','""')+'"').join(',')).join('\r\n'));return true;
+      }
       if(url.pathname==='/api/admin/resume-ai'&&req.method==='GET'){json(res,200,memberConfiguration?await memberConfiguration():{unavailable:true});return true;}
       if(url.pathname==='/api/admin/resume-ai'&&req.method==='PUT'){if(!updateMemberConfiguration)throw fail('AI 服务未连接。',503);json(res,200,await updateMemberConfiguration(await body(req)));return true;}
       if(url.pathname==='/api/admin/settings'&&req.method==='GET'){json(res,200,result());return true;}
