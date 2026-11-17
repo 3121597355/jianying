@@ -108,6 +108,8 @@ export function setupExportPreview({ getFileName, toast } = {}) {
 
   const isFullscreen = () => modal.classList.contains('is-fullscreen');
 
+  const nativeFullscreen = () => Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+
   function setFullscreen(on) {
     modal.classList.toggle('is-fullscreen', on);
     fullscreenButton?.setAttribute('aria-pressed', String(on));
@@ -118,6 +120,22 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     if (on) pagesEl.scrollTop = 0;
     closeButton?.focus({ preventScroll: true });
   }
+
+  /** 真的让网页进全屏（浏览器 F11 那种）；不支持或被拒绝时退回弹窗铺满。 */
+  async function toggleFullscreen() {
+    if (nativeFullscreen()) { await document.exitFullscreen?.().catch(() => {}); return; }
+    const request = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
+    if (typeof request !== 'function') { setFullscreen(!isFullscreen()); return; }
+    try {
+      await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+    } catch {
+      setFullscreen(!isFullscreen());
+    }
+  }
+
+  const syncFullscreen = () => { if (!modal.hidden) setFullscreen(nativeFullscreen()); };
+  document.addEventListener('fullscreenchange', syncFullscreen);
+  document.addEventListener('webkitfullscreenchange', syncFullscreen);
   /** 末页内容少于三成时提示取舍，避免用户导出后只剩一行字的第二页。 */
   const idleMeta = (count, lastPageCss) => {
     if (count > 1 && Number.isFinite(lastPageCss) && lastPageCss < PAGE_HEIGHT_CSS * 0.3) {
@@ -218,6 +236,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     modal.classList.remove('is-fullscreen');
     pagesEl.classList.remove('is-zoomed');
     document.body.classList.remove('export-open');
+    if (nativeFullscreen()) document.exitFullscreen?.().catch(() => {});
     lastFocus?.focus?.({ preventScroll: true });
     lastFocus = null;
   }
@@ -232,7 +251,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
       return;
     }
     if (event.target.closest('[data-fullscreen]')) {
-      setFullscreen(!isFullscreen());
+      void toggleFullscreen();
       return;
     }
     if (event.target.closest('[data-close]')) close();
@@ -281,7 +300,12 @@ export function setupExportPreview({ getFileName, toast } = {}) {
 
   document.addEventListener('keydown', event => {
     if (modal.hidden) return;
-    if (event.key === 'Escape') { event.preventDefault(); if (isFullscreen()) setFullscreen(false); else close(); return; }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      if (nativeFullscreen()) { document.exitFullscreen?.().catch(() => {}); return; }
+      if (isFullscreen()) setFullscreen(false); else close();
+      return;
+    }
     if (event.key !== 'Tab') return;
     const items = [...modal.querySelectorAll(FOCUSABLE)].filter(item => item.offsetParent !== null);
     if (!items.length) return;
