@@ -73,6 +73,18 @@ test('registered account list exposes identifiers and counts without credentials
   const wide=await(await s.admin('/api/admin/accounts?days=90')).json();
   assert.equal(wide.registration.series.length,90);
 
+  const usage=list.registration.usage;
+  assert.equal(usage.registered,2);
+  assert.equal(usage.saved,1);
+  assert.equal(usage.used,1);
+  assert.equal(usage.output,1);
+  assert.equal(usage.silent,1);
+  assert.equal(usage.usedRate,50);
+  assert.equal(usage.silentRate,50);
+  assert.equal(usage.recentRegistered,2);
+  assert.equal(usage.recentUsed,1);
+  assert.deepEqual(usage.funnel.map(step=>step.count),[2,1,1]);
+
   const byName=await(await s.admin('/api/admin/accounts?q=qa_active')).json();
   assert.equal(byName.matched,1);
   assert.equal(byName.accounts[0].username,'qa_active');

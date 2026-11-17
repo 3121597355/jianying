@@ -10,6 +10,31 @@ const sorts=[['recent','最近活动'],['created','注册时间'],['resumes','�
 const ranges=[7,30,90];
 const metric=(label,value,note)=>`<div class="metric"><span class="metric-label">${esc(label)}</span><strong>${number(value)}</strong><small>${esc(note)}</small></div>`;
 
+function usagePanel(usage){
+  if(!usage)return '';
+  const steps=usage.funnel||[];
+  const top=Math.max(1,steps[0]?.count||1);
+  const rows=steps.map(step=>{
+    const width=Math.round((step.count/top)*100);
+    const share=step.base?Math.round((step.count/step.base)*1000)/10:0;
+    return `<div class="funnel-row">
+      <span class="funnel-label">${esc(step.label)}</span>
+      <span class="funnel-track"><i style="width:${width}%"></i></span>
+      <span class="funnel-value"><strong>${number(step.count)}</strong> 人 · ${share}%</span>
+    </div>`;
+  }).join('');
+  return `<section class="panel usage-panel">
+    <div class="panel-heading"><div><h2>注册 → 使用</h2><p>注册只是进来过，真正用起来才算转化；下面是每一层的人数和占比。</p></div></div>
+    <div class="funnel">${rows}</div>
+    <div class="usage-figures">
+      <span>仅注册、没动过 <strong>${number(usage.silent)}</strong> 人（${usage.silentRate}%）</span>
+      <span>用过产品 <strong>${number(usage.used)}</strong> 人（${usage.usedRate}%）</span>
+      <span>近 30 天注册中已使用 <strong>${number(usage.recentUsed)}/${number(usage.recentRegistered)}</strong>（${usage.recentUsedRate}%）</span>
+    </div>
+    <p class="settings-help">「用过」指保存过简历、触发导出或做过 AI 生成；只登录没操作的账户记为仅注册。</p>
+  </section>`;
+}
+
 function registrationPanel(registration){
   if(!registration)return '';
   const series=registration.series||[];
@@ -35,6 +60,7 @@ export function usersView(data){
   const query=data.query||'';
   const locked=sorts.some(([key])=>key===data.sort)?data.sort:'recent';
   const stats=registrationPanel(data.registration);
+  const usage=usagePanel(data.registration?.usage);
   const toolbar=`<div class="users-toolbar">
     <form id="users-search" class="users-search" role="search">
       <input id="users-query" type="search" name="q" value="${esc(query)}" maxlength="40" placeholder="搜索用户名或昵称" aria-label="搜索用户名或昵称">
@@ -45,10 +71,11 @@ export function usersView(data){
     </label>
     <a class="secondary" href="/api/admin/accounts/export">导出 CSV <span aria-hidden="true">↓</span></a>
   </div>`;
-  if(!data.total)return stats+toolbar+'<div class="empty"><strong>还没有注册账户</strong>有人注册后会出现在这里。</div>';
-  if(!data.matched)return stats+toolbar+`<div class="empty"><strong>没有匹配的账户</strong>换个用户名或昵称再试。</div>`;
+  if(!data.total)return stats+usage+toolbar+'<div class="empty"><strong>还没有注册账户</strong>有人注册后会出现在这里。</div>';
+  if(!data.matched)return stats+usage+toolbar+`<div class="empty"><strong>没有匹配的账户</strong>换个用户名或昵称再试。</div>`;
   const rows=data.accounts.map(item=>`<tr>
     <td><strong>${esc(item.username)}</strong>${item.nickname&&item.nickname!==item.username?`<small class="muted">${esc(item.nickname)}</small>`:''}</td>
+    <td><span class="usage-tag${(item.resumeCount>0||item.cloudSaves>0||item.exports>0||item.aiGenerations>0)?' used':''}">${(item.resumeCount>0||item.cloudSaves>0||item.exports>0||item.aiGenerations>0)?'已使用':'仅注册'}</span></td>
     <td>${esc(stamp(item.createdAt))}</td>
     <td title="${esc(stamp(item.lastActiveAt))}">${esc(relative(item.lastActiveAt))}</td>
     <td class="num">${number(item.resumeCount)}</td>
@@ -58,7 +85,7 @@ export function usersView(data){
     <td class="num">${number(item.logins)}</td>
   </tr>`).join('');
   const pager=data.pages>1?`<div class="users-pager"><button type="button" class="secondary" data-users-page="${data.page-1}"${data.page<=1?' disabled':''}>← 上一页</button><span>第 ${data.page} / ${data.pages} 页 · 共 ${number(data.matched)} 个账户</span><button type="button" class="secondary" data-users-page="${data.page+1}"${data.page>=data.pages?' disabled':''}>下一页 →</button></div>`:`<p class="users-count">共 ${number(data.matched)} 个账户</p>`;
-  return `${stats}<section class="panel users-panel">${toolbar}<div class="data-table-wrap"><table class="data-table data-table-wide"><thead><tr><th>账户</th><th>注册时间</th><th>最近活动</th><th>云端简历</th><th>云端保存</th><th>导出</th><th>AI 生成</th><th>登录</th></tr></thead><tbody>${rows}</tbody></table></div>${pager}<p class="settings-help">${esc(data.notice||'仅显示账户标识、时间和操作次数；不展示简历正文和照片。')}</p></section>`;
+  return `${stats}${usage}<section class="panel users-panel">${toolbar}<div class="data-table-wrap"><table class="data-table data-table-wide"><thead><tr><th>账户</th><th>状态</th><th>注册时间</th><th>最近活动</th><th>云端简历</th><th>云端保存</th><th>导出</th><th>AI 生成</th><th>登录</th></tr></thead><tbody>${rows}</tbody></table></div>${pager}<p class="settings-help">${esc(data.notice||'仅显示账户标识、时间和操作次数；不展示简历正文和照片。')}</p></section>`;
 }
 
 export function bindUsers({host,onChange}){

@@ -162,7 +162,7 @@ export function createAdministration({root,dataDir=path.join(root,'private','adm
       if(url.pathname==='/api/admin/accounts/export'&&req.method==='GET'){
         if(!memberAccounts)throw fail('账户数据尚未连接。',503);
         const data=await memberAccounts(new URLSearchParams('all=1')),stamp=value=>value?new Date(value+8*3600000).toISOString().slice(0,16).replace('T',' '):'';
-        const rows=[['用户名','昵称','注册时间','最近活动','云端简历','云端保存','导出次数','AI 生成','登录次数'],...data.accounts.map(item=>[item.username,item.nickname,stamp(item.createdAt),stamp(item.lastActiveAt),item.resumeCount,item.cloudSaves,item.exports,item.aiGenerations,item.logins])];
+        const rows=[['用户名','昵称','状态','注册时间','最近活动','云端简历','云端保存','导出次数','AI 生成','登录次数'],...data.accounts.map(item=>[item.username,item.nickname,(item.resumeCount>0||item.cloudSaves>0||item.exports>0||item.aiGenerations>0)?'已使用':'仅注册',stamp(item.createdAt),stamp(item.lastActiveAt),item.resumeCount,item.cloudSaves,item.exports,item.aiGenerations,item.logins])];
         res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="yizhi-accounts.csv"','Cache-Control':'no-store'}).end('\uFEFF'+rows.map(row=>row.map(value=>'"'+String(value??'').replaceAll('"','""')+'"').join(',')).join('\r\n'));return true;
       }
       if(url.pathname==='/api/admin/resume-ai'&&req.method==='GET'){json(res,200,memberConfiguration?await memberConfiguration():{unavailable:true});return true;}

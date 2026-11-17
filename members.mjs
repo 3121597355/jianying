@@ -151,6 +151,14 @@ export async function createMembers({root,directory=path.join(root,'private','me
     const buckets=new Map(series.map(item=>[item.date,item]));
     for(const row of rows){const bucket=buckets.get(dayOf(row.createdAt||0));if(bucket)bucket.count+=1;}
     const since=dayOffset=>dayStart(current0-dayOffset*86400000);
+    // Registration is not usage: separate accounts that saved, produced output, or never used the product.
+    const isUsed=row=>row.resumeCount>0||row.cloudSaves>0||row.exports>0||row.aiGenerations>0;
+    const savedRows=rows.filter(row=>row.resumeCount>0||row.cloudSaves>0);
+    const usedRows=rows.filter(isUsed);
+    const outputRows=rows.filter(row=>row.exports>0||row.aiGenerations>0);
+    const recentRows=rows.filter(row=>(row.createdAt||0)>=since(29));
+    const recentUsedRows=recentRows.filter(isUsed);
+    const rate=(part,whole)=>whole?Math.round(part/whole*1000)/10:0;
     const registration={
       days,
       total:rows.length,
@@ -161,7 +169,26 @@ export async function createMembers({root,directory=path.join(root,'private','me
       active7:rows.filter(row=>row.lastActiveAt>=current0-7*86400000).length,
       windowTotal:series.reduce((total,item)=>total+item.count,0),
       peak:series.reduce((total,item)=>Math.max(total,item.count),0),
-      series
+      series,
+      usage:{
+        registered:rows.length,
+        saved:savedRows.length,
+        used:usedRows.length,
+        output:outputRows.length,
+        silent:rows.length-usedRows.length,
+        savedRate:rate(savedRows.length,rows.length),
+        usedRate:rate(usedRows.length,rows.length),
+        outputRate:rate(outputRows.length,rows.length),
+        silentRate:rate(rows.length-usedRows.length,rows.length),
+        recentRegistered:recentRows.length,
+        recentUsed:recentUsedRows.length,
+        recentUsedRate:rate(recentUsedRows.length,recentRows.length),
+        funnel:[
+          {key:'registered',label:'注册账户',count:rows.length,base:rows.length},
+          {key:'saved',label:'保存过简历',count:savedRows.length,base:rows.length},
+          {key:'output',label:'导出或 AI 生成',count:outputRows.length,base:savedRows.length}
+        ]
+      }
     };
     return {total:rows.length,matched:sorted.length,page:current,pages,size,sort,query,registration,accounts:all?sorted:sorted.slice((current-1)*size,current*size),notice:'仅显示账户标识、时间和操作次数；不展示简历正文、照片、密码或恢复码。'};
   }

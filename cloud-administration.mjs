@@ -112,7 +112,7 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
       if(route==='/api/admin/accounts/export'&&req.method==='GET'){
         if(!memberAccounts)throw fail('账户数据尚未连接。',503);
         const data=await memberAccounts(new URLSearchParams('all=1')),stamp=value=>value?new Date(value+8*3600000).toISOString().slice(0,16).replace('T',' '):'';
-        csv(res,'yizhi-accounts.csv',[['用户名','昵称','注册时间','最近活动','云端简历','云端保存','导出次数','AI 生成','登录次数'],...data.accounts.map(item=>[item.username,item.nickname,stamp(item.createdAt),stamp(item.lastActiveAt),item.resumeCount,item.cloudSaves,item.exports,item.aiGenerations,item.logins])]);return true;
+        csv(res,'yizhi-accounts.csv',[['用户名','昵称','状态','注册时间','最近活动','云端简历','云端保存','导出次数','AI 生成','登录次数'],...data.accounts.map(item=>[item.username,item.nickname,(item.resumeCount>0||item.cloudSaves>0||item.exports>0||item.aiGenerations>0)?'已使用':'仅注册',stamp(item.createdAt),stamp(item.lastActiveAt),item.resumeCount,item.cloudSaves,item.exports,item.aiGenerations,item.logins])]);return true;
       }
       if(route==='/api/admin/resume-ai'&&req.method==='GET'){json(res,200,memberConfiguration?await memberConfiguration():{unavailable:true});return true;}
       if(route==='/api/admin/resume-ai'&&req.method==='PUT'){if(!updateMemberConfiguration)throw fail('AI 服务未连接。',503);json(res,200,await updateMemberConfiguration(await body(req)));return true;}
