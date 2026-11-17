@@ -25,38 +25,84 @@ export function setupExportPreview({ getFileName, toast } = {}) {
   let runId = 0;
   let lastFocus = null;
   let lastPageCss = null;
-  // 1 = 适应宽度；其它值按适应宽度的倍数放大缩小。
-  const ZOOM_STEPS = [0.75, 0.9, 1, 1.25, 1.5, 1.75, 2];
-  let zoomIndex = ZOOM_STEPS.indexOf(1);
+  // 「整页」= 一屏看完一整页；「适应」= 适应宽度；其余是相对适应宽度的自由缩放。
+  const ZOOM_LADDER = [0.4, 0.5, 0.6, 0.75, 0.9, 1, 1.1, 1.25, 1.4, 1.6, 1.8, 2, 2.4, 3, 4];
+  const MIN_ZOOM = ZOOM_LADDER[0], MAX_ZOOM = ZOOM_LADDER.at(-1);
+  let zoomMode = 'page';
+  let zoomFactor = 1;
+  let lastWidth = 0;
   let resizeTimer = 0;
+  let pinch = null;
 
   const setMeta = text => { if (metaEl) metaEl.textContent = text; };
   const setBusy = busy => { working = busy; buttons.forEach(button => { button.disabled = busy; }); };
 
-  /** 适应宽度下的页面宽度（px），放大缩小时以它为基准。 */
+  const portrait = () => window.innerHeight >= window.innerWidth || window.innerWidth <= 720;
+
+  /** 适应宽度下的页面宽度（px），自由缩放以它为基准。 */
   function fitWidth() {
     const styles = getComputedStyle(pagesEl);
     const padding = (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.paddingRight) || 0);
     return Math.max(160, Math.min(620, pagesEl.clientWidth - padding));
   }
 
-  function applyZoom() {
-    const pages = [...pagesEl.querySelectorAll('.export-page')];
-    const zoom = ZOOM_STEPS[zoomIndex];
-    const fitted = zoom === 1;
-    const width = fitted ? 0 : Math.round(fitWidth() * zoom);
-    for (const page of pages) page.style.width = fitted ? '' : `${width}px`;
-    pagesEl.classList.toggle('is-zoomed', !fitted);
-    if (zoomValueButton) {
-      zoomValueButton.textContent = fitted ? '适应' : `${Math.round(zoom * 100)}%`;
-      zoomValueButton.setAttribute('aria-label', fitted ? '适应宽度（当前）' : `当前 ${Math.round(zoom * 100)}%，点击恢复适应宽度`);
-    }
-    if (zoomOutButton) zoomOutButton.disabled = zoomIndex === 0;
-    if (zoomInButton) zoomInButton.disabled = zoomIndex === ZOOM_STEPS.length - 1;
+  /** 一屏放下整页时的页面宽度：按可用高度算，再受宽度限制。 */
+  function fitPageWidth() {
+    const styles = getComputedStyle(pagesEl);
+    const padX = (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.paddingRight) || 0);
+    const padY = (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0);
+    const image = pagesEl.querySelector('.export-page img');
+    const aspect = image?.naturalWidth ? image.naturalHeight / image.naturalWidth : 1160 / 820;
+    const captionEl = pagesEl.querySelector('.export-page figcaption');
+    const caption = (captionEl?.offsetHeight || 20) + 12; // 页码说明 + 上下间距
+    const availableH = Math.max(140, pagesEl.clientHeight - padY - caption);
+    const availableW = Math.max(120, pagesEl.clientWidth - padX);
+    return Math.max(120, Math.min(availableW, availableH / aspect));
   }
 
-  function setZoom(nextIndex) {
-    zoomIndex = Math.min(ZOOM_STEPS.length - 1, Math.max(0, nextIndex));
+  const zoomWidth = () => (zoomMode === 'page' ? fitPageWidth() : zoomMode === 'width' ? fitWidth() : fitWidth() * zoomFactor);
+
+  function applyZoom() {
+    const pages = [...pagesEl.querySelectorAll('.export-page')];
+    const width = Math.round(zoomWidth());
+    lastWidth = width;
+    for (const page of pages) page.style.width = `${width}px`;
+    const label = zoomMode === 'page' ? '整页' : zoomMode === 'width' ? '适应' : `${Math.round(zoomFactor * 100)}%`;
+    if (zoomValueButton) {
+      zoomValueButton.textContent = label;
+      zoomValueButton.setAttribute('aria-label', `${label}（点击切换整页 / 适应宽度）`);
+      zoomValueButton.title = '点击切换：整页看全貌 / 适应宽度看细节';
+    }
+    if (zoomOutButton) zoomOutButton.disabled = zoomMode === 'custom' ? zoomFactor <= MIN_ZOOM + 1e-6 : zoomMode === 'page';
+    if (zoomInButton) zoomInButton.disabled = zoomMode === 'custom' && zoomFactor >= MAX_ZOOM - 1e-6;
+  }
+
+  /** 点「＋ / －」按档位缩放；从整页开始时以当前宽度为起点继续放大。 */
+  function stepZoom(direction) {
+    const current = zoomMode === 'custom' ? zoomFactor : zoomMode === 'page' ? lastWidth / fitWidth() : 1;
+    const next = direction > 0
+      ? ZOOM_LADDER.find(value => value > current + 1e-3)
+      : [...ZOOM_LADDER].reverse().find(value => value < current - 1e-3);
+    if (!next) return;
+    zoomMode = 'custom';
+    zoomFactor = next;
+    applyZoom();
+  }
+
+  /** 滚轮 / 双指缩放：直接按目标宽度连续缩放，并尽量保持当前滚动位置。 */
+  function setFreeZoom(width) {
+    if (!Number.isFinite(width) || width <= 0) return;
+    const ratioY = pagesEl.scrollHeight ? pagesEl.scrollTop / pagesEl.scrollHeight : 0;
+    const ratioX = pagesEl.scrollWidth ? pagesEl.scrollLeft / pagesEl.scrollWidth : 0;
+    zoomMode = 'custom';
+    zoomFactor = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, width / fitWidth()));
+    applyZoom();
+    pagesEl.scrollTop = ratioY * pagesEl.scrollHeight;
+    pagesEl.scrollLeft = ratioX * pagesEl.scrollWidth;
+  }
+
+  function toggleZoomMode() {
+    zoomMode = zoomMode === 'page' ? 'width' : 'page';
     applyZoom();
   }
 
@@ -67,6 +113,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     fullscreenButton?.setAttribute('aria-pressed', String(on));
     fullscreenButton?.setAttribute('aria-label', on ? '退出全屏预览' : '全屏预览');
     fullscreenButton?.setAttribute('title', on ? '退出全屏预览' : '全屏预览');
+    zoomMode = 'page';
     applyZoom();
     if (on) pagesEl.scrollTop = 0;
     closeButton?.focus({ preventScroll: true });
@@ -109,7 +156,8 @@ export function setupExportPreview({ getFileName, toast } = {}) {
       renderPages(result.pages);
       generated = true;
       lastPageCss = result.lastPageCss;
-      applyZoom();
+      // 等一帧让页头和页脚排好版，再按真实可用高度算「整页」宽度。
+      requestAnimationFrame(() => { if (id === runId) applyZoom(); });
       setMeta(idleMeta(result.count, lastPageCss));
     } catch (error) {
       if (id !== runId) return;
@@ -151,7 +199,8 @@ export function setupExportPreview({ getFileName, toast } = {}) {
   function open() {
     if (!modal.hidden) return;
     lastFocus = document.activeElement;
-    zoomIndex = ZOOM_STEPS.indexOf(1);
+    zoomMode = portrait() ? 'page' : 'width';
+    zoomFactor = 1;
     modal.classList.remove('is-fullscreen');
     fullscreenButton?.setAttribute('aria-pressed', 'false');
     fullscreenButton?.setAttribute('aria-label', '全屏预览');
@@ -177,7 +226,9 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     const zoomButton = event.target.closest('[data-zoom]');
     if (zoomButton) {
       const action = zoomButton.dataset.zoom;
-      setZoom(action === 'in' ? zoomIndex + 1 : action === 'out' ? zoomIndex - 1 : ZOOM_STEPS.indexOf(1));
+      if (action === 'in') stepZoom(1);
+      else if (action === 'out') stepZoom(-1);
+      else toggleZoomMode();
       return;
     }
     if (event.target.closest('[data-fullscreen]')) {
@@ -190,8 +241,39 @@ export function setupExportPreview({ getFileName, toast } = {}) {
   window.addEventListener('resize', () => {
     if (modal.hidden) return;
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { if (pagesEl.classList.contains('is-zoomed') || isFullscreen()) applyZoom(); }, 140);
+    resizeTimer = setTimeout(() => applyZoom(), 140);
   });
+
+  // 弹窗尺寸变化（全屏切换、地址栏收放、键盘弹出）时重新适配整页。
+  if (typeof ResizeObserver === 'function') {
+    let observerTimer = 0;
+    const observer = new ResizeObserver(() => {
+      if (modal.hidden || zoomMode !== 'page') return;
+      clearTimeout(observerTimer);
+      observerTimer = setTimeout(() => { if (!modal.hidden && zoomMode === 'page') applyZoom(); }, 80);
+    });
+    observer.observe(pagesEl);
+  }
+
+  // Ctrl / ⌘ + 滚轮连续缩放，不触发浏览器整页缩放。
+  pagesEl.addEventListener('wheel', event => {
+    if (modal.hidden || !(event.ctrlKey || event.metaKey)) return;
+    event.preventDefault();
+    setFreeZoom((lastWidth || fitWidth()) * (event.deltaY < 0 ? 1.12 : 1 / 1.12));
+  }, { passive: false });
+
+  // 手机双指捏合缩放。
+  const pinchDistance = touches => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+  pagesEl.addEventListener('touchstart', event => {
+    if (event.touches.length !== 2) return;
+    pinch = { start: pinchDistance(event.touches) || 1, width: lastWidth || fitWidth() };
+  }, { passive: true });
+  pagesEl.addEventListener('touchmove', event => {
+    if (!pinch || event.touches.length !== 2) return;
+    event.preventDefault();
+    setFreeZoom(pinch.width * (pinchDistance(event.touches) / pinch.start));
+  }, { passive: false });
+  pagesEl.addEventListener('touchend', event => { if (event.touches.length < 2) pinch = null; }, { passive: true });
 
   buttons.forEach(button => {
     button.addEventListener('click', () => void exportAs(button.dataset.format));
