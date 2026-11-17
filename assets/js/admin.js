@@ -5,7 +5,7 @@ import {acquisitionView,bindAcquisition} from './admin-acquisition.js';
 import {resumeAiView,bindResumeAi} from './admin-members.js';
 import {usersView,bindUsers} from './admin-users.js';
 import {MOBILE_ADMIN_MEDIA} from './mobile-layout.js';
-import {productOverview,productFeatures,productAudience} from './admin-product.js';
+import {productOverview,productFeatures,productAudience} from './admin-product.js?v=20261117-trend-period';
 import {setAnalyticsExclusion} from './analytics-policy.js';
 function excludeThisBrowser(){let storage,session;try{storage=window.localStorage;}catch{}try{session=window.sessionStorage;}catch{}setAnalyticsExclusion(true,{document,storage,session});}
 const $=selector=>document.querySelector(selector),$$=selector=>[...document.querySelectorAll(selector)];
@@ -27,6 +27,20 @@ function showAnalyticsPeriod(collection){
   $('#analytics-period-description').textContent='分界：'+collection.boundaryLabel;
   const dates=collection.range?`实际统计日期：${collection.range.from} 至 ${collection.range.to}。`:'所选日期与该周期无交集，暂无数据。';
   const notice=$('#analytics-period-notice');notice.classList.toggle('is-history',collection.scope==='history');notice.textContent=`${collection.label} · ${dates} ${collection.notice}`;
+}
+// Slide the whole date range by its own length, so 7 天窗口永远看 7 天，
+// 往前推一期就是上一周同一口径的对比。
+function shiftPeriod(direction){
+  const range=summary&&summary.range;
+  if(!range)return;
+  const dayCount=86400000,from=Date.parse(range.from),to=Date.parse(range.to);
+  if(!Number.isFinite(from)||!Number.isFinite(to)||to<from)return;
+  const length=Math.round((to-from)/dayCount)+1;
+  const today=Date.parse(new Date(Date.now()+8*3600000).toISOString().slice(0,10));
+  const nextTo=Math.min(to+direction*length*dayCount,today),nextFrom=nextTo-(length-1)*dayCount;
+  custom={from:new Date(nextFrom).toISOString().slice(0,10),to:new Date(nextTo).toISOString().slice(0,10)};
+  $$('[data-days]').forEach(button=>button.classList.remove('active'));
+  void load();
 }
 const time=value=>new Intl.DateTimeFormat('zh-CN',{dateStyle:'short',timeStyle:'short',timeZone:'Asia/Shanghai'}).format(new Date(value));
 function notify(message){clearTimeout(toastTimer);$('#admin-toast').textContent=message;$('#admin-toast').classList.add('visible');toastTimer=setTimeout(()=>$('#admin-toast').classList.remove('visible'),3500);}
@@ -81,6 +95,7 @@ async function save(form,next){const button=form.querySelector('[type=submit]');
 function readTemplateRows(){return $$('#template-rows [data-template]').map(row=>{const original=settings.templates.find(t=>t.id===Number(row.dataset.template));return {...original,name:row.querySelector('[data-field=name]').value,desc:row.querySelector('[data-field=desc]').value,enabled:row.querySelector('[data-field=enabled]').checked,featured:row.querySelector('[data-field=featured]').checked};});}
 function bindForms(){
   $('#exclude-browser')?.addEventListener('click',()=>{excludeThisBrowser();notify('本浏览器的后续访问已排除');});
+  $$('[data-period]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;shiftPeriod(Number(button.dataset.period));}));
   const host=$('#dashboard-content');host.oninput=()=>dirty=true;host.onchange=()=>dirty=true;
   if(panel==='audience')bindAcquisition({host,notify});
   if(panel==='members')bindResumeAi({host,api,notify,showError,refresh:load,markClean:()=>{dirty=false;}});
