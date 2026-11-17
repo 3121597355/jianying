@@ -5,7 +5,7 @@ import {acquisitionView,bindAcquisition} from './admin-acquisition.js';
 import {resumeAiView,bindResumeAi} from './admin-members.js';
 import {usersView,bindUsers} from './admin-users.js';
 import {MOBILE_ADMIN_MEDIA} from './mobile-layout.js';
-import {productOverview,productFeatures,productAudience} from './admin-product.js?v=20261117-trend-period';
+import {productOverview,productFeatures,productAudience} from './admin-product.js?v=20261117-default7';
 import {setAnalyticsExclusion} from './analytics-policy.js';
 function excludeThisBrowser(){let storage,session;try{storage=window.localStorage;}catch{}try{session=window.sessionStorage;}catch{}setAnalyticsExclusion(true,{document,storage,session});}
 const $=selector=>document.querySelector(selector),$$=selector=>[...document.querySelectorAll(selector)];
@@ -20,7 +20,8 @@ panels.sponsorship=['赞助统计','区分支持意向和实际到账，核对�
 let sponsorshipData;
 let changelogData;
 let usersQuery={q:'',sort:'recent',page:1,days:30};
-let csrf='',username='',panel='overview',days=30,custom=null,dataScope='current',settings,revision='',summary,dirty=false,requestId=0,toastTimer;
+// 默认看近 7 天：数据量还小，7 天窗口才看得到每天的起伏。
+let csrf='',username='',panel='overview',days=7,custom=null,dataScope='current',settings,revision='',summary,dirty=false,requestId=0,toastTimer;
 const isAnalyticsPanel=()=>['overview','features','audience','engagement'].includes(panel);
 const params=()=>{const query=new URLSearchParams(custom||{days});if(isAnalyticsPanel())query.set('scope',dataScope);return query.toString();};
 function showAnalyticsPeriod(collection){
