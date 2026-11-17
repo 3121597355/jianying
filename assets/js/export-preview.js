@@ -13,6 +13,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
   if (!modal) return { open() {}, close() {} };
 
   const pagesEl = modal.querySelector('#exportPages');
+  const dialogEl = modal.querySelector('.export-dialog');
   const metaEl = modal.querySelector('#exportMeta');
   const buttons = [...modal.querySelectorAll('[data-format]')];
   const closeButton = modal.querySelector('.export-close');
@@ -62,12 +63,34 @@ export function setupExportPreview({ getFileName, toast } = {}) {
 
   const zoomWidth = () => (zoomMode === 'page' ? fitPageWidth() : zoomMode === 'width' ? fitWidth() : fitWidth() * zoomFactor);
 
+  /**
+   * 「整页」时弹窗跟着简历变成竖屏比例：A4 是纵向的，横着的宽弹窗只会把页面挤得很小。
+   * 宽度 = 页面宽 + 左右内边距 + 滚动条余量，高度由 CSS 给到接近满屏。
+   */
+  function fitFrameToPage(pageWidth) {
+    const styles = getComputedStyle(pagesEl);
+    const padX = (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.paddingRight) || 0);
+    const wanted = Math.round(pageWidth + padX + 22); // 22 ≈ 滚动条余量 + 边框
+    return Math.max(340, Math.min(920, wanted));
+  }
+
   /** 缩放直接切换尺寸，不做过渡：预览是文档，动画反而显得拖沓。 */
   function applyZoom() {
     const pages = [...pagesEl.querySelectorAll('.export-page')];
-    const width = Math.round(zoomWidth());
+    const pageFit = zoomMode === 'page' && !isFullscreen() && window.innerWidth > 720;
+    modal.classList.toggle('is-page', pageFit);
+    const setPageWidth = value => { for (const page of pages) page.style.width = `${value}px`; };
+    let width = Math.round(zoomWidth());
+    setPageWidth(width);
+    if (dialogEl) dialogEl.style.width = pageFit ? `${fitFrameToPage(width)}px` : '';
+    // 弹窗宽度刚变过（变竖屏或变回宽屏），可用尺寸跟着变了，重新量一次让它一次到位。
+    const settled = Math.round(zoomWidth());
+    if (Math.abs(settled - width) > 2) {
+      width = settled;
+      setPageWidth(width);
+      if (pageFit && dialogEl) dialogEl.style.width = `${fitFrameToPage(width)}px`;
+    }
     lastWidth = width;
-    for (const page of pages) page.style.width = `${width}px`;
     const label = zoomMode === 'page' ? '整页' : zoomMode === 'width' ? '适应' : `${Math.round(zoomFactor * 100)}%`;
     if (zoomValueButton) {
       zoomValueButton.textContent = label;
