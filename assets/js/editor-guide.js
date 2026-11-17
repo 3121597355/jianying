@@ -24,7 +24,7 @@ export function setupEditorGuide({isSample,openEditor,openModules,selectModule})
     {title:'收起编辑区，看看整份简历',text:'点侧边箭头收起编辑区，简历预览会放大。手机上点“查看预览”；点“编辑内容”或箭头就能回来继续写。',selector:()=>window.matchMedia(MOBILE_EDITOR_MEDIA).matches?'.workspace-views [data-view="edit"]':'#resumeEditorPanel > .close'},
     {title:'把证件照换成你的',text:'基本信息里可以更换或移除照片，也可以关闭“展示照片”。顶部“证件照”可换底、裁切，再放回简历。',selector:'#formHost [data-act="pickPhoto"]'},
     {title:'更多信息，按需填写',text:'点“展开更多信息”填写政治面貌等资料；不填就不展示。还可以在下面添加个人网站、作品集等自定义信息。',selector:'#formHost [data-act="toggleMore"]'},
-    {title:'保存与导出，准备投递',text:'输入后自动保存在当前浏览器。登录后可保存到云端、创建多份简历；完成后点右上角下载 PDF，并检查页数与排版。',selector:'.qm-download'},
+    {title:'保存与导出，准备投递',text:'输入后自动保存在当前浏览器。登录后可保存到云端、创建多份简历；完成后点右上角导出，先看完整预览，再选 PDF、长图或纯文本。',selector:'.qm-download'},
   ];
   const targetSelector=()=>typeof steps[step].selector==='function'?steps[step].selector():steps[step].selector;
   function position(){

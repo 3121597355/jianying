@@ -7,7 +7,7 @@ import {
 } from './store.js';
 import { renderByTpl, TEMPLATES, getTemplate, applyTemplate } from './templates.js';
 import { renderForm, setQuillFactory, disposeEditors, setActiveItem } from './forms.js';
-import { downloadResumePDF } from './pdf.js';
+import { setupExportPreview } from './export-preview.js?v=20261117-export-preview';
 import { MODULES, FONTS } from './dict.js';
 import { buildSettingsPanel } from './settings.js?v=20261112-settings';
 import { getModuleOrder } from './module-order.js?v=20261112-drag';
@@ -647,40 +647,18 @@ function toast(msg) {
   toastTimer = setTimeout(() => el.classList.remove('on'), 2400);
 }
 
-/* ------------------------------ 下载 PDF ------------------------------ */
+/* ------------------------------ 导出 ------------------------------ */
 
-let downloading = false;
+// 先看整份简历，再选择 PDF、长图或纯文本；导出面板自己处理进度与错误。
+const exportPreview = setupExportPreview({
+  getFileName: () => getResume().basicInfo?.name || '',
+  toast: message => toast(message),
+});
 
-async function handleDownload() {
-  if (downloading) return;
-  downloading = true;
-
-  const label = $('#dlLabel');
-  const oldText = label ? label.textContent : '下载 PDF';
-  const btn = $('.qm-download');
-  const setText = t => { if (label) label.textContent = t; if (btn) btn.style.opacity = t === oldText ? '' : '.7'; };
-
-  try {
-    renderPreview();
-    flushSave();
-    setText('生成中…');
-    const r = await downloadResumePDF({
-      name: getResume().basicInfo?.name || '',
-      onProgress: p => {
-        if (p < 0.7) setText('排版中…');
-        else if (p < 1) setText('写入 PDF…');
-      },
-    });
-    setText(oldText);
-    toast(r ? `已下载「${r.fileName}」· ${r.pages} 页 A4` : '已取消');
-  } catch (e) {
-    track('resume_export_error');
-    console.error(e);
-    setText(oldText);
-    toast('PDF 生成失败：' + (e?.message || e));
-  } finally {
-    downloading = false;
-  }
+function handleDownload() {
+  renderPreview();
+  flushSave();
+  exportPreview.open();
 }
 
 /* ------------------------------ 顶栏 ------------------------------ */
