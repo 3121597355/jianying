@@ -53,7 +53,8 @@ document.querySelectorAll('[data-preview]').forEach(button=>button.addEventListe
   dialog.showModal();
 }));
 $('#closePreview').onclick=()=>dialog.close();
-dialog.addEventListener('click',event=>{if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dialog.close();}});
+dialog.addEventListener('click',event=>{if(event.target!==dialog||!dialog.dataset.pressedBackdrop)return;delete dialog.dataset.pressedBackdrop;const selection=window.getSelection?.();if(selection&&!selection.isCollapsed)return;const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dialog.close();});
+dialog.addEventListener('pointerdown',event=>{const rect=dialog.getBoundingClientRect();const outside=event.target===dialog&&(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom);if(outside)dialog.dataset.pressedBackdrop='1';else delete dialog.dataset.pressedBackdrop;});
 document.querySelectorAll('details>summary').forEach(summary=>summary.addEventListener('click',event=>{
   event.preventDefault();
   const details=summary.parentElement;

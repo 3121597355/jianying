@@ -19,7 +19,19 @@ export function dialog(title,content,{wide=false,onClose}={}){
   element.innerHTML=`<header class="member-dialog-head"><h2>${escape(title)}</h2><button type="button" class="member-close" aria-label="关闭">×</button></header><div class="member-dialog-body">${content}</div>`;
   const trigger=document.activeElement;
   element.querySelector('.member-close').onclick=()=>element.close();
-  element.addEventListener('click',event=>{if(event.target===element){const bounds=element.getBoundingClientRect();if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)element.close();}});
+  // 点遮罩关闭：必须「按在遮罩上 + 松手还在遮罩上 + 没有选中文字」才算。
+  // 否则在输入框里拖选、复制文字时松手滑到遮罩上，会误判成点击遮罩，把正在填的表单关掉。
+  const outsideDialog=event=>{const bounds=element.getBoundingClientRect();return event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom;};
+  let pressedBackdrop=false;
+  element.addEventListener('pointerdown',event=>{pressedBackdrop=event.target===element&&outsideDialog(event);});
+  element.addEventListener('pointercancel',()=>{pressedBackdrop=false;});
+  element.addEventListener('click',event=>{
+    if(event.target!==element||!pressedBackdrop)return;
+    pressedBackdrop=false;
+    const selection=window.getSelection?.();
+    if(selection&&!selection.isCollapsed)return;
+    if(outsideDialog(event))element.close();
+  });
   element.addEventListener('close',()=>{onClose?.();element.remove();trigger?.focus?.({preventScroll:true});});
   document.body.append(element);element.showModal();return element;
 }
