@@ -94,6 +94,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
       if (pageFit && dialogEl) dialogEl.style.width = `${fitFrameToPage(width)}px`;
     }
     lastWidth = width;
+    pagesEl.classList.toggle('can-pan', pagesEl.scrollHeight > pagesEl.clientHeight + 1 || pagesEl.scrollWidth > pagesEl.clientWidth + 1);
     const factor = zoomFactor();
     const label = Math.abs(factor - 1) < 1e-3
       ? (zoomMode === 'page' ? '整页' : '适应')
@@ -307,27 +308,53 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     observer.observe(pagesEl);
   }
 
-  // 滚轮缩放：没东西可滚就直接缩放（整页看一页时最顺手），能滚动时滚轮照常滚动；
-  // Ctrl / ⌘ + 滚轮则任何时候都是缩放。连续滚动会当成同一次缩放动作，不会中途变成滚动。
-  let wheelZoomAt = 0;
+  // 滚轮：鼠标在简历上 = 缩放；在灰底（页面外的空白）= 滚动。
+  // 缩放到极限时把滚轮交回滚动，保证放大后还能上下翻看。Ctrl / ⌘ + 滚轮任何时候都缩放。
   pagesEl.addEventListener('wheel', event => {
     if (modal.hidden) return;
     const zoomMod = event.ctrlKey || event.metaKey;
     if (!zoomMod) {
-      // 滚到边界了才缩放：还有内容可滚时，滚轮就是滚动（符合直觉，也不会打断翻页）。
-      const atTop = pagesEl.scrollTop <= 0;
-      const atBottom = pagesEl.scrollTop + pagesEl.clientHeight >= pagesEl.scrollHeight - 1;
-      const atEdge = event.deltaY < 0 ? atTop : atBottom;
-      const gesturing = Date.now() - wheelZoomAt < 300;
-      if (!atEdge && !gesturing) return;
+      const overPage = Boolean(event.target?.closest?.('.export-page'));
+      if (!overPage) return; // 灰底：交给浏览器原生滚动
+      // 跟手：一格滚轮（±100）约 ±16%，太猛的一次滚动限幅，避免一下冲到极限。
+      const delta = Math.max(-150, Math.min(150, event.deltaY || 0));
+      const ratio = Math.exp(-delta * 0.0015);
+      const base = zoomMode === 'page' ? pageBaseWidth() : fitWidth();
+      const min = zoomMode === 'page' ? 1 : MIN_ZOOM;
+      const next = Math.min(MAX_ZOOM, Math.max(min, (zoomFactor() * ratio)));
+      if (Math.abs(next - zoomFactor()) < 1e-3) return; // 已经到极限，滚轮让给滚动
+      event.preventDefault();
+      setFreeZoom(base * next);
+      return;
     }
     event.preventDefault();
-    wheelZoomAt = Date.now();
-    // 跟手：一格滚轮（±100）约 ±16%，太猛的一次滚动限幅，避免一下冲到极限。
     const delta = Math.max(-150, Math.min(150, event.deltaY || 0));
-    const ratio = Math.exp(-delta * 0.0015);
-    setFreeZoom((lastWidth || fitWidth()) * ratio);
+    setFreeZoom((lastWidth || fitWidth()) * Math.exp(-delta * 0.0015));
   }, { passive: false });
+
+  // 按住拖动平移：放大之后除了滚灰底，也能直接抓住简历拖。
+  let pan = null;
+  pagesEl.addEventListener('pointerdown', event => {
+    if (modal.hidden || event.button !== 0 || event.pointerType !== 'mouse') return;
+    if (!(pagesEl.scrollHeight > pagesEl.clientHeight + 1 || pagesEl.scrollWidth > pagesEl.clientWidth + 1)) return;
+    pan = { x: event.clientX, y: event.clientY, left: pagesEl.scrollLeft, top: pagesEl.scrollTop };
+    pagesEl.classList.add('is-panning');
+    pagesEl.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+  });
+  pagesEl.addEventListener('pointermove', event => {
+    if (!pan) return;
+    pagesEl.scrollLeft = pan.left - (event.clientX - pan.x);
+    pagesEl.scrollTop = pan.top - (event.clientY - pan.y);
+  });
+  const endPan = event => {
+    if (!pan) return;
+    pan = null;
+    pagesEl.classList.remove('is-panning');
+    try { pagesEl.releasePointerCapture?.(event.pointerId); } catch { /* 指针已经释放 */ }
+  };
+  pagesEl.addEventListener('pointerup', endPan);
+  pagesEl.addEventListener('pointercancel', endPan);
 
   // 手机双指捏合缩放。
   const pinchDistance = touches => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);

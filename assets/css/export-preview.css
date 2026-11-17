@@ -39,6 +39,9 @@ body.export-open { overflow: hidden; }
 
 .export-pages { display: flex; flex: 1; min-height: 220px; flex-direction: column; gap: 22px; padding: 24px; overflow: auto; overscroll-behavior: contain; background: var(--ui-canvas); }
 .export-page { width: min(100%, 620px); margin: 0 auto; }
+/* 放大后可以抓住简历拖动查看（滚轮在页面上是缩放，所以再给一个平移手势）。 */
+.export-pages.can-pan .export-page { cursor: grab; }
+.export-pages.is-panning, .export-pages.is-panning .export-page { cursor: grabbing; user-select: none; }
 
 /* 全屏预览：整页铺满，只看简历。 */
 .export-modal.is-fullscreen { padding: 0; }
