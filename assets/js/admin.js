@@ -5,7 +5,7 @@ import {acquisitionView,bindAcquisition} from './admin-acquisition.js';
 import {resumeAiView,bindResumeAi} from './admin-members.js';
 import {usersView,bindUsers} from './admin-users.js';
 import {MOBILE_ADMIN_MEDIA} from './mobile-layout.js';
-import {productOverview,productFeatures,productAudience} from './admin-product.js?v=20261117-views';
+import {productOverview,productFeatures,productAudience} from './admin-product.js?v=20261117-merged';
 import {setAnalyticsExclusion} from './analytics-policy.js';
 function excludeThisBrowser(){let storage,session;try{storage=window.localStorage;}catch{}try{session=window.sessionStorage;}catch{}setAnalyticsExclusion(true,{document,storage,session});}
 const $=selector=>document.querySelector(selector),$$=selector=>[...document.querySelectorAll(selector)];
@@ -96,11 +96,6 @@ function readTemplateRows(){return $$('#template-rows [data-template]').map(row=
 function bindForms(){
   $('#exclude-browser')?.addEventListener('click',()=>{excludeThisBrowser();notify('本浏览器的后续访问已排除');});
   $$('[data-period]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;shiftPeriod(Number(button.dataset.period));}));
-  $$('[data-view]').forEach(button=>button.addEventListener('click',()=>{
-    const view=button.dataset.view;
-    $$('[data-view]').forEach(item=>{const active=item.dataset.view===view;item.classList.toggle('active',active);item.setAttribute('aria-pressed',String(active));});
-    $$('[data-view-pane]').forEach(pane=>{pane.hidden=pane.dataset.viewPane!==view;});
-  }));
   const host=$('#dashboard-content');host.oninput=()=>dirty=true;host.onchange=()=>dirty=true;
   if(panel==='audience')bindAcquisition({host,notify});
   if(panel==='members')bindResumeAi({host,api,notify,showError,refresh:load,markClean:()=>{dirty=false;}});

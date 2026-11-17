@@ -121,25 +121,4 @@
 @media(max-width:800px){.hero-stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:22px}.hero-stat{padding:0 14px}.hero-stat:nth-child(odd){border-left:0;padding-left:0}.hero-stat:nth-child(3),.hero-stat:nth-child(4){padding-top:22px;border-top:1px solid var(--line)}}
 @media(max-width:480px){.hero-stat-value{font-size:26px}.ovf-figures strong{font-size:18px}.bar-track{width:44px}.failure-row{flex-wrap:wrap;gap:6px}}
 @media(max-width:700px){.trend-heading{flex-wrap:wrap;align-items:flex-start}.period-switch{margin-left:auto}.product-trend text{font-size:13px}.product-trend .bar-value{font-size:12px}}
-.heading-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.view-switch{display:flex;background:var(--soft);border-radius:6px;padding:3px;gap:2px}
-.view-switch button{border:0;background:none;border-radius:4px;padding:6px 12px;font-size:10px;color:var(--muted);line-height:1.4}
-.view-switch button.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px #2734200d}
-:root[data-theme=dark] .view-switch{background:#2b3424}
-.dist-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px}
-.dist-block h3{font-size:11px;font-weight:500;margin-bottom:14px;color:var(--ink)}
-.dist-list{display:grid;gap:12px}
-.dist-row{display:grid;grid-template-columns:minmax(0,1fr) 60px 52px;align-items:center;gap:10px;font-size:11px}
-.dist-name{overflow-wrap:anywhere;line-height:1.5}
-.dist-name small{display:block;font-size:9px;color:var(--muted)}
-.dist-track{height:4px;border-radius:3px;background:var(--soft);overflow:hidden}
-.dist-track i{display:block;height:100%;background:#a4b48f;border-radius:inherit}
-.dist-value{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
-.dist-value small{display:block;font-size:9px;color:var(--muted);margin-top:2px}
-.rank-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:26px;align-items:start}
-.rank-title,.dist-block h3{font-size:11px;font-weight:500;margin-bottom:14px;color:var(--ink)}
-.data-table td.num{text-align:right;font-variant-numeric:tabular-nums}
-.data-table th.num{text-align:right;white-space:nowrap}
-@media(max-width:900px){.dist-grid{grid-template-columns:1fr;gap:22px}.rank-grid{grid-template-columns:1fr;gap:22px}}
-@media(max-width:480px){.view-switch button{padding:6px 9px}}
 @media(max-width:480px){.period-switch span{font-size:9px;padding:0 3px}.period-switch button{width:24px;height:24px;font-size:14px}}
