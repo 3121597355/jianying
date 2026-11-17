@@ -158,7 +158,13 @@ export function setupExportPreview({ getFileName, toast } = {}) {
 
   function toggleZoomMode() {
     zoomMode = zoomMode === 'page' ? 'width' : 'page';
+    // 切换模式一律回到该模式的自然尺寸：整页＝看全貌，适应＝贴满宽度，
+    // 不把上一个模式的放大（或滚到一半的位置）带过来。
+    if (zoomMode === 'page') pageZoom = 1;
+    else widthZoom = 1;
     applyZoom();
+    pagesEl.scrollTop = 0;
+    pagesEl.scrollLeft = 0;
   }
 
   const isFullscreen = () => modal.classList.contains('is-fullscreen');
