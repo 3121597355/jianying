@@ -116,6 +116,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
       : [...ZOOM_LADDER].reverse().find(value => value < current - 1e-3);
     if (!next) return;
     if (zoomMode === 'page' && next < 1 - 1e-3) return; // 整页已经是最小
+    hideTip();
     setZoomFactor(next);
     applyZoom();
   }
@@ -247,6 +248,31 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     }
   }
 
+  // 首次打开时给一句滚轮提示，用过一次或几秒后自己消失，之后不再打扰。
+  const TIP_KEY = 'yizhi.exportWheelTip';
+  let tipEl = null;
+  let tipTimer = 0;
+  function hideTip() {
+    clearTimeout(tipTimer);
+    if (!tipEl) return;
+    tipEl.remove();
+    tipEl = null;
+    try { localStorage.setItem(TIP_KEY, '1'); } catch { /* 隐私模式 */ }
+  }
+  function showTip() {
+    if (window.innerWidth <= 720) return; // 手机上用的是双指
+    let seen = false;
+    try { seen = localStorage.getItem(TIP_KEY) === '1'; } catch { /* 隐私模式 */ }
+    if (seen || tipEl) return;
+    const dialog = modal.querySelector('.export-dialog');
+    if (!dialog) return;
+    tipEl = document.createElement('p');
+    tipEl.className = 'export-wheel-tip';
+    tipEl.textContent = '简历上滚轮＝缩放 · 旁边空白处＝滚动';
+    dialog.append(tipEl);
+    tipTimer = setTimeout(hideTip, 5200);
+  }
+
   function open() {
     if (!modal.hidden) return;
     lastFocus = document.activeElement;
@@ -261,11 +287,13 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     document.body.classList.add('export-open');
     closeButton?.focus({ preventScroll: true });
     void generate();
+    showTip();
   }
 
   function close() {
     if (modal.hidden) return;
     runId++;
+    hideTip();
     modal.hidden = true;
     modal.classList.remove('is-fullscreen');
     pagesEl.classList.remove('is-zoomed');
@@ -324,10 +352,12 @@ export function setupExportPreview({ getFileName, toast } = {}) {
       const next = Math.min(MAX_ZOOM, Math.max(min, (zoomFactor() * ratio)));
       if (Math.abs(next - zoomFactor()) < 1e-3) return; // 已经到极限，滚轮让给滚动
       event.preventDefault();
+      hideTip();
       setFreeZoom(base * next);
       return;
     }
     event.preventDefault();
+    hideTip();
     const delta = Math.max(-150, Math.min(150, event.deltaY || 0));
     setFreeZoom((lastWidth || fitWidth()) * Math.exp(-delta * 0.0015));
   }, { passive: false });

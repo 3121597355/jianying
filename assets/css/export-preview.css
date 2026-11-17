@@ -43,6 +43,10 @@ body.export-open { overflow: hidden; }
 .export-pages.can-pan .export-page { cursor: grab; }
 .export-pages.is-panning, .export-pages.is-panning .export-page { cursor: grabbing; user-select: none; }
 
+/* 首次打开的滚轮提示：只出现一次，不挡操作。 */
+.export-wheel-tip { position: absolute; left: 50%; bottom: 84px; z-index: 2; margin: 0; padding: 6px 12px; border-radius: 999px; background: rgb(16 18 22 / .82); color: #fff; font-size: 12px; line-height: 1.5; white-space: nowrap; pointer-events: none; transform: translateX(-50%); }
+.export-modal.is-page .export-wheel-tip { bottom: 60px; }
+
 /* 全屏预览：整页铺满，只看简历。 */
 .export-modal.is-fullscreen { padding: 0; }
 .export-modal.is-fullscreen .export-dialog { width: 100%; max-width: none; height: 100dvh; max-height: none; border: 0; border-radius: 0; }

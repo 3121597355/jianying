@@ -7,7 +7,7 @@ import {
 } from './store.js';
 import { renderByTpl, TEMPLATES, getTemplate, applyTemplate } from './templates.js';
 import { renderForm, setQuillFactory, disposeEditors, setActiveItem } from './forms.js';
-import { setupExportPreview } from './export-preview.js?v=20261117-hoverzoom';
+import { setupExportPreview } from './export-preview.js?v=20261117-wheelhint';
 import { MODULES, FONTS } from './dict.js';
 import { buildSettingsPanel } from './settings.js?v=20261112-settings';
 import { getModuleOrder } from './module-order.js?v=20261112-drag';
