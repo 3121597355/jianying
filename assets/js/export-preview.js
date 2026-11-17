@@ -101,7 +101,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     if (zoomValueButton) {
       zoomValueButton.textContent = label;
       zoomValueButton.setAttribute('aria-label', `${label}（点击切换整页 / 适应宽度）`);
-      zoomValueButton.title = '点击切换：整页看全貌 / 适应宽度看细节';
+      zoomValueButton.title = '点击切换：整页看全貌 / 适应宽度看细节；滚轮或 Ctrl/⌘ + 滚轮可缩放';
     }
     if (zoomOutButton) zoomOutButton.disabled = zoomMode === 'page' ? pageZoom <= 1 + 1e-6 : widthZoom <= MIN_ZOOM + 1e-6;
     if (zoomInButton) zoomInButton.disabled = factor >= MAX_ZOOM - 1e-6;
@@ -125,7 +125,8 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     const ratioY = pagesEl.scrollHeight ? pagesEl.scrollTop / pagesEl.scrollHeight : 0;
     const ratioX = pagesEl.scrollWidth ? pagesEl.scrollLeft / pagesEl.scrollWidth : 0;
     const base = zoomMode === 'page' ? pageBaseWidth() : fitWidth();
-    setZoomFactor(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, width / base)));
+    const min = zoomMode === 'page' ? 1 : MIN_ZOOM; // 整页已经是最小，再缩没意义
+    setZoomFactor(Math.min(MAX_ZOOM, Math.max(min, width / base)));
     // 滚轮 / 捏合是连续输入，直接跟手，不再补动画。
     applyZoom();
     pagesEl.scrollTop = ratioY * pagesEl.scrollHeight;
@@ -306,11 +307,26 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     observer.observe(pagesEl);
   }
 
-  // Ctrl / ⌘ + 滚轮连续缩放，不触发浏览器整页缩放。
+  // 滚轮缩放：没东西可滚就直接缩放（整页看一页时最顺手），能滚动时滚轮照常滚动；
+  // Ctrl / ⌘ + 滚轮则任何时候都是缩放。连续滚动会当成同一次缩放动作，不会中途变成滚动。
+  let wheelZoomAt = 0;
   pagesEl.addEventListener('wheel', event => {
-    if (modal.hidden || !(event.ctrlKey || event.metaKey)) return;
+    if (modal.hidden) return;
+    const zoomMod = event.ctrlKey || event.metaKey;
+    if (!zoomMod) {
+      // 滚到边界了才缩放：还有内容可滚时，滚轮就是滚动（符合直觉，也不会打断翻页）。
+      const atTop = pagesEl.scrollTop <= 0;
+      const atBottom = pagesEl.scrollTop + pagesEl.clientHeight >= pagesEl.scrollHeight - 1;
+      const atEdge = event.deltaY < 0 ? atTop : atBottom;
+      const gesturing = Date.now() - wheelZoomAt < 300;
+      if (!atEdge && !gesturing) return;
+    }
     event.preventDefault();
-    setFreeZoom((lastWidth || fitWidth()) * (event.deltaY < 0 ? 1.12 : 1 / 1.12));
+    wheelZoomAt = Date.now();
+    // 跟手：一格滚轮（±100）约 ±16%，太猛的一次滚动限幅，避免一下冲到极限。
+    const delta = Math.max(-150, Math.min(150, event.deltaY || 0));
+    const ratio = Math.exp(-delta * 0.0015);
+    setFreeZoom((lastWidth || fitWidth()) * ratio);
   }, { passive: false });
 
   // 手机双指捏合缩放。
