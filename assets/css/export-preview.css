@@ -1,4 +1,4 @@
-/* 导出面板：先预览整份简历，再选择 PDF / 长图 / 纯文本。 */
+/* 导出面板：先预览整份简历，再选择 PDF / Word / 长图。 */
 body.export-open { overflow: hidden; }
 
 .export-modal { position: fixed; inset: 0; z-index: 6200; display: flex; align-items: center; justify-content: center; padding: 24px; }

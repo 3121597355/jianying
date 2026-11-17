@@ -9,6 +9,7 @@
 | esbuild | 云端构建时打包富文本清理库，兼容 Vercel 模块加载 | MIT；[源码](https://github.com/evanw/esbuild)，见安装包 LICENSE；构建保留依赖声明 |
 | html2canvas 1.4.1 | 简历 PDF 栅格化 | MIT；[源码](https://github.com/niklasvh/html2canvas)，见 LICENSES/html2canvas-MIT.txt |
 | jsPDF 2.5.1 | PDF 文件生成 | MIT；[源码](https://github.com/parallax/jsPDF)，见 LICENSES/jsPDF-MIT.txt；内嵌组件的声明保留在分发文件中 |
+| docx 9.5.1 | Word（.docx）文件生成，按需加载 | MIT；[源码](https://github.com/dolanmiu/docx)；由 scripts/build-docx-vendor.mjs 打包为 assets/vendor/docx.browser.js，构建保留依赖声明 |
 | ONNX Runtime | CPU 模型推理 | MIT；[源码](https://github.com/microsoft/onnxruntime)，见安装包 LICENSE |
 | sharp / libvips | 图片缩放、裁切和格式转换 | sharp Apache-2.0；libvips LGPL-2.1-or-later；[说明](https://sharp.pixelplumbing.com/install/#licensing)及安装包许可证 |
 | MODNet photographic | 人像 alpha 遮罩 | Apache-2.0；[原项目](https://github.com/ZHKKKe/MODNet)、[ONNX 转换](https://github.com/yakhyo/modnet)，见 portrait/models/MODNET-LICENSE.txt、MODNET-NOTICE.md |

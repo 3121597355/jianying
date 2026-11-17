@@ -53,14 +53,14 @@
 <link rel="stylesheet" href="/assets/css/experience.css">
 <link rel="stylesheet" href="/assets/css/interface.css?v=20261112-settings">
 <link rel="stylesheet" href="/assets/css/editor-polish.css?v=20261115-guide-details">
-<link rel="stylesheet" href="/assets/css/export-preview.css?v=20261117-zoomreset">
+<link rel="stylesheet" href="/assets/css/export-preview.css?v=20261117-word">
 <link rel="stylesheet" href="/assets/css/mobile-editor.css?v=20261112-settings">
 <link rel="stylesheet" href="/assets/css/editor-guide.css?v=20261115-heading">
 <link rel="stylesheet" href="/assets/css/member.css?v=20261115-github">
 <link rel="preload" href="/assets/vendor/quill.js" as="script">
 <!-- editor-modulepreload:start -->
 <link rel="modulepreload" href="/assets/js/vendor-loader.js">
-<link rel="modulepreload" href="/assets/js/app.js?v=20261117-zoomreset">
+<link rel="modulepreload" href="/assets/js/app.js?v=20261117-word">
 <link rel="modulepreload" href="/assets/js/store.js">
 <link rel="modulepreload" href="/assets/js/templates.js">
 <link rel="modulepreload" href="/assets/js/tpl-standard.js">
@@ -79,13 +79,14 @@
 <link rel="modulepreload" href="/assets/js/forms.js">
 <link rel="modulepreload" href="/assets/js/motion.js">
 <link rel="modulepreload" href="/assets/js/project-layout.js">
-<link rel="modulepreload" href="/assets/js/export-preview.js?v=20261117-zoomreset">
+<link rel="modulepreload" href="/assets/js/export-preview.js?v=20261117-word">
 <link rel="modulepreload" href="/assets/js/pdf.js">
 <link rel="modulepreload" href="/assets/js/analytics.js">
 <link rel="modulepreload" href="/assets/js/visit-tracker.js">
 <link rel="modulepreload" href="/assets/js/public-pages.js">
 <link rel="modulepreload" href="/assets/js/attribution.js">
 <link rel="modulepreload" href="/assets/js/analytics-policy.js">
+<link rel="modulepreload" href="/assets/js/word.js">
 <link rel="modulepreload" href="/assets/js/settings.js?v=20261112-settings">
 <link rel="modulepreload" href="/assets/js/module-drag.js?v=20261112-touch">
 <link rel="modulepreload" href="/assets/js/personal-templates.js">
@@ -116,7 +117,7 @@
   <header class="edit_header" data-v-236d5b80>
     <div class="edit_header_main" data-v-236d5b80>
       <button type="button" class="logo home-button brand-home" aria-label="返回首页" data-v-236d5b80><img src="/assets/img/brand/icon.png?v=20261112-favicon" alt="" width="34" height="34"><span>一纸简历</span></button>
-      <ul class="get_list" data-v-236d5b80><li class="active qm-download" role="button" tabindex="0" aria-label="预览并导出" title="预览整份简历，导出 PDF、长图或纯文本" data-v-236d5b80><i class="webfont webicon-xiazai" data-v-236d5b80></i><span id="dlLabel" data-v-236d5b80>导出</span></li></ul>
+      <ul class="get_list" data-v-236d5b80><li class="active qm-download" role="button" tabindex="0" aria-label="预览并导出" title="预览整份简历，导出 PDF、Word 或长图" data-v-236d5b80><i class="webfont webicon-xiazai" data-v-236d5b80></i><span id="dlLabel" data-v-236d5b80>导出</span></li></ul>
       <ul class="set_list" data-v-236d5b80><li data-set="templates" data-v-236d5b80><div class="click_btn" data-v-236d5b80><i aria-hidden="true" data-v-236d5b80></i><b data-v-236d5b80>更换模板</b></div></li></ul>
     </div>
   </header>
@@ -149,9 +150,9 @@
     </header>
     <div class="export-pages" id="exportPages"></div>
     <footer class="export-actions">
-      <p class="export-hint">PDF 保留排版与项目链接；长图适合微信和邮件发送；纯文本适合网申表单粘贴。</p>
+      <p class="export-hint">PDF 保留排版与项目链接，投递首选；Word 可以继续修改、上传到招聘系统；长图适合微信和邮件发送。</p>
       <div class="export-buttons">
-        <button type="button" class="export-btn" data-format="text">纯文本</button>
+        <button type="button" class="export-btn" data-format="word">Word 文档</button>
         <button type="button" class="export-btn" data-format="image">长图 PNG</button>
         <button type="button" class="export-btn primary" data-format="pdf">下载 PDF</button>
       </div>
@@ -159,6 +160,6 @@
   </div>
 </div>
 <script>setTimeout(function () { if (document.documentElement.dataset.editorState === 'loading') document.documentElement.dataset.editorState = 'error'; }, 15000);</script>
-<script type="module" src="/assets/js/editor-entry.js?v=20261117-zoomreset" onerror="document.documentElement.dataset.editorState='error'"></script>
+<script type="module" src="/assets/js/editor-entry.js?v=20261117-word" onerror="document.documentElement.dataset.editorState='error'"></script>
 </body>
 </html>

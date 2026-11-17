@@ -7,7 +7,7 @@ import {
 } from './store.js';
 import { renderByTpl, TEMPLATES, getTemplate, applyTemplate } from './templates.js';
 import { renderForm, setQuillFactory, disposeEditors, setActiveItem } from './forms.js';
-import { setupExportPreview } from './export-preview.js?v=20261117-zoomreset';
+import { setupExportPreview } from './export-preview.js?v=20261117-word';
 import { MODULES, FONTS } from './dict.js';
 import { buildSettingsPanel } from './settings.js?v=20261112-settings';
 import { getModuleOrder } from './module-order.js?v=20261112-drag';
@@ -649,7 +649,7 @@ function toast(msg) {
 
 /* ------------------------------ 导出 ------------------------------ */
 
-// 先看整份简历，再选择 PDF、长图或纯文本；导出面板自己处理进度与错误。
+// 先看整份简历，再选择 PDF、Word 或长图；导出面板自己处理进度与错误。
 const exportPreview = setupExportPreview({
   getFileName: () => getResume().basicInfo?.name || '',
   toast: message => toast(message),

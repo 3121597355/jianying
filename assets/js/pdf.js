@@ -1,6 +1,6 @@
 /**
- * 简历 → PDF / 长图 / 纯文本。
- * PDF 与长图依赖 vendor/html2canvas（DOM 栅格化），PDF 另需 vendor/jspdf。
+ * 简历 → PDF / 长图。
+ * PDF 与长图依赖 vendor/html2canvas（DOM 栅格化），PDF 另需 vendor/jspdf；Word 导出见 word.js。
  */
 
 import { loadVendor } from './vendor-loader.js';
@@ -218,7 +218,7 @@ export async function downloadResumeImage(opts = {}) {
   }
 }
 
-/** 纯文本：给网申表单、邮件正文和 ATS 文本框粘贴用。 */
+/** 纯文本：给网申表单、邮件正文和 ATS 文本框粘贴用（导出面板已改用 Word，这里保留复制场景）。 */
 export function resumePlainText() {
   const host = document.querySelector('#resumeHost .resume_all');
   if (!host) throw new Error('未找到简历内容');
@@ -235,11 +235,3 @@ export function resumePlainText() {
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
 }
 
-export function downloadResumeText(opts = {}) {
-  const text = resumePlainText();
-  const fileName = `${baseName(opts.name)}个人简历.txt`;
-  saveBlob(new Blob([`\uFEFF${text}`], { type: 'text/plain;charset=utf-8' }), fileName);
-  track('resume_export');
-  window.dispatchEvent(new Event('resume-file-generated'));
-  return { pages: 1, fileName };
-}

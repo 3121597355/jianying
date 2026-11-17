@@ -1,11 +1,12 @@
-import { renderResumePages, downloadResumePDF, downloadResumeImage, downloadResumeText, PAGE_HEIGHT_CSS } from './pdf.js';
+import { renderResumePages, downloadResumePDF, downloadResumeImage, PAGE_HEIGHT_CSS } from './pdf.js';
+import { downloadResumeWord } from './word.js';
 import { track } from './analytics.js';
 
 const FOCUSABLE = 'button:not([disabled]),[href],input,select,textarea,[tabindex]:not([tabindex="-1"])';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
 /**
- * 导出面板：先看清整份简历，再选择 PDF、长图或纯文本。
+ * 导出面板：先看清整份简历，再选择 PDF、Word 或长图。
  * 预览与 PDF 使用同一套 A4 分页规则，所见即所得。
  */
 export function setupExportPreview({ getFileName, toast } = {}) {
@@ -252,9 +253,10 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     const name = getFileName?.() || '';
     setBusy(true);
     try {
-      if (format === 'text') {
-        const result = downloadResumeText({ name });
-        toast?.(`已下载「${result.fileName}」`);
+      if (format === 'word') {
+        setMeta('正在生成 Word…');
+        const result = await downloadResumeWord({ name });
+        toast?.(`已下载「${result.fileName}」· 可在 Word 里继续修改`);
       } else if (format === 'image') {
         setMeta('正在生成长图…');
         const result = await downloadResumeImage({ name, onProgress: progress => setMeta(progress < 0.8 ? '正在生成长图…' : '正在导出长图…') });

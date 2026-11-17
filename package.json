@@ -11,6 +11,7 @@
     "changelog": "node scripts/changelog-add.mjs",
     "setup-model": "node portrait/setup-model.mjs",
     "build:vercel": "node scripts/vercel-build.mjs",
+    "build:docx": "node scripts/build-docx-vendor.mjs",
     "seo:submit": "node scripts/submit-indexnow.mjs"
   },
   "engines": {
@@ -26,6 +27,8 @@
     "adm-zip": "0.6.1"
   },
   "devDependencies": {
+    "buffer": "^6.0.3",
+    "docx": "^9.5.1",
     "esbuild": "0.28.2"
   }
 }
