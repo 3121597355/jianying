@@ -26,7 +26,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
   let lastFocus = null;
   let lastPageCss = null;
   // 「整页」= 一屏看完一整页；「适应」= 适应宽度；其余是相对适应宽度的自由缩放。
-  const ZOOM_LADDER = [0.4, 0.5, 0.6, 0.75, 0.9, 1, 1.1, 1.25, 1.4, 1.6, 1.8, 2, 2.4, 3, 4];
+  const ZOOM_LADDER = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4];
   const MIN_ZOOM = ZOOM_LADDER[0], MAX_ZOOM = ZOOM_LADDER.at(-1);
   let zoomMode = 'page';
   let zoomFactor = 1;
@@ -62,11 +62,35 @@ export function setupExportPreview({ getFileName, toast } = {}) {
 
   const zoomWidth = () => (zoomMode === 'page' ? fitPageWidth() : zoomMode === 'width' ? fitWidth() : fitWidth() * zoomFactor);
 
-  function applyZoom() {
+  const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+  /** 缩放用 FLIP：先按新尺寸排版，再用 transform 补一段放大/缩小，避免宽度动画把整页拉长。 */
+  function animateScale(pages, fromWidth) {
+    if (!pages.length || !fromWidth || reduceMotion()) return;
+    const toWidth = pages[0].getBoundingClientRect().width;
+    if (!toWidth || Math.abs(toWidth - fromWidth) < 0.5) return;
+    const scale = fromWidth / toWidth;
+    if (!Number.isFinite(scale) || scale === 1) return;
+    for (const page of pages) {
+      page.style.transformOrigin = 'top center';
+      if (typeof page.animate !== 'function') { page.style.transformOrigin = ''; continue; }
+      const animation = page.animate(
+        [{ transform: `scale(${scale})` }, { transform: 'scale(1)' }],
+        { duration: 220, easing: 'cubic-bezier(.22,.61,.36,1)' },
+      );
+      const finish = () => { animation.cancel(); page.style.transformOrigin = ''; };
+      animation.onfinish = finish;
+      animation.oncancel = () => { page.style.transformOrigin = ''; };
+    }
+  }
+
+  function applyZoom({ animate = false } = {}) {
     const pages = [...pagesEl.querySelectorAll('.export-page')];
+    const fromWidth = animate && pages.length ? pages[0].getBoundingClientRect().width : 0;
     const width = Math.round(zoomWidth());
     lastWidth = width;
     for (const page of pages) page.style.width = `${width}px`;
+    animateScale(pages, fromWidth);
     const label = zoomMode === 'page' ? '整页' : zoomMode === 'width' ? '适应' : `${Math.round(zoomFactor * 100)}%`;
     if (zoomValueButton) {
       zoomValueButton.textContent = label;
@@ -79,14 +103,19 @@ export function setupExportPreview({ getFileName, toast } = {}) {
 
   /** 点「＋ / －」按档位缩放；从整页开始时以当前宽度为起点继续放大。 */
   function stepZoom(direction) {
-    const current = zoomMode === 'custom' ? zoomFactor : zoomMode === 'page' ? lastWidth / fitWidth() : 1;
+    // 整页 → 先回到「适应宽度」，再一档档放大，避免每次只挪一点点。
+    if (zoomMode === 'page') {
+      if (direction > 0) { zoomMode = 'width'; applyZoom({ animate: true }); }
+      return;
+    }
+    const current = zoomMode === 'custom' ? zoomFactor : 1;
     const next = direction > 0
       ? ZOOM_LADDER.find(value => value > current + 1e-3)
       : [...ZOOM_LADDER].reverse().find(value => value < current - 1e-3);
     if (!next) return;
     zoomMode = 'custom';
     zoomFactor = next;
-    applyZoom();
+    applyZoom({ animate: true });
   }
 
   /** 滚轮 / 双指缩放：直接按目标宽度连续缩放，并尽量保持当前滚动位置。 */
@@ -96,6 +125,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
     const ratioX = pagesEl.scrollWidth ? pagesEl.scrollLeft / pagesEl.scrollWidth : 0;
     zoomMode = 'custom';
     zoomFactor = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, width / fitWidth()));
+    // 滚轮 / 捏合是连续输入，直接跟手，不再补动画。
     applyZoom();
     pagesEl.scrollTop = ratioY * pagesEl.scrollHeight;
     pagesEl.scrollLeft = ratioX * pagesEl.scrollWidth;
@@ -103,7 +133,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
 
   function toggleZoomMode() {
     zoomMode = zoomMode === 'page' ? 'width' : 'page';
-    applyZoom();
+    applyZoom({ animate: true });
   }
 
   const isFullscreen = () => modal.classList.contains('is-fullscreen');

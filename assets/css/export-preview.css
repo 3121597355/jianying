@@ -37,7 +37,6 @@ body.export-open { overflow: hidden; }
 
 .export-pages { display: flex; flex: 1; min-height: 220px; flex-direction: column; gap: 22px; padding: 24px; overflow: auto; overscroll-behavior: contain; background: var(--ui-canvas); }
 .export-page { width: min(100%, 620px); margin: 0 auto; }
-.export-page { transition: width 160ms ease; }
 
 /* 全屏预览：整页铺满，只看简历。 */
 .export-modal.is-fullscreen { padding: 0; }
@@ -80,6 +79,5 @@ body.export-open { overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   .export-backdrop, .export-dialog { animation: none; }
-  .export-page { transition: none; }
   .export-spinner { animation-duration: 2.4s; }
 }
