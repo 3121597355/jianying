@@ -87,7 +87,8 @@ for (const raw of incoming) {
     console.warn(`跳过：版本 ${entry.version} 已存在（${exists.title}）。`);
     continue;
   }
-  const now = new Date().toISOString();
+  // 批量补记时让时间戳逐条递增，保证先后顺序稳定（同一天新条目排在前面）。
+  const now = new Date(Date.now() + drafts.length).toISOString();
   drafts.push({...entry, id: crypto.randomUUID(), createdAt: now, updatedAt: now});
 }
 

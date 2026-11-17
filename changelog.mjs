@@ -27,7 +27,8 @@ export function createChangelog({root,dataDir}){
   function persist(next){fs.writeFileSync(file+'.tmp',JSON.stringify(next,null,2),{mode:0o600});fs.renameSync(file+'.tmp',file);entries=next;}
   if(!fs.existsSync(file))persist(entries);
   const revision=()=>crypto.createHash('sha256').update(JSON.stringify(entries)).digest('hex');
-  const list=()=>({entries:[...entries].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt)),revision:revision()});
+  // 同一天同一毫秒写入的多条（批量补记）按版本号从新到旧兜底排序。
+  const list=()=>({entries:[...entries].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt)||b.version.localeCompare(a.version)),revision:revision()});
   function check(input){if(input?.revision!==revision())throw fail('更新日志已在其他窗口修改。请刷新后重试。',409);}
   return {
     list,
