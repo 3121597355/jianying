@@ -1,5 +1,6 @@
 import {Pool} from 'pg';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import {promisify} from 'node:util';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
@@ -65,6 +66,8 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
     });}catch(error){await pool.end();throw error;}
   }
   await q(`INSERT INTO ${table('state')} (key,data) VALUES ($1,$2) ON CONFLICT(key) DO NOTHING`,['sponsorship','[]']);
+  // 管理员在后台删掉的日志版本，部署补齐时不再复活。
+  await q(`INSERT INTO ${table('state')} (key,data) VALUES ($1,$2) ON CONFLICT(key) DO NOTHING`,['changelog-deleted','[]']);
   const savedSettings=await state('settings');
   if(upgradeSiteBrand(upgradeTemplateCatalog(savedSettings))!==savedSettings)await mutate('settings',current=>{Object.assign(current,upgradeSiteBrand(upgradeTemplateCatalog(current)));});
   const entryId=value=>typeof value==='string'&&/^[a-zA-Z0-9-]{16,80}$/.test(value)?hash(salt+value).slice(0,24):'';
@@ -84,6 +87,24 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
   }
   async function summary(params){const range=period(params),scope=analyticsScope(params),cutoff=Date.now()-90*86400000;const [settings,events,visits]=await Promise.all([state('settings'),q(`SELECT data FROM ${table('events')} WHERE time>=$1 ORDER BY time DESC,id DESC LIMIT 100000`,[cutoff]),q(`SELECT * FROM ${table('visits')} WHERE updated>=$1 ORDER BY updated DESC LIMIT 100000`,[cutoff])]);return buildSummary({settings,events:events.rows.reverse().map(e=>e.data),visits:visits.rows.map(v=>({id:v.id,path:v.path,seq:Number(v.seq),startedAt:Number(v.started),updatedAt:Number(v.updated),visibleMs:Number(v.visible),...v.data})),range,scope});}
   const logsResult=entries=>({entries:[...entries].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt)),revision:revision(entries)});
+  const seedLogs=(()=>{try{const list=JSON.parse(fs.readFileSync(path.join(root,'changelog-seed.json'),'utf8'));return Array.isArray(list)?list:[];}catch{return [];}})();
+  /** 部署后把仓库里新增的更新日志补进站点数据库，按版本去重；后台删过的版本不复活。 */
+  async function mergeSeedLogs(){
+    if(!seedLogs.length)return;
+    const [entries,deleted]=await Promise.all([state('changelog'),state('changelog-deleted')]);
+    const known=new Set(entries.map(entry=>entry.version)),gone=new Set(Array.isArray(deleted)?deleted:[]);
+    if(!seedLogs.some(entry=>!known.has(entry.version)&&!gone.has(entry.version)))return;
+    await mutate('changelog',current=>{
+      const have=new Set(current.map(entry=>entry.version)),ids=new Set(current.map(entry=>entry.id));
+      for(const raw of seedLogs){
+        if(current.length>=100)break;
+        if(have.has(raw.version)||gone.has(raw.version)||ids.has(raw.id))continue;
+        let entry;try{entry={...normalizeChangelog(raw),id:raw.id,createdAt:raw.createdAt,updatedAt:raw.updatedAt};}catch{continue;}
+        if(!/^[a-f0-9-]{36}$/.test(entry.id))continue;
+        current.push(entry);have.add(entry.version);ids.add(entry.id);
+      }
+    });
+  }
   function csv(res,name,rows){const cell=value=>'"'+String(value??'').replaceAll('"','""')+'"';res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':`attachment; filename="${name}"`,'Cache-Control':'no-store'}).end('\uFEFF'+rows.map(row=>row.map(cell).join(',')).join('\r\n'));}
   let nextCleanup=0;
   async function cleanup(){if(Date.now()<nextCleanup)return;nextCleanup=Date.now()+3600000;const cutoff=Date.now()-90*86400000;await q(`DELETE FROM ${table('events')} WHERE time<$1 OR id IN (SELECT id FROM ${table('events')} ORDER BY time DESC,id DESC OFFSET 100000)`,[cutoff]);await q(`DELETE FROM ${table('visits')} WHERE updated<$1 OR id IN (SELECT id FROM ${table('visits')} ORDER BY updated DESC OFFSET 100000)`,[cutoff]);await q(`DELETE FROM ${table('sessions')} WHERE expires<$1`,[Date.now()]);await q(`DELETE FROM ${table('limits')} WHERE expires<$1`,[Date.now()]);}
@@ -126,12 +147,14 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
       if(route==='/api/admin/sponsorship'&&req.method==='POST'||/^\/api\/admin\/sponsorship\/[a-f0-9-]{36}$/.test(route)&&req.method==='PUT'){
         const input=await body(req,8192);await mutate('sponsorship',entries=>{const next=mutateReceipts(entries,input,req.method==='PUT'?route.split('/').at(-1):'');entries.splice(0,entries.length,...next);});json(res,req.method==='POST'?201:200,{ok:true});return true;
       }
-      if(route==='/api/admin/changelog'&&req.method==='GET'){json(res,200,logsResult(await state('changelog')));return true;}
+      if(route==='/api/admin/changelog'&&req.method==='GET'){try{await mergeSeedLogs();}catch{}json(res,200,logsResult(await state('changelog')));return true;}
       if(route==='/api/admin/changelog'&&req.method==='POST'||/^\/api\/admin\/changelog\/[a-f0-9-]{36}$/.test(route)&&['PUT','DELETE'].includes(req.method)){
-        const input=await body(req),id=route.split('/').at(-1);const result=await mutate('changelog',entries=>{if(input.revision!==revision(entries))throw fail('更新日志已在其他窗口修改。请刷新后重试。',409);
+        const input=await body(req),id=route.split('/').at(-1);let removedVersion='';const result=await mutate('changelog',entries=>{if(input.revision!==revision(entries))throw fail('更新日志已在其他窗口修改。请刷新后重试。',409);
           if(req.method==='POST'){if(entries.length>=100)throw fail('最多保存 100 条更新日志。');const now=new Date().toISOString();entries.push({...normalizeChangelog(input.entry),id:crypto.randomUUID(),createdAt:now,updatedAt:now});}
-          else{const index=entries.findIndex(e=>e.id===id);if(index<0)throw fail('此更新日志已不存在，请刷新。',404);if(req.method==='DELETE')entries.splice(index,1);else entries[index]={...normalizeChangelog(input.entry),id,createdAt:entries[index].createdAt,updatedAt:new Date().toISOString()};}return logsResult(entries);
-        });json(res,req.method==='POST'?201:200,result);return true;
+          else{const index=entries.findIndex(e=>e.id===id);if(index<0)throw fail('此更新日志已不存在，请刷新。',404);if(req.method==='DELETE')removedVersion=entries.splice(index,1)[0].version;else entries[index]={...normalizeChangelog(input.entry),id,createdAt:entries[index].createdAt,updatedAt:new Date().toISOString()};}return logsResult(entries);
+        });
+        if(removedVersion)try{await mutate('changelog-deleted',list=>{if(Array.isArray(list)&&!list.includes(removedVersion))list.push(removedVersion);});}catch{}
+        json(res,req.method==='POST'?201:200,result);return true;
       }
       if(route==='/api/admin/keys'&&req.method==='GET'){json(res,200,{keys:(await state('auth')).keys.map(({hash,...key})=>key)});return true;}
       if(route==='/api/admin/keys'&&req.method==='POST'){const {name}=await body(req,8192);const result=await mutate('auth',auth=>{if(auth.keys.length>=5)throw fail('最多保存 5 个接口密钥。');if(typeof name!=='string'||!name.trim()||name.length>80)throw fail('请填写 80 字以内的密钥名称。');const token='jy_'+crypto.randomBytes(32).toString('hex'),key={id:crypto.randomUUID(),name:name.trim(),prefix:token.slice(0,11),scope:'analytics:read',createdAt:new Date().toISOString(),lastUsedAt:null};auth.keys.push({...key,hash:hash(token)});return {key,token};});json(res,201,result);return true;}
