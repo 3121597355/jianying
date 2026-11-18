@@ -1,40 +1,54 @@
+import http from 'node:http';
 import https from 'node:https';
 import dns from 'node:dns/promises';
 import net from 'node:net';
 import clientAddress from './request-client.cjs';
-import {generateJobVersion} from './job-tailor.mjs';
+import {generateJobVersion,reviewResume,reviseJobVersion} from './job-tailor.mjs';
 import {normalizeResume,modelResume} from './resume-document.mjs';
 import sharp from 'sharp';
 import {buildPrompt} from './portrait/public/presets.js';
 
 const fail=(message,status=400)=>Object.assign(Error(message),{status});
+const loopbackHost=host=>/^(localhost|127\.0\.0\.1|\[::1\]|::1)$/i.test(String(host||''));
 export function privateAddress(ip){
   if(net.isIPv4(ip)){const [a,b]=ip.split('.').map(Number);return a===0||a===10||a===127||a>=224||(a===169&&b===254)||(a===172&&b>=16&&b<=31)||(a===192&&(b===168||b===0))||(a===100&&b>=64&&b<=127)||(a===198&&(b===18||b===19));}
   return !net.isIPv6(ip)||/^(::|fc|fd|fe[89ab]|ff)/i.test(ip);
 }
-export function personalConnection(input={}){
+export function personalConnection(input={},options={}){
+  const allowLocal=options.allowLocal===true;
   const base=String(input.baseUrl||'').trim().replace(/\/$/,'');let url;
   try{url=new URL(base);}catch{throw fail('请填写有效的 API 基础地址。');}
-  if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash||url.port||!url.hostname.includes('.')||url.hostname.endsWith('.local')||url.hostname.endsWith('.localhost')||net.isIP(url.hostname.replace(/[\[\]]/g,'')))throw fail('API 须使用公开的 HTTPS 域名，不支持内网、IP 或含密钥的地址。');
+  // 本机部署可以连本机服务（127.0.0.1 / localhost 任意端口，http 或 https）；
+  // 公网部署仍然只允许公开 HTTPS 域名，防止被当成访问内网的跳板。
+  const local=allowLocal&&loopbackHost(url.hostname);
+  const scheme=local?(url.protocol==='https:'||url.protocol==='http:'):url.protocol==='https:';
+  const host=url.hostname.replace(/[\[\]]/g,'');
+  const hostOk=local?true:(host.includes('.')&&!host.endsWith('.local')&&!host.endsWith('.localhost')&&!net.isIP(host));
+  if(!scheme||url.username||url.password||url.search||url.hash||(!local&&url.port)||!hostOk)throw fail(local?'请填写有效的本机接口地址。':'API 须使用公开的 HTTPS 域名，不支持内网、IP 或含密钥的地址。');
   if(/\/(chat\/completions|images\/edits|models)$/.test(url.pathname))throw fail('请填写 API 基础地址（通常以 /v1 结尾），不要包含接口路径。');
   const apiKey=String(input.apiKey||'').trim(),model=String(input.model||'').trim();
   if(!apiKey||apiKey.length>4000||/[\r\n]/.test(apiKey)||!model||model.length>160)throw fail('请填写 API Key 和服务商提供的完整模型名称。');
-  return {baseUrl:url.pathname==='/'?url.origin+'/v1':base,apiKey,model,enabled:true,personal:true,mode:input.mode==='json'?'json':'multipart',imageField:['image','image[]'].includes(input.imageField)?input.imageField:'image'};
+  return {baseUrl:url.pathname==='/'?url.origin+'/v1':base,apiKey,model,enabled:true,personal:true,local,mode:input.mode==='json'?'json':'multipart',imageField:['image','image[]'].includes(input.imageField)?input.imageField:'image'};
 }
 // DNS is resolved once, checked, and pinned on the actual HTTPS connection.
 // No redirects, cookies, shared provider keys or raw provider errors are forwarded.
-export async function personalFetch(address,options={},lookup=dns.lookup){
+export async function personalFetch(address,options={},lookup=dns.lookup,allowLocal=false){
   const url=new URL(address);
-  if(url.protocol!=='https:'||url.username||url.password||url.port)throw fail('远程地址不受支持。');
+  const local=allowLocal===true&&loopbackHost(url.hostname);
+  if(url.username||url.password)throw fail('远程地址不受支持。');
+  if(local){if(url.protocol!=='https:'&&url.protocol!=='http:')throw fail('远程地址不受支持。');}
+  else if(url.protocol!=='https:'||url.port)throw fail('远程地址不受支持。');
   const host=url.hostname.replace(/[\[\]]/g,'');
-  if(!host.includes('.')||host.endsWith('.localhost')||host.endsWith('.local'))throw fail('不支持内网地址。');
+  if(!local&&(!host.includes('.')||host.endsWith('.localhost')||host.endsWith('.local')))throw fail('不支持内网地址。');
   const ips=net.isIP(host)?[{address:host,family:net.isIP(host)}]:await lookup(host,{all:true});
-  if(!ips.length||ips.some(item=>privateAddress(item.address)))throw fail('不支持内网地址。');
+  if(!ips.length||(!local&&ips.some(item=>privateAddress(item.address))))throw fail('不支持内网地址。');
   let payload=options.body,headers={...options.headers};
   if(payload instanceof FormData){const request=new Request(url,{method:'POST',body:payload});payload=Buffer.from(await request.arrayBuffer());headers['Content-Type']=request.headers.get('content-type');}
   if(payload)headers['Content-Length']=Buffer.byteLength(payload);
   return new Promise((resolve,reject)=>{
-    const request=https.request(url,{method:options.method||'GET',headers,signal:options.signal,lookup:(_host,opts,cb)=>cb(null,opts.all?ips:ips[0].address,ips[0].family)},response=>{
+    const send=(url.protocol==='http:'?http:https).request;
+    // 本机端点常使用自签证书，仅对回环地址放行；公网连接仍严格校验证书。
+    const request=send(url,{method:options.method||'GET',headers,signal:options.signal,...(local?{rejectUnauthorized:false}:{}),lookup:(_host,opts,cb)=>cb(null,opts.all?ips:ips[0].address,ips[0].family)},response=>{
       const chunks=[];let size=0;
       response.on('data',chunk=>{size+=chunk.length;if(size>36*1024*1024){response.destroy(fail('服务返回内容过大。',502));return;}chunks.push(chunk);});
       response.on('error',reject);response.on('end',()=>resolve(new Response(Buffer.concat(chunks),{status:response.statusCode,headers:response.headers})));
@@ -42,7 +56,8 @@ export async function personalFetch(address,options={},lookup=dns.lookup){
     request.on('error',reject);if(payload)request.write(payload);request.end();
   });
 }
-export function createPersonalAi({hostPort,allowedOrigins=[],publicOrigin='',checkRate,transport=personalFetch}={}){
+export function createPersonalAi({hostPort,allowedOrigins=[],publicOrigin='',checkRate,allowLocal=false,transport}={}){
+  if(!transport)transport=(address,options)=>personalFetch(address,options,dns.lookup,allowLocal===true);
   const limits=new Map();let active=0;
   return async function handle(req,res,url){
     if(!url.pathname.startsWith('/api/personal-ai/'))return false;
@@ -59,14 +74,23 @@ export function createPersonalAi({hostPort,allowedOrigins=[],publicOrigin='',che
       const parts=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>4100000)throw fail('提交内容过大，请缩小照片。',413);parts.push(chunk);}
       let input;try{input=JSON.parse(Buffer.concat(parts).toString());}catch{throw fail('提交格式无效。');}
       if(input.consent!==true)throw fail('请确认使用个人 API 连接并发送相关材料。');
-      const config=personalConnection(input.connection);active++;running=true;controller=new AbortController();onClose=()=>{if(!res.writableEnded)controller.abort();};res.on('close',onClose);
+      const config=personalConnection(input.connection,{allowLocal});active++;running=true;controller=new AbortController();onClose=()=>{if(!res.writableEnded)controller.abort();};res.on('close',onClose);
       const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(55000)]);
       if(url.pathname.endsWith('/tailor')){
         const resume=normalizeResume(input.resume),jd=String(input.jd||'').slice(0,12000),jobTitle=String(input.jobTitle||'').trim().slice(0,80);
-        if(jd.trim().length<20||!jobTitle)throw fail('请填写岗位名称和至少 20 字的岗位要求。');
         // The browser omits identity fields; the model receives only modelResume facts.
         modelResume(resume);
-        json(200,await generateJobVersion({resume,jd,jobTitle,config,fetchImpl:transport,signal}));
+        // 不填岗位要求时是只读诊断，不生成新版本，因此不要求岗位名称。
+        if(input.mode==='review')json(200,await reviewResume({resume,config,fetchImpl:transport,signal}));
+        else if(input.mode==='feedback'){
+          const feedback=String(input.feedback||'').trim().slice(0,2000);
+          if(jd.trim().length<20||!jobTitle||feedback.length<2)throw fail('请填写岗位名称、至少 20 字的岗位要求和具体反馈。');
+          json(200,await reviseJobVersion({resume,jd,jobTitle,feedback,previousResult:input.previousResult,config,fetchImpl:transport,signal}));
+        }
+        else{
+          if(jd.trim().length<20||!jobTitle)throw fail('请填写岗位名称和至少 20 字的岗位要求，或留空岗位要求只做简历诊断。');
+          json(200,await generateJobVersion({resume,jd,jobTitle,config,fetchImpl:transport,signal}));
+        }
       }else{
         if(typeof input.image!=='string'||!/^data:image\/(png|jpeg|webp);base64,/.test(input.image))throw fail('请上传有效照片。');
         const source=Buffer.from(input.image.split(',')[1],'base64');

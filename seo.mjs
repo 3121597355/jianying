@@ -22,14 +22,15 @@ export function renderSeo(html, pathname, origin = SITE_ORIGIN) {
   const image = siteOrigin(origin) + '/assets/img/brand/icon.png';
   const content=contentMetadata(pathname);
   const publisher={'@type':'Organization',name:'一纸简历',url:siteOrigin(origin)+'/',logo:{'@type':'ImageObject',url:image}};
+  const parent=content?.kind==='article'?{name:'使用指南',path:'/guides/'}:content?.kind==='template'?{name:'简历模板',path:'/templates/'}:null;
   const breadcrumb={'@type':'BreadcrumbList',itemListElement:[
     {'@type':'ListItem',position:1,name:'首页',item:siteOrigin(origin)+'/'},
-    ...(content?.kind==='article'?[{'@type':'ListItem',position:2,name:'使用指南',item:siteOrigin(origin)+'/guides/'}]:[]),
-    {'@type':'ListItem',position:content?.kind==='article'?3:2,name:CONTENT_PAGES[pathname],item:url},
+    ...(parent?[{'@type':'ListItem',position:2,name:parent.name,item:siteOrigin(origin)+parent.path}]:[]),
+    {'@type':'ListItem',position:parent?3:2,name:CONTENT_PAGES[pathname],item:url},
   ]};
   const schema = pathname === '/' ? {
     '@context':'https://schema.org','@type':'WebSite',name:'一纸简历',url,description,inLanguage:'zh-CN',publisher,
-  } : content?.kind==='article' ? {
+  } : content?.kind==='article'||content?.kind==='template' ? {
     '@context':'https://schema.org','@type':'Article',headline:content.title,url,description,inLanguage:'zh-CN',datePublished:content.updated,dateModified:content.updated,
     author:publisher,publisher,mainEntityOfPage:{'@type':'WebPage','@id':url,breadcrumb},
   } : content ? {

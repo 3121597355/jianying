@@ -1,0 +1,202 @@
+/* AI 简历建议：停靠在编辑区右侧的第三栏，收起只改变宽度，建议内容一直保留。 */
+.job-coach { display: none; --coach-card-width: 380px; --coach-col-width: 404px; }
+
+.edit_resume .edit_main.resume-workspace { --coach-card-width: 340px; --coach-col-width: 364px; }
+
+/* 建议栏是临时浮层，不参与编辑器网格排版，避免把工作区挤成第三栏。 */
+.edit_resume .edit_main.resume-workspace { position: relative; }
+
+.job-coach-host .job-coach {
+  display: flex; justify-content: flex-end; position: fixed; z-index: 9999;
+  top: 70px; right: 24px; bottom: auto; width: 0; min-width: 0;
+  height: min(620px, calc(100vh - 86px));
+  overflow: hidden; pointer-events: none;
+  transition: width 240ms cubic-bezier(.4, 0, .2, 1);
+}
+.job-coach-host .job-coach.is-open {
+  width: min(var(--coach-col-width), calc(100% - 40px));
+  pointer-events: auto;
+}
+
+.job-coach-card {
+  display: flex; flex-direction: column; flex: 0 0 var(--coach-card-width); width: var(--coach-card-width);
+  margin-left: 24px; min-height: 0; height: 100%; overflow: hidden;
+  background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: 14px;
+  color: var(--ui-text); font: 13px/1.7 "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+.job-coach * { box-sizing: border-box; }
+.job-coach [hidden] { display: none !important; }
+
+.job-coach-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  padding: 14px 14px 10px; border-bottom: 1px solid var(--ui-line); flex-shrink: 0;
+}
+.job-coach-head[data-coach-drag] { cursor: grab; user-select: none; touch-action: none; }
+.job-coach.is-dragging .job-coach-head[data-coach-drag] { cursor: grabbing; }
+.job-coach.is-dragging .job-coach-card { box-shadow: 0 18px 48px #00000026; }
+.job-coach-title { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.job-coach-title strong { font-size: 14px; font-weight: 650; letter-spacing: -.1px; }
+.job-coach-title small { color: var(--ui-muted); font-size: 11px; }
+.job-coach-close {
+  flex-shrink: 0; width: 30px; height: 30px; margin: -2px -4px 0 0; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 8px; background: none; color: var(--ui-muted); cursor: pointer;
+  font: 18px/1 sans-serif; transition: background 160ms, color 160ms;
+}
+.job-coach-close:hover { background: var(--ui-soft); color: var(--ui-text); }
+
+.job-coach-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 14px 18px; }
+
+.job-coach-formwrap { border: 1px solid var(--ui-line); border-radius: 10px; background: var(--ui-soft); padding: 0 10px 10px; }
+.job-coach-formwrap > summary {
+  list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 38px; padding: 4px 0; color: var(--ui-text); font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.job-coach-formwrap > summary::-webkit-details-marker { display: none; }
+.job-coach-formwrap > summary::after {
+  content: ''; width: 7px; height: 7px; margin-right: 2px; border-right: 1.6px solid var(--ui-muted); border-bottom: 1.6px solid var(--ui-muted);
+  transform: rotate(45deg) translateY(-2px); transition: transform 180ms;
+}
+.job-coach-formwrap[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+.job-coach-formwrap > summary small { color: var(--ui-muted); font-weight: 400; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+
+.job-coach-field { display: grid; gap: 5px; margin-top: 8px; font-size: 12px; font-weight: 500; }
+.job-coach-field > span { color: var(--ui-muted); font-weight: 500; }
+.job-coach-field input, .job-coach-field select, .job-coach-field textarea {
+  display: block; width: 100%; min-height: 36px; padding: 8px 10px; font: inherit; font-size: 13px;
+  color: var(--ui-text); background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: 8px;
+}
+.job-coach-field textarea { resize: vertical; min-height: 92px; line-height: 1.6; }
+.job-coach-field :is(input, select, textarea):focus { outline: 2px solid var(--ui-focus); border-color: var(--ui-accent); }
+.job-coach-consent { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; font-size: 11px; line-height: 1.6; color: var(--ui-muted); }
+.job-coach-consent input { width: 15px; height: 15px; margin: 2px 0 0; flex-shrink: 0; accent-color: var(--ui-accent); }
+
+.job-coach-note { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 11px; color: var(--ui-muted); }
+.job-coach-actions { display: flex; gap: 8px; margin-top: 10px; }
+.job-coach-actions .member-button { flex: 1; min-height: 38px; font-size: 12px; padding: 8px 10px; }
+.job-coach-link {
+  border: 0; background: none; padding: 4px 0; color: var(--ui-accent);
+  font: inherit; font-size: 11px; cursor: pointer; white-space: nowrap;
+}
+.job-coach-link:hover { text-decoration: underline; }
+.job-coach-error { margin: 10px 0 0; padding: 9px 11px; border-radius: 8px; font-size: 12px; color: #bf414a; background: color-mix(in srgb, #bf414a 8%, var(--ui-surface)); }
+.job-coach-muted { color: var(--ui-muted); font-size: 12px; margin: 8px 0; }
+.job-coach-saved { margin: 14px 0 0; color: var(--ui-muted); font-size: 11px; }
+
+.job-coach-progress { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--ui-soft); color: var(--ui-muted); font-size: 12px; }
+.job-coach-progress .member-spinner { width: 14px; height: 14px; border-width: 2px; }
+
+.job-coach-result { margin-top: 14px; }
+.coach-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.coach-head strong { font-size: 13px; }
+.coach-head span { color: var(--ui-muted); font-size: 11px; line-height: 1.6; }
+
+.coach-list { display: grid; gap: 8px; }
+.coach-item { border: 1px solid var(--ui-line); border-radius: 10px; padding: 10px 11px; background: var(--ui-surface); }
+.coach-item > header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.coach-item > header strong { font-size: 12px; font-weight: 650; overflow-wrap: anywhere; }
+.coach-item > header em { margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: var(--ui-accent-soft); color: var(--ui-accent); font-size: 10px; font-style: normal; font-weight: 500; }
+.coach-item > p { margin: 6px 0 0; font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; white-space: pre-wrap; }
+.coach-item .coach-reason { color: var(--ui-muted); font-size: 11px; }
+.coach-diff { margin-top: 8px; }
+.coach-diff > summary { cursor: pointer; color: var(--ui-accent); font-size: 11px; list-style: none; }
+.coach-diff > summary::-webkit-details-marker { display: none; }
+.coach-diff > summary::before { content: '▸ '; }
+.coach-diff[open] > summary::before { content: '▾ '; }
+.coach-diff > div { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: var(--ui-soft); }
+.coach-diff > div + div { margin-top: 6px; border: 1px solid var(--ui-accent-line); background: var(--ui-accent-soft); }
+.coach-diff small { display: block; color: var(--ui-muted); font-size: 10px; margin-bottom: 3px; }
+.coach-diff p { margin: 0; font-size: 12px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.coach-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.coach-chips span { padding: 3px 8px; border-radius: 6px; border: 1px solid var(--ui-line); font-size: 11px; }
+.coach-chips span.is-found { border-color: var(--ui-accent-line); background: var(--ui-accent-soft); color: var(--ui-accent); }
+.coach-warn { margin: 10px 0; padding: 9px 11px 9px 26px; border-radius: 9px; background: var(--ui-soft); font-size: 11px; line-height: 1.7; color: var(--ui-muted); }
+
+.coach-apply { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--ui-line); }
+.coach-apply > label { display: flex; align-items: flex-start; gap: 8px; font-size: 11px; color: var(--ui-muted); }
+.coach-apply > label input { width: 15px; height: 15px; margin: 2px 0 0; flex-shrink: 0; accent-color: var(--ui-accent); }
+.coach-apply-row { display: flex; gap: 8px; margin-top: 10px; }
+.coach-apply-row .member-button { flex: 1; min-height: 38px; font-size: 12px; padding: 8px 10px; }
+.coach-applied { display: flex; align-items: center; gap: 6px; margin-top: 12px; padding: 9px 11px; border-radius: 9px; background: var(--ui-accent-soft); color: var(--ui-accent); font-size: 12px; }
+
+/* 反馈聊天：同一个浮层里继续对话，新建议先待确认，不直接覆盖当前建议。 */
+.coach-feedback { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--ui-line); }
+.coach-feedback-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.coach-feedback-head strong { font-size: 12px; font-weight: 650; }
+.coach-feedback-head span { color: var(--ui-muted); font-size: 11px; line-height: 1.6; }
+.coach-feedback-log { display: grid; gap: 8px; margin-bottom: 10px; max-height: 190px; overflow-y: auto; overscroll-behavior: contain; }
+.coach-feedback-message { display: grid; gap: 2px; padding: 8px 10px; border-radius: 9px; background: var(--ui-soft); }
+.coach-feedback-message.user { background: var(--ui-accent-soft); }
+.coach-feedback-message > span { color: var(--ui-muted); font-size: 10px; }
+.coach-feedback-message > p { margin: 0; font-size: 12px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.coach-feedback-form { display: grid; gap: 8px; }
+.coach-feedback-input {
+  display: block; width: 100%; min-height: 68px; padding: 9px 10px; resize: vertical;
+  font: inherit; font-size: 13px; line-height: 1.6; color: var(--ui-text);
+  background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: 9px;
+}
+.coach-feedback-input:focus { outline: 2px solid var(--ui-focus); border-color: var(--ui-accent); }
+.coach-feedback-actions { display: flex; align-items: center; gap: 8px; }
+.coach-feedback-consent { display: flex; align-items: flex-start; gap: 7px; font-size: 11px; line-height: 1.6; color: var(--ui-muted); }
+.coach-feedback-consent input { width: 14px; height: 14px; margin: 2px 0 0; flex-shrink: 0; accent-color: var(--ui-accent); }
+.coach-feedback-actions .member-button { min-height: 36px; padding: 7px 12px; font-size: 12px; }
+.coach-feedback-hint { color: var(--ui-muted); font-size: 10px; }
+.coach-pending-result { display: grid; gap: 4px; padding: 10px 11px; border: 1px solid var(--ui-accent-line); border-radius: 9px; background: var(--ui-accent-soft); }
+.coach-pending-result strong { font-size: 12px; color: var(--ui-accent); }
+.coach-pending-result > span { color: var(--ui-muted); font-size: 11px; line-height: 1.6; }
+.coach-pending-result .coach-apply-row { margin-top: 2px; }
+.coach-pending-banner { display: grid; gap: 4px; margin-bottom: 10px; padding: 10px 11px; border: 1px solid var(--ui-accent-line); border-radius: 10px; background: var(--ui-accent-soft); }
+.coach-pending-banner strong { font-size: 12px; color: var(--ui-accent); }
+.coach-pending-banner > span { color: var(--ui-muted); font-size: 11px; line-height: 1.6; }
+
+.job-coach :is(button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+
+/* 有保存过的建议时，入口按钮上留一个小圆点 */
+#jobTailorButton { position: relative; }
+#jobTailorButton.has-coach::after {
+  content: ''; position: absolute; top: 6px; right: 7px; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--ui-accent); box-shadow: 0 0 0 2px var(--ui-primary);
+}
+
+/* 点击建议跳转时给对应表单一个短暂的定位高亮 */
+@keyframes coachFlash { from { box-shadow: inset 0 0 0 2px var(--ui-accent-line); } to { box-shadow: inset 0 0 0 2px transparent; } }
+#formHost.coach-flash { animation: coachFlash 1400ms ease-out; border-radius: 10px; }
+
+/* 宽屏：预览、编辑、建议三栏并排，编辑列宽度不变，只压缩预览。 */
+@media screen and (min-width: 1500px) {
+  .edit_resume .edit_main.resume-workspace { --coach-card-width: 380px; --coach-col-width: 404px; }
+}
+
+/* 中等宽度：浮层靠右显示，编辑区和预览保持原来的两栏。 */
+@media screen and (min-width: 861px) and (max-width: 1499px) {
+  .edit_resume .edit_main.resume-workspace { --coach-card-width: 380px; --coach-col-width: 404px; }
+}
+
+/* 手机：底部抽屉，不锁页面滚动，收起后编辑位置不变。 */
+@media screen and (max-width: 860px), screen and (max-width: 1024px) and (max-height: 500px) {
+  .job-coach-host .job-coach {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+    width: auto; height: auto; overflow: visible; z-index: 70;
+    padding: 0 8px max(8px, env(safe-area-inset-bottom));
+    transform: translateY(104%); opacity: 0; pointer-events: none;
+    transition: transform 280ms cubic-bezier(.32, .72, 0, 1), opacity 200ms ease-out;
+  }
+  .job-coach-host .job-coach.is-open { width: auto; transform: none; opacity: 1; pointer-events: auto; }
+  .job-coach-host .job-coach-card {
+    flex: 1 1 auto; width: auto; margin-left: 0; height: auto;
+    max-height: min(74dvh, 620px); border-radius: 16px 16px 12px 12px;
+    box-shadow: 0 -2px 40px #0000002e;
+  }
+  .job-coach-head { padding: 12px 14px 8px; }
+  .job-coach-head[data-coach-drag] { cursor: default; touch-action: auto; }
+  .job-coach-body { padding: 10px 14px max(16px, env(safe-area-inset-bottom)); }
+  .job-coach-field input, .job-coach-field select, .job-coach-field textarea, .coach-feedback-input { font-size: 16px; }
+  .coach-apply-row .member-button, .job-coach-actions .member-button { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .job-coach-host .job-coach,
+  .job-coach-host .job-coach.is-open { transition: none; }
+  #formHost.coach-flash { animation: none; box-shadow: inset 0 0 0 2px var(--ui-accent-line); }
+}

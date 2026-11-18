@@ -1,6 +1,9 @@
 // Fixed public page labels; arbitrary paths and query strings never enter analytics.
 export const CONTENT_PAGES = Object.freeze({
   '/templates/':'简历模板',
+  '/templates/minimal/':'极简黑白简历模板',
+  '/templates/professional/':'标准专业简历模板',
+  '/templates/classic-blue/':'经典蓝色简历模板',
   '/guides/':'使用指南',
   '/guides/graduate-resume/':'无实习经历简历示例',
   '/guides/developer-projects/':'计算机项目经历示例',
@@ -8,5 +11,10 @@ export const CONTENT_PAGES = Object.freeze({
   '/guides/one-page-resume/':'一页简历与 PDF 指南',
   '/guides/project-experience/':'项目经历写作指南',
   '/guides/id-photo-background/':'证件照换底指南',
+  '/guides/id-photo-size/':'证件照尺寸对照',
+  '/guides/id-photo-selfie/':'手机拍证件照',
+  '/guides/resume-photo/':'简历照片要求',
+  '/guides/self-evaluation/':'简历自我评价怎么写',
+  '/guides/skills-section/':'简历技能怎么写',
 });
 export const ANALYTICS_PAGES = Object.freeze({'/':'介绍页','/resume/':'简历编辑','/portrait/':'证件照','/plans/':'自愿支持','/plans/thanks/':'心意感谢页',...CONTENT_PAGES});

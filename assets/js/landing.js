@@ -3,6 +3,7 @@ import {SITE_LINKS} from './site-config.js';
 import {setupLandingMotion,setupMotionToggle} from './landing-motion.js';
 import {siteSettings} from './site-settings.js';
 import {track} from './analytics.js';
+import {scheduleSourceSurvey} from './source-survey.js';
 const $ = selector => document.querySelector(selector);
 if(siteSettings?.site) {
   const site=siteSettings.site;
@@ -64,3 +65,6 @@ document.querySelectorAll('details>summary').forEach(summary=>summary.addEventLi
 if(new URL(location.href).searchParams.get('portrait')==='applied')location.replace('/resume/?portrait=applied');
 setupLandingMotion();
 setupMotionToggle();
+
+// 平台常把带参链接限流或删除，这里在落地页停留一会儿后问一次来源，只问一次。
+scheduleSourceSurvey(15000);

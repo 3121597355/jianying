@@ -5,7 +5,7 @@ import path from 'node:path';
 import {once} from 'node:events';
 import {createResumeServer} from '../serve.mjs';
 import {defaults,buildSummary} from '../admin.mjs';
-import {captureAttribution,sanitizeAttribution,campaignLink} from '../assets/js/attribution.js';
+import {captureAttribution,sanitizeAttribution,campaignLink,surveyAttribution} from '../assets/js/attribution.js';
 import {buildAcquisition} from '../acquisition.mjs';
 import {siteOrigin,renderSeo,searchDocument,SITE_ORIGIN,PUBLIC_PAGES} from '../seo.mjs';
 
@@ -87,5 +87,52 @@ test('acquisition counts completed sessions, isolates historical traffic and spl
     {...event,visitor:'old',attribution:undefined,time:100,type:'page_view'},
     {...event,visitor:'',time:100,type:'page_view'},
   ]);
-  assert.deepEqual(result,{channels:[{...attribution,sessions:2,started:1,completed:1,failures:1}],unattributedSessions:1});
+  assert.deepEqual(result,{channels:[{...attribution,sessions:2,started:1,completed:1,failures:1}],unattributedSessions:1,selfReported:[]});
+});
+
+test('returning visitors keep their first channel instead of falling back to direct',()=>{
+ const data=new Map();
+ const storage={getItem:key=>data.has(key)?data.get(key):null,setItem:(key,value)=>data.set(key,String(value))};
+ const origin='https://yizhijianli.cn';
+ const first=captureAttribution({search:'?utm_source=xiaohongshu&utm_campaign=resume_demo_01',origin,storage,now:1000});
+ assert.deepEqual(first,{source:'xiaohongshu',medium:'social',campaign:'resume_demo_01'});
+ // 隔天直接打开（无 referrer、无 UTM）：仍归到小红书，而不是 direct
+ assert.equal(captureAttribution({origin,storage,now:1000+26*3600000}).source,'xiaohongshu');
+ // 30 天内多次直访不会把来源洗成 direct
+ assert.equal(captureAttribution({origin,storage,now:1000+20*86400000}).campaign,'resume_demo_01');
+ // 超过首次触点保留期才回落为 direct
+ assert.equal(captureAttribution({origin,storage,now:1000+31*86400000}).source,'direct');
+});
+
+test('direct visits never overwrite the stored first channel and short aliases are accepted',()=>{
+ const data=new Map();
+ const storage={getItem:key=>data.has(key)?data.get(key):null,setItem:(key,value)=>data.set(key,String(value))};
+ const origin='https://yizhijianli.cn';
+ captureAttribution({search:'?utm_source=bing',origin,storage,now:1000});
+ captureAttribution({origin,storage,now:2000});
+ assert.equal(captureAttribution({origin,storage,now:4000000}).source,'bing','direct visits keep the earlier channel');
+ assert.deepEqual(captureAttribution({search:'?from=wechat&c=campus_01',origin,storage,now:5000}),{source:'wechat',medium:'community',campaign:'campus_01'});
+ assert.equal(captureAttribution({search:'?from=unknown-channel',origin,storage,now:6000}).source,'wechat','unknown aliases fall back to the last known channel');
+});
+
+
+test('self-reported source stays inside the fixed whitelist',()=>{
+ assert.deepEqual(surveyAttribution('xiaohongshu'),{source:'xiaohongshu',medium:'social',campaign:'self_report'});
+ assert.deepEqual(surveyAttribution('wechat'),{source:'wechat',medium:'community',campaign:'self_report'});
+ assert.equal(surveyAttribution('myspace'),null);
+ assert.equal(surveyAttribution('javascript:alert(1)'),null);
+ assert.equal(surveyAttribution(''),null);
+});
+
+test('self-reported sources are counted apart from sessions',()=>{
+ const attribution={source:'wechat',medium:'community',campaign:'campus_01'},event={day:'2026-11-12',visitor:'anonymous',attribution};
+ const result=buildAcquisition([
+  {...event,time:100,type:'page_view'},
+  {...event,time:200,type:'source_survey',attribution:{source:'xiaohongshu',medium:'social',campaign:'self_report'}},
+  {...event,time:300,type:'source_survey',attribution:{source:'xiaohongshu',medium:'social',campaign:'self_report'}},
+  {...event,time:400,type:'source_survey',attribution:{source:'direct',medium:'direct',campaign:'self_report'}},
+ ]);
+ assert.deepEqual(result.selfReported,[{source:'xiaohongshu',count:2}]);
+ assert.equal(result.channels.length,1,'survey answers must not open a second channel session');
+ assert.equal(result.channels[0].sessions,1);
 });

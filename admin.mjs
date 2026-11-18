@@ -22,7 +22,7 @@ const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const dayOf = time => new Date(time + 8*3600000).toISOString().slice(0,10);
 const catalog = TEMPLATES.map(({id,code,name,desc,thumbnail})=>({id,code,name,desc,thumbnail}));
 const routes = ANALYTICS_PAGES;
-export const ACTIONS = {...SUPPORT_EVENTS,page_view:'页面访问',template_select:'套用模板',template_preview:'预览模板',resume_edit_start:'开始填写简历',resume_export:'导出简历 PDF',resume_export_error:'简历导出失败',portrait_upload:'载入照片',portrait_cutout:'快速换底',portrait_cutout_error:'快速换底失败',portrait_export:'导出证件照',portrait_export_error:'证件照导出失败',portrait_apply:'照片用于简历',job_version_adopt:'采用岗位版本'};
+export const ACTIONS = {...SUPPORT_EVENTS,page_view:'页面访问',source_survey:'来源自述',template_select:'套用模板',template_preview:'预览模板',resume_edit_start:'开始填写简历',resume_export:'导出简历 PDF',resume_export_error:'简历导出失败',portrait_upload:'载入照片',portrait_cutout:'快速换底',portrait_cutout_error:'快速换底失败',portrait_export:'导出证件照',portrait_export_error:'证件照导出失败',portrait_apply:'照片用于简历',job_version_adopt:'采用岗位版本'};
 const defaults = () => ({site:{title:'一纸简历 · 免费在线简历制作、PDF 导出与证件照换底',kicker:'简洁 · 免费 · 无广告',headline:'简历与证件照\n一站准备好',description:'简历，是做取舍。把与岗位相关的经历，清楚地留在一页里。\n免费编辑简历、导出 PDF、制作证件照，打开就能用。',github:SITE_LINKS.github},templates:catalog.map((item,index)=>({...item,enabled:true,featured:index<4})),defaultTemplate:DEFAULT_TPL,analytics:{enabled:true},support:normalizeSupport()});
 export function upgradeTemplateCatalog(settings){
   if(!settings||!Array.isArray(settings.templates))return settings;

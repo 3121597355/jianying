@@ -41,7 +41,7 @@ export async function createResumeServer({ portraitOptions = {}, adminOptions = 
     basePath: '/portrait', hostPort: () => server?.address()?.port,
     ...(cloud?{publicMode:true,allowedOrigins,requestToken:process.env.PORTRAIT_REQUEST_SECRET,checkRate:administration.checkPortraitRate}:{}),
   });
-  const handlePersonalAi=createPersonalAi({hostPort:()=>server?.address()?.port,allowedOrigins,publicOrigin:process.env.PUBLIC_ORIGIN||'',checkRate:administration.checkPortraitRate});
+  const handlePersonalAi=createPersonalAi({hostPort:()=>server?.address()?.port,allowedOrigins,publicOrigin:process.env.PUBLIC_ORIGIN||'',checkRate:administration.checkPortraitRate,allowLocal:!cloud});
   const handlePortrait = portrait.listeners('request')[0];
   server = http.createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');

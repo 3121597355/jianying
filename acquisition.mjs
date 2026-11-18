@@ -2,9 +2,15 @@ import {sanitizeAttribution,SOURCES,CAMPAIGNS} from './assets/js/attribution.js'
 const STARTS = new Set(['resume_edit_start','portrait_upload']);
 const FINISHES = new Set(['resume_export','portrait_export']);
 export function buildAcquisition(events) {
-  const sessions = [], current = new Map();
+  const sessions = [], current = new Map(), selfReported = new Map();
   for (const event of [...events].sort((a,b)=>a.time-b.time)) {
     if(!event.visitor)continue;
+    // 来源自述单独计数：也算进会话会把同一次访问拆成两个渠道。
+    if(event.type==='source_survey'){
+      const said=sanitizeAttribution(event.attribution);
+      if(said&&said.source!=='direct')selfReported.set(said.source,(selfReported.get(said.source)||0)+1);
+      continue;
+    }
     const attribution=sanitizeAttribution(event.attribution), channel=attribution?JSON.stringify(attribution):'legacy';
     const key=event.day+':'+event.visitor;
     let session=current.get(key);
@@ -23,8 +29,8 @@ export function buildAcquisition(events) {
     if(!row){row={...session.attribution,sessions:0,started:0,completed:0,failures:0};groups.set(session.channel,row);}
     row.sessions++;row.started+=Number(session.started);row.completed+=Number(session.completed);row.failures+=session.failures;
   }
-  return {channels:[...groups.values()].sort((a,b)=>b.completed-a.completed||b.sessions-a.sessions),unattributedSessions:sessions.filter(s=>!s.attribution).length};
+  return {channels:[...groups.values()].sort((a,b)=>b.completed-a.completed||b.sessions-a.sessions),unattributedSessions:sessions.filter(s=>!s.attribution).length,selfReported:[...selfReported].map(([source,count])=>({source,count})).sort((a,b)=>b.count-a.count)};
 }
 export function acquisitionCsvRows(data) {
-  return [['来源','媒介','活动标签','访问会话','开始制作','完成导出','失败操作'],...data.channels.map(row=>[SOURCES[row.source],row.medium,CAMPAIGNS[row.campaign]||'未指定活动',row.sessions,row.started,row.completed,row.failures]),[],['未归因的历史会话',data.unattributedSessions]];
+  return [['来源','媒介','活动标签','访问会话','开始制作','完成导出','失败操作'],...data.channels.map(row=>[SOURCES[row.source],row.medium,CAMPAIGNS[row.campaign]||'未指定活动',row.sessions,row.started,row.completed,row.failures]),[],['用户自述来源','人数'],...(data.selfReported||[]).map(row=>[SOURCES[row.source]||row.source,row.count]),[],['未归因的历史会话',data.unattributedSessions]];
 }

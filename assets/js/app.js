@@ -39,6 +39,8 @@ const markScope = root => {
   return root;
 };
 window.__markScope = markScope;
+// AI 简历建议侧栏沿用同一套模块切换逻辑（切换栏目 + 打开编辑区）。
+window.__selectModule = name => selectEditorModule(name);
 
 /* ------------------------------ Quill ------------------------------ */
 
@@ -866,5 +868,7 @@ export function bootEditor() {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); flushSave(); }
   });
   // Accounts load independently so an unavailable account service never blocks editing.
-  void import('./editor-member.js?v=20261115-github').then(module=>module.installEditorMember()).catch(error=>console.warn('账户扩展暂时无法加载',error));
+  void import('./editor-member.js?v=20261118-coach4').then(module=>module.installEditorMember()).catch(error=>console.warn('账户扩展暂时无法加载',error));
 }
+
+

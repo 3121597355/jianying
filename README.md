@@ -41,9 +41,9 @@ npm start
 
 [一纸简历：免费制作简历与证件照](https://yizhijianli.top/?utm_source=github&utm_medium=community&utm_campaign=github_readme)，无需注册即可编辑并导出 PDF。自愿支持不影响基础免费功能；可选 AI 服务由用户自行配置。
 
-- [没有实习经历的应届生简历](https://yizhijianli.top/guides/graduate-resume/)：课程项目、校园实践与可编辑示例。
-- [计算机项目经历写法](https://yizhijianli.top/guides/developer-projects/)：个人贡献、成果、技术栈与面试检查。
-- [免费模板与 PDF 导出](https://yizhijianli.top/guides/free-resume-pdf/)：填写、保存与导出检查，包含当前 PDF 格式限制。
+- [没有实习经历的应届生简历](https://yizhijianli.top/guides/graduate-resume/?utm_source=github&utm_medium=community&utm_campaign=guide_resume)：课程项目、校园实践与可编辑示例。
+- [计算机项目经历写法](https://yizhijianli.top/guides/developer-projects/?utm_source=github&utm_medium=community&utm_campaign=guide_resume)：个人贡献、成果、技术栈与面试检查。
+- [免费模板与 PDF 导出](https://yizhijianli.top/guides/free-resume-pdf/?utm_source=github&utm_medium=community&utm_campaign=guide_resume)：填写、保存与导出检查，包含当前 PDF 格式限制。
 
 ## 公开服务模式
 
