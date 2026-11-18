@@ -122,3 +122,13 @@
 @media(max-width:480px){.hero-stat-value{font-size:26px}.ovf-figures strong{font-size:18px}.bar-track{width:44px}.failure-row{flex-wrap:wrap;gap:6px}}
 @media(max-width:700px){.trend-heading{flex-wrap:wrap;align-items:flex-start}.period-switch{margin-left:auto}.product-trend text{font-size:13px}.product-trend .bar-value{font-size:12px}}
 @media(max-width:480px){.period-switch span{font-size:9px;padding:0 3px}.period-switch button{width:24px;height:24px;font-size:14px}}
+
+/* 后台滚动分区：鼠标停在侧边栏上滚轮滚导航列表，停在工作区上滚页面内容 */
+@media(min-width:801px){
+  .sidebar{overflow:hidden}
+  .sidebar nav{flex:1 1 auto;min-height:0;align-content:start;overflow-y:auto;padding-right:2px;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--muted) 45%,transparent) transparent}
+  .sidebar nav::-webkit-scrollbar{width:6px}
+  .sidebar nav::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--muted) 38%,transparent);border-radius:3px}
+  .sidebar nav::-webkit-scrollbar-track{background:transparent}
+}
+@media(max-width:800px){.sidebar nav{flex:none;min-height:0;overflow:visible;padding-right:0}}
