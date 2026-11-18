@@ -140,3 +140,9 @@
 .scope-toggle[aria-pressed=true] span{display:inline}
 :root[data-theme=dark] .scope-toggle[aria-pressed=true]{background:#303c27;border-color:#3f4b34;color:#d2e5b8}
 @media(max-width:480px){.scope-toggle{padding:7px 9px;font-size:9px}}
+.date-toolbar[data-mode=weekly] .date-presets,.date-toolbar[data-mode=weekly] #date-form{display:none}
+.delta{color:var(--muted);font-size:9px;white-space:nowrap}
+.delta-up{color:#4d7a3c}
+.delta-down{color:#a8593c}
+:root[data-theme=dark] .delta-up{color:#a9c78e}
+:root[data-theme=dark] .delta-down{color:#dcae94}

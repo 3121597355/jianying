@@ -7,6 +7,7 @@ import {usersView,bindUsers} from './admin-users.js';
 import {MOBILE_ADMIN_MEDIA} from './mobile-layout.js';
 import {productOverview,productFeatures,productAudience} from './admin-product.js?v=20261117-merged';
 import {setAnalyticsExclusion} from './analytics-policy.js';
+import {weeklyView} from './admin-weekly.js?v=20261118-weekly';
 function excludeThisBrowser(){let storage,session;try{storage=window.localStorage;}catch{}try{session=window.sessionStorage;}catch{}setAnalyticsExclusion(true,{document,storage,session});}
 const $=selector=>document.querySelector(selector),$$=selector=>[...document.querySelectorAll(selector)];
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -14,11 +15,13 @@ const number=value=>new Intl.NumberFormat('zh-CN').format(value||0);
 const panels={overview:['数据概览','关注开始制作、完成导出与实际转化。'],features:['功能表现','查看工具使用、模板选择与导出情况。'],audience:['访问来源','了解访客从哪里来，使用什么设备。'],templates:['模板管理','调整模板名称、顺序与首页展示。'],integration:['统计与接口','管理匿名统计，连接自己的数据工作空间。'],security:['账户安全','管理管理员密码与登录安全。'],content:['网站内容','更新首页、支持页文案和卡片图片。']};
 panels.engagement=['停留与离开','看访客停在哪一步，用任务完成情况判断体验。'];
 panels.changelog=['更新日志','记录版本变化，回顾每次功能与体验改进。'];
+panels.weekly=['周报对比','按周并排看变化，本周对上周、对四周前同期。'];
 panels.members=['账户与简历','观察多份简历、云端保存、生成和导出的实际使用。'];
 panels.users=['注册用户','查看注册趋势与账户明细，含注册时间和操作次数。'];
 panels.sponsorship=['赞助统计','区分支持意向和实际到账，核对账单后登记。'];
 let sponsorshipData;
 let changelogData;
+let weeklyData;
 let usersQuery={q:'',sort:'recent',page:1,days:30};
 // 默认看近 7 天：数据量还小，7 天窗口才看得到每天的起伏。
 let csrf='',username='',panel='overview',days=7,custom=null,settings,revision='',summary,dirty=false,requestId=0,toastTimer;
@@ -90,7 +93,7 @@ function security(){return `<div class="settings-layout">${panelBox('管理员�
 async function load(){
   const id=++requestId;dirty=false;showError('');$$('[data-panel]').forEach(b=>{b.classList.toggle('active',b.dataset.panel===panel);b.setAttribute('aria-current',b.dataset.panel===panel?'page':'false');});
   const analytics=isAnalyticsPanel();$('#analytics-period-notice').hidden=true;
-  $('#page-title').textContent=panels[panel][0];$('#page-description').textContent=panels[panel][1];$('#breadcrumb').textContent='网站 / '+panels[panel][0];const stats=['overview','features','audience','engagement'].includes(panel);$('#date-toolbar').hidden=!stats&&!['members','sponsorship'].includes(panel);$('#export-data').hidden=!stats&&panel!=='sponsorship';$('#page-eyebrow').textContent=stats?'网站数据':'网站管理';$('#export-data').href=panel==='sponsorship'?'/api/admin/sponsorship/export':(panel==='engagement'?'/api/admin/engagement/export?':'/api/admin/export?')+params()+(panel==='audience'?'&view=acquisition':panel==='overview'||panel==='features'?'&view=product':'');const painted=paintedPanel===panel&&Boolean($('#dashboard-content').firstElementChild)&&!$('#dashboard-content').querySelector('.loading');if(painted)$('#updated-at').textContent='更新中…';else $('#dashboard-content').innerHTML='<div class="loading" role="status">正在读取…</div>';
+  $('#page-title').textContent=panels[panel][0];$('#page-description').textContent=panels[panel][1];$('#breadcrumb').textContent='网站 / '+panels[panel][0];const stats=['overview','features','audience','engagement'].includes(panel);$('#date-toolbar').hidden=!stats&&!['members','sponsorship','weekly'].includes(panel);$('#date-toolbar').dataset.mode=panel==='weekly'?'weekly':'';$('#export-data').hidden=!stats&&panel!=='sponsorship';$('#page-eyebrow').textContent=stats?'网站数据':'网站管理';$('#export-data').href=panel==='sponsorship'?'/api/admin/sponsorship/export':(panel==='engagement'?'/api/admin/engagement/export?':'/api/admin/export?')+params()+(panel==='audience'?'&view=acquisition':panel==='overview'||panel==='features'?'&view=product':'');const painted=paintedPanel===panel&&Boolean($('#dashboard-content').firstElementChild)&&!$('#dashboard-content').querySelector('.loading');if(painted)$('#updated-at').textContent='更新中…';else $('#dashboard-content').innerHTML='<div class="loading" role="status">正在读取…</div>';
   try{
     let markup;
     if(stats){
@@ -108,7 +111,7 @@ async function load(){
       applySummaryMeta();markup=panelMarkup();
     }else{
     const loaded=await api('/api/admin/settings');if(id!==requestId)return;settings=loaded.settings;revision=loaded.revision;
-    if(panel==='members'){const [data,connection]=await Promise.all([api('/api/admin/members?'+params()),api('/api/admin/resume-ai')]);if(id!==requestId)return;$('#date-from').value=data.range.from;$('#date-to').value=data.range.to;markup=membersView(data)+resumeAiView(connection);}else if(panel==='users'){const query=new URLSearchParams({sort:usersQuery.sort,page:String(usersQuery.page),days:String(usersQuery.days||30)});if(usersQuery.q)query.set('q',usersQuery.q);const [data,productSummary]=await Promise.all([api('/api/admin/accounts?'+query.toString()),api('/api/admin/summary?'+new URLSearchParams({days:String(usersQuery.days||30),scope:'current'}).toString())]);if(id!==requestId)return;if(data&&data.page&&Number(data.page)!==usersQuery.page)usersQuery={...usersQuery,page:Number(data.page)};markup=usersView(data,productSummary&&productSummary.product);}else if(panel==='sponsorship'){sponsorshipData=await api('/api/admin/sponsorship?'+params());if(id!==requestId)return;$('#date-from').value=sponsorshipData.range.from;$('#date-to').value=sponsorshipData.range.to;markup=sponsorshipView(sponsorshipData);}else if(panel==='integration'){const {keys}=await api('/api/admin/keys');if(id!==requestId)return;markup=integration(keys);}else if(panel==='changelog'){changelogData=await api('/api/admin/changelog');if(id!==requestId)return;markup=changelogView(changelogData);}else markup=({templates,content,security})[panel]();
+    if(panel==='members'){const [data,connection]=await Promise.all([api('/api/admin/members?'+params()),api('/api/admin/resume-ai')]);if(id!==requestId)return;$('#date-from').value=data.range.from;$('#date-to').value=data.range.to;markup=membersView(data)+resumeAiView(connection);}else if(panel==='users'){const query=new URLSearchParams({sort:usersQuery.sort,page:String(usersQuery.page),days:String(usersQuery.days||30)});if(usersQuery.q)query.set('q',usersQuery.q);const [data,productSummary]=await Promise.all([api('/api/admin/accounts?'+query.toString()),api('/api/admin/summary?'+new URLSearchParams({days:String(usersQuery.days||30),scope:'current'}).toString())]);if(id!==requestId)return;if(data&&data.page&&Number(data.page)!==usersQuery.page)usersQuery={...usersQuery,page:Number(data.page)};markup=usersView(data,productSummary&&productSummary.product);}else if(panel==='sponsorship'){sponsorshipData=await api('/api/admin/sponsorship?'+params());if(id!==requestId)return;$('#date-from').value=sponsorshipData.range.from;$('#date-to').value=sponsorshipData.range.to;markup=sponsorshipView(sponsorshipData);}else if(panel==='weekly'){weeklyData=await api('/api/admin/weekly?weeks=8'+(cleanOnly?'&scope=clean':''));if(id!==requestId)return;markup=weeklyView(weeklyData,productUi());}else if(panel==='integration'){const {keys}=await api('/api/admin/keys');if(id!==requestId)return;markup=integration(keys);}else if(panel==='changelog'){changelogData=await api('/api/admin/changelog');if(id!==requestId)return;markup=changelogView(changelogData);}else markup=({templates,content,security})[panel]();
     }
     $('#dashboard-content').innerHTML=markup;paintedPanel=panel;$('#updated-at').textContent='更新于 '+time(Date.now());bindForms();
   }catch(error){if(id===requestId){$('#dashboard-content').replaceChildren();showError(error.message);}}

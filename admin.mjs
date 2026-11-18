@@ -100,6 +100,45 @@ export function periodSummaryRows({range,scope,metrics,product}){
 export function exportFileName(kind,{range,scope}){
     return `jianying-${kind}-${range.from}_${range.to}${scope==='clean'?'-clean':''}.csv`;
   }
+// 周报：以周一为一周起点，把最近几周并排放在一起。本周是进行中的未完成周，
+// 所以除了总数还给日均，本周只和上周、四周前同期比日均才有意义。
+// 原始记录按天保存，周报是现算的，不需要额外归档表。
+export function buildWeeklyReport({events=[],visits=[],weeks=8,to=dayOf(Date.now()),scope='all'}){
+    const clean=scope==='clean',count=Math.min(12,Math.max(4,Number(weeks)||8));
+    const today=Date.parse(to),weekday=(new Date(today).getUTCDay()+6)%7,monday=today-weekday*86400000;
+    const pack=(from,end)=>{
+      const list=events.filter(event=>event.day>=from&&event.day<=end),
+        spans=visits.filter(visit=>{const day=dayOf(Number(visit.startedAt));return day>=from&&day<=end;}),
+        product=buildProductAnalytics({events:list,visits:spans,range:{from,to:end}}),
+        days=Math.round((Date.parse(end)-Date.parse(from))/86400000)+1,
+        views=list.filter(event=>event.type==='page_view').length,
+        exports=list.filter(event=>event.type==='resume_export'||event.type==='portrait_export').length,
+        per=value=>Math.round(value/days*10)/10;
+      return {
+        from,to:end,days,views,exports,
+        sessions:product.metrics.sessions,started:product.metrics.started,completed:product.metrics.completed,
+        completionRate:product.metrics.completionRate,sessionToExport:product.metrics.exportRate,
+        viewsPerDay:per(views),sessionsPerDay:per(product.metrics.sessions),exportsPerDay:per(exports),startedPerDay:per(product.metrics.started),completedPerDay:per(product.metrics.completed),
+        channels:product.channels.map(row=>{const label=row.label||{};return {source:label.source,medium:label.medium,campaign:label.campaign,sessions:row.sessions,started:row.started,completed:row.completed};})
+      };
+    };
+    // 同一长度窗口，供「上周」「四周前同期」使用；干净口径下前半段会被截掉或整体跳过。
+    const window=(start,clipTo)=>{
+      let from=dayOf(start),end=dayOf(start+6*86400000);
+      if(clipTo&&end>clipTo)end=clipTo;
+      if(clean){if(end<ANALYTICS_CLEAN_DAY)return null;if(from<ANALYTICS_CLEAN_DAY)from=ANALYTICS_CLEAN_DAY;}
+      return from>end?null:pack(from,end);
+    };
+    const rows=[];
+    for(let index=0;index<count;index++){
+      const start=monday-index*7*86400000;
+      if(dayOf(start)>to)continue;
+      const current=window(start,to);
+      if(!current)continue;
+      rows.push({index,from:current.from,to:current.to,inProgress:current.to<dayOf(start+6*86400000),current,prevWeek:window(start-7*86400000),prevMonth:window(start-28*86400000)});
+    }
+    return {scope:clean?'clean':'all',today:to,weeks:rows,notice:'按自然周（周一至周日）统计。本周仍在进行，对比请看日均；数据保留 90 天，可回看最近 12 周。'};
+  }
 export function renderHomepageDocument(html,settings){
     const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const site=settings.site,featured=settings.templates.filter(t=>t.enabled&&t.featured).slice(0,4);
@@ -186,6 +225,7 @@ export function createAdministration({root,dataDir=path.join(root,'private','adm
         if(req.method==='DELETE'){json(res,200,changelog.remove(id,await body(req)));return true;}
       }
       if(url.pathname==='/api/admin/summary'&&req.method==='GET'){json(res,200,summary(url.searchParams));return true;}
+      if(url.pathname==='/api/admin/weekly'&&req.method==='GET'){json(res,200,buildWeeklyReport({events,visits:[...visits.values()],weeks:url.searchParams.get('weeks'),scope:url.searchParams.get('scope')==='clean'?'clean':'all'}));return true;}
       if(url.pathname==='/api/admin/members'&&req.method==='GET'){json(res,200,memberSummary?await memberSummary(url.searchParams):{unavailable:true});return true;}
       if(url.pathname==='/api/admin/accounts'&&req.method==='GET'){json(res,200,memberAccounts?await memberAccounts(url.searchParams):{unavailable:true});return true;}
       if(url.pathname==='/api/admin/accounts/export'&&req.method==='GET'){

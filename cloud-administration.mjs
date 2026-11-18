@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import {promisify} from 'node:util';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
-import {ACTIONS,catalog,defaults,normalizeSettings,upgradeTemplateCatalog,dayOf,periodSummaryRows,exportFileName,period,buildSummary,renderHomepageDocument} from './admin.mjs';
+import {ACTIONS,catalog,defaults,normalizeSettings,upgradeTemplateCatalog,dayOf,periodSummaryRows,exportFileName,period,buildSummary,buildWeeklyReport,renderHomepageDocument} from './admin.mjs';
 import {buildSupportReport,mutateReceipts,receiptsCsv} from './sponsorship.mjs';
 import {normalizeChangelog} from './changelog.mjs';
 import {upgradeSiteBrand} from './site-brand.mjs';
@@ -155,6 +155,17 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
       if(route==='/api/auth/logout'&&req.method==='POST'){await q(`DELETE FROM ${table('sessions')} WHERE id=$1`,[sessionKey(req)]);res.setHeader('Set-Cookie','jianying_admin=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0'+(publicOrigin.startsWith('https://')||process.env.VERCEL?'; Secure':''));json(res,200,{ok:true});return true;}
       if(route==='/api/auth/password'&&req.method==='POST'){await budget(req,'login',8,15*60000);const input=await body(req,8192);await mutate('auth',async(auth,client)=>{if(!await matches(input.currentPassword,auth.admin))throw fail('当前密码不正确。',403);Object.assign(auth.admin,await password(input.password),{changedAt:new Date().toISOString()});await client.query(`DELETE FROM ${table('sessions')} WHERE id<>$1`,[sessionKey(req)]);});json(res,200,{ok:true});return true;}
       if(route==='/api/admin/summary'&&req.method==='GET'){const timing={};const value=await summary(url.searchParams,timing);res.setHeader('Server-Timing',`db;dur=${timing.dbMs}, build;dur=${timing.buildMs}, events;desc="${timing.events} rows", window;desc="${timing.windowDays} days"`);json(res,200,value);return true;}
+      if(route==='/api/admin/weekly'&&req.method==='GET'){
+        const scope=url.searchParams.get('scope')==='clean'?'clean':'all',
+          weeks=Math.min(12,Math.max(4,Number(url.searchParams.get('weeks')||8)||8)),
+          cutoff=scope==='clean'?ANALYTICS_CLEAN_SINCE:Date.now()-(weeks*7+42)*86400000,
+          [weeklyEvents,weeklyVisits]=await Promise.all([
+            q(`SELECT data FROM ${table('events')} WHERE time>=$1 ORDER BY time DESC,id DESC LIMIT 100000`,[cutoff]),
+            q(`SELECT * FROM ${table('visits')} WHERE updated>=$1 ORDER BY updated DESC LIMIT 100000`,[cutoff]),
+          ]);
+        json(res,200,buildWeeklyReport({events:weeklyEvents.rows.reverse().map(e=>e.data),visits:weeklyVisits.rows.map(v=>({id:v.id,path:v.path,seq:Number(v.seq),startedAt:Number(v.started),updatedAt:Number(v.updated),visibleMs:Number(v.visible),...v.data})),weeks,scope}));
+        return true;
+      }
       if(route==='/api/admin/members'&&req.method==='GET'){json(res,200,memberSummary?await memberSummary(url.searchParams):{unavailable:true});return true;}
       if(route==='/api/admin/accounts'&&req.method==='GET'){json(res,200,memberAccounts?await memberAccounts(url.searchParams):{unavailable:true});return true;}
       if(route==='/api/admin/accounts/export'&&req.method==='GET'){

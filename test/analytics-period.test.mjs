@@ -5,7 +5,7 @@ import {once} from 'node:events';
 import os from 'node:os';
 import path from 'node:path';
 import {ANALYTICS_CLEAN_SINCE as boundary,analyticsScope,selectAnalyticsPeriod,analyticsWindowStart,ANALYTICS_RETENTION_DAYS} from '../analytics-period.mjs';
-import {buildSummary,defaults,periodSummaryRows,exportFileName} from '../admin.mjs';
+import {buildSummary,defaults,periodSummaryRows,exportFileName,buildWeeklyReport} from '../admin.mjs';
 import {productAudience,productTrend} from '../assets/js/admin-product.js';
 import {createResumeServer} from '../serve.mjs';
 
@@ -47,6 +47,21 @@ test('每份导出的文件自带周期、日均和上一期对比，文件名�
   assert.match(periodSummaryRows({...summary,scope:'clean'}).map(row=>row.join('|')).join('\n'),/干净口径从分界当天开始，暂无可比的上期/);
   assert.equal(exportFileName('analytics',summary),'jianying-analytics-2026-11-10_2026-11-11.csv');
   assert.equal(exportFileName('engagement',{...summary,scope:'clean'}),'jianying-engagement-2026-11-10_2026-11-11-clean.csv');
+});
+test('周报按自然周（周一起）并排，本周未结束按日均对比，干净口径截到分界日',()=>{
+  const at=(date,type='page_view',visitor='w-'+date+type)=>({time:Date.parse(date+'T10:00:00+08:00'),day:date,type,path:'/resume/',visitor,device:'desktop',attribution:null});
+  const events=[at('2026-11-10'),at('2026-11-16'),at('2026-11-16','resume_export','w-same'),at('2026-11-17')];
+  const report=buildWeeklyReport({events,visits:[],weeks:8,to:'2026-11-18'});
+  assert.equal(report.weeks.length,8,'默认回看 8 周');
+  const [now,last]=report.weeks;
+  assert.deepEqual([now.current.from,now.current.to,now.current.days],['2026-11-16','2026-11-18',3]);
+  assert.equal(now.inProgress,true);
+  assert.equal(now.current.views,2);assert.equal(now.current.viewsPerDay,0.7);
+  assert.equal(last.current.from,'2026-11-09');assert.equal(last.current.to,'2026-11-15');assert.equal(last.current.views,1);
+  assert.equal(now.prevWeek.from,'2026-11-09');assert.equal(now.prevMonth.from,'2026-10-19');
+  const clean=buildWeeklyReport({events,visits:[],weeks:8,to:'2026-11-18',scope:'clean'});
+  assert.equal(clean.scope,'clean');assert.equal(clean.weeks.length,1,'干净口径下分界前没有整周可看');
+  assert.equal(clean.weeks[0].current.from,'2026-11-16');assert.equal(clean.weeks[0].prevWeek,null);
 });
 test('requested dates without records keep an empty series instead of a fabricated chart',()=>{
   const summary=buildSummary({events:[event(1)],visits:[visit(2)],settings:defaults(),range:{from:'2026-11-01',to:'2026-11-02'}});
