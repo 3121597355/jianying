@@ -12,3 +12,31 @@ export function normalizeBasicFields(input){
   }));
 }
 export const visibleBasicFields=input=>normalizeBasicFields(input).filter(item=>item.visible&&item.value.trim());
+
+/** 基本信息可排序字段。身高体重共用一行，以 height 作为该行的键。 */
+export const BASIC_FIELD_KEYS=['name','sex','birthday','photo','workYears','mobile','email','hunyin','height','minzu','jiguan','zhengzhi'];
+export const DEFAULT_BASIC_ORDER=[...BASIC_FIELD_KEYS];
+
+/** 只保留认识的键，缺失的按默认顺序补在末尾，避免旧草稿或外部写入打乱表单。 */
+export function normalizeBasicOrder(input){
+  const seen=new Set(),out=[];
+  for(const key of Array.isArray(input)?input:[]){
+    if(!BASIC_FIELD_KEYS.includes(key)||seen.has(key))continue;
+    seen.add(key);out.push(key);
+  }
+  for(const key of DEFAULT_BASIC_ORDER)if(!seen.has(key))out.push(key);
+  return out;
+}
+
+export function hasCustomBasicOrder(input){
+  return Array.isArray(input)&&input.some(key=>BASIC_FIELD_KEYS.includes(key))
+    &&normalizeBasicOrder(input).join()!==DEFAULT_BASIC_ORDER.join();
+}
+
+export function moveBasicKey(order,key,index){
+  const list=normalizeBasicOrder(order),from=list.indexOf(key);
+  if(from<0)return list;
+  const to=Math.max(0,Math.min(list.length-1,Number(index)||0));
+  list.splice(to,0,...list.splice(from,1));
+  return list;
+}

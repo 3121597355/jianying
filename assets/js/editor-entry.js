@@ -3,7 +3,7 @@ import { loadVendor } from './vendor-loader.js';
 async function startEditor() {
   try {
     const [{ bootEditor }] = await Promise.all([
-      import('./app.js?v=20261118-coach'),
+      import('./app.js?v=20261118-basic-order'),
       loadVendor('/assets/vendor/quill.js', () => Boolean(window.Quill)),
     ]);
     bootEditor();

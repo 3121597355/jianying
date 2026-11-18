@@ -7,7 +7,7 @@ import { getResume, getUi, getModule, set, commit, blankItem } from './store.js'
 import { animateIn, animateDisclosure } from './motion.js';
 import {PROJECT_FIELDS,PROJECT_SPACING,projectSpacing,normalizeProjectDetails,projectFieldShown,safeProjectUrl} from './project-fields.js';
 import {bulletProjectContributions,setupProjectEditor} from './project-layout.js';
-import {normalizeBasicFields,MAX_BASIC_FIELDS,BASIC_FIELD_NAME_LIMIT,BASIC_FIELD_VALUE_LIMIT} from './basic-fields.js';
+import {normalizeBasicFields,normalizeBasicOrder,hasCustomBasicOrder,MAX_BASIC_FIELDS,BASIC_FIELD_NAME_LIMIT,BASIC_FIELD_VALUE_LIMIT} from './basic-fields.js';
 import {
   SEX, MARRIAGE, POLITICS, DEGREE, WORK_YEARS, MODULES,
   HOT_CITIES, JOB_LIST, MONTH_OPTIONS, optionalLabel, degreeLabel,
@@ -57,14 +57,15 @@ function basicCustomFields(input){
 function formBasic(r) {
   const b = r.basicInfo;
   const yrs = WORK_YEARS.map((t, i) => opt(i - 1, t, b.workYears)).join('');
-  return `<div class="edit_b_list active_full">
-  <p class="info_tip"><i class="el-icon-info"></i>填写的信息会自动排版在简历上，不需要的信息可以选择不填或删除内容。</p>
-  <ul class="info_list clearfix hide_more">
-    <li><b>姓　名</b><input class="input" data-k="basicInfo.name" maxlength="49" placeholder="输入你的姓名" value="${esc(b.name)}"></li>
-    <li><b>性　别</b><select class="input" data-k="basicInfo.sex">${SEX.map((t, i) => opt(i, t, b.sex)).join('')}</select></li>
-    <li><b>出生年月</b><input class="input" type="month" data-k="basicInfo.birthday" value="${esc(b.birthday)}"></li>
-    <li class="photo-settings"><b>照片设置</b>
-      <div class="photo-controls">
+  const grip = '<button type="button" class="basic-field-grip" data-basic-grip aria-label="拖动调整顺序，也可用上下方向键" title="拖动调整顺序"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="1.35"/><circle cx="15" cy="7" r="1.35"/><circle cx="9" cy="12" r="1.35"/><circle cx="15" cy="12" r="1.35"/><circle cx="9" cy="17" r="1.35"/><circle cx="15" cy="17" r="1.35"/></svg></button>';
+  const row = (key, body, className = '') => `<li data-basic-key="${key}"${className ? ` class="${className}"` : ''}>${grip}<b>${body.label}</b>${body.control}</li>`;
+  const rows = {
+    name: () => row('name', { label: '姓　名', control: `<input class="input" data-k="basicInfo.name" maxlength="49" placeholder="输入你的姓名" value="${esc(b.name)}">` }),
+    sex: () => row('sex', { label: '性　别', control: `<select class="input" data-k="basicInfo.sex">${SEX.map((t, i) => opt(i, t, b.sex)).join('')}</select>` }),
+    birthday: () => row('birthday', { label: '出生年月', control: `<input class="input" type="month" data-k="basicInfo.birthday" value="${esc(b.birthday)}">` }),
+    photo: () => row('photo', {
+      label: '照片设置',
+      control: `<div class="photo-controls">
         <div class="photo-actions">
           <button type="button" class="photo_upload" data-act="pickPhoto">${b.photo ? '更换照片' : '上传照片'}</button>
           ${b.photo ? '<button type="button" class="photo_remove" data-act="removePhoto">移除</button>' : ''}
@@ -74,20 +75,26 @@ function formBasic(r) {
           <span class="el-checkbox__label">展示照片</span>
         </label>
       </div>
-      <input type="file" accept="image/*" id="photoFile" style="display:none">
-    </li>
-    <li><b>工作年限</b><select class="input" data-k="basicInfo.workYears">${yrs}</select></li>
-    <li><b>联系电话</b><input class="input" data-k="basicInfo.mobile" maxlength="49" placeholder="输入联系电话" value="${esc(b.mobile)}"></li>
-    <li><b>联系邮箱</b><input class="input" data-k="basicInfo.email" maxlength="49" placeholder="输入联系邮箱" value="${esc(b.email)}"></li>
-    <li><b>婚姻状况</b><select class="input" data-k="basicInfo.hunyin">${MARRIAGE.map((t, i) => opt(i, t, b.hunyin)).join('')}</select></li>
-    <li class="more-item"><b>身高/体重</b>
-      <input class="input w60" type="number" data-k="basicInfo.height" placeholder="身高" value="${esc(b.height)}"> cm
-      <input class="input w60 ml20" type="number" data-k="basicInfo.weight" placeholder="体重" value="${esc(b.weight)}"> kg
-    </li>
-    <li class="more-item"><b>民　族</b><input class="input" data-k="basicInfo.minzu" maxlength="49" placeholder="如：汉族" value="${esc(b.minzu)}"></li>
-    <li class="more-item"><b>籍　贯</b><input class="input" data-k="basicInfo.jiguan" maxlength="49" placeholder="如：浙江杭州" value="${esc(b.jiguan)}"></li>
-    <li class="more-item"><b>政治面貌</b><select class="input" data-k="basicInfo.zhengzhi">${POLITICS.map((t, i) => opt(i, t, Math.max(0, POLITICS.indexOf(optionalLabel(POLITICS, b.zhengzhi))))).join('')}</select></li>
-  </ul>
+      <input type="file" accept="image/*" id="photoFile" style="display:none">`
+    }, 'photo-settings'),
+    workYears: () => row('workYears', { label: '工作年限', control: `<select class="input" data-k="basicInfo.workYears">${yrs}</select>` }),
+    mobile: () => row('mobile', { label: '联系电话', control: `<input class="input" data-k="basicInfo.mobile" maxlength="49" placeholder="输入联系电话" value="${esc(b.mobile)}">` }),
+    email: () => row('email', { label: '联系邮箱', control: `<input class="input" data-k="basicInfo.email" maxlength="49" placeholder="输入联系邮箱" value="${esc(b.email)}">` }),
+    hunyin: () => row('hunyin', { label: '婚姻状况', control: `<select class="input" data-k="basicInfo.hunyin">${MARRIAGE.map((t, i) => opt(i, t, b.hunyin)).join('')}</select>` }),
+    height: () => row('height', {
+      label: '身高/体重',
+      control: `<input class="input w60" type="number" data-k="basicInfo.height" placeholder="身高" value="${esc(b.height)}"> cm
+      <input class="input w60 ml20" type="number" data-k="basicInfo.weight" placeholder="体重" value="${esc(b.weight)}"> kg`
+    }, 'more-item'),
+    minzu: () => row('minzu', { label: '民　族', control: `<input class="input" data-k="basicInfo.minzu" maxlength="49" placeholder="如：汉族" value="${esc(b.minzu)}">` }, 'more-item'),
+    jiguan: () => row('jiguan', { label: '籍　贯', control: `<input class="input" data-k="basicInfo.jiguan" maxlength="49" placeholder="如：浙江杭州" value="${esc(b.jiguan)}">` }, 'more-item'),
+    zhengzhi: () => row('zhengzhi', { label: '政治面貌', control: `<select class="input" data-k="basicInfo.zhengzhi">${POLITICS.map((t, i) => opt(i, t, Math.max(0, POLITICS.indexOf(optionalLabel(POLITICS, b.zhengzhi))))).join('')}</select>` }, 'more-item'),
+  };
+  const list = normalizeBasicOrder(r.setData?.basicOrder).map(key => rows[key] ? rows[key]() : '').join('');
+  return `<div class="edit_b_list active_full">
+  <p class="info_tip"><i class="el-icon-info"></i>填写的信息会自动排版在简历上，不需要的信息可以选择不填或删除内容。</p>
+  <p class="basic-sort-hint">拖动左侧圆点调整显示顺序，也可以聚焦后按 ↑ ↓ 移动。${hasCustomBasicOrder(r.setData?.basicOrder) ? '<button type="button" class="basic-sort-reset" data-basic-sort-reset>恢复默认顺序</button>' : ''}</p>
+  <ul class="info_list clearfix hide_more" data-basic-list>${list}</ul>
   <div class="line_box mb10"><span class="btn_more" data-act="toggleMore">展开更多信息 <i class="webfont webicon-jiantoudown"></i></span></div>
   ${basicCustomFields(b.make)}
 </div>`;
@@ -482,6 +489,10 @@ function bind(host, def) {
     host.querySelector('[data-project-spacing-label]').textContent=PROJECT_SPACING.find(option=>option.value===node.dataset.projectSpacing).label+'间距';
   }));
   host.querySelector('.project-extras')?.addEventListener('toggle',event=>{getUi().projectExtrasOpen=event.currentTarget.open;commit({uiOnly:true});});
+
+  host.querySelector('[data-basic-sort-reset]')?.addEventListener('click', () => {
+    set(rr => { rr.setData.basicOrder = []; }, { structural: true });
+  });
 
   // 展开更多
   host.querySelector('[data-act="toggleMore"]')?.addEventListener('click', e => {

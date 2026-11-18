@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeBasicFields,MAX_BASIC_FIELDS} from '../assets/js/basic-fields.js';
+import {normalizeBasicFields,MAX_BASIC_FIELDS,normalizeBasicOrder,moveBasicKey,hasCustomBasicOrder,DEFAULT_BASIC_ORDER} from '../assets/js/basic-fields.js';
 import {createDefault} from '../assets/js/resume-defaults.js';
 import {TEMPLATES,renderByTpl} from '../assets/js/templates.js';
 import {normalizeResume,modelResume} from '../resume-document.mjs';
@@ -35,4 +35,32 @@ test('AI suggestions retain custom basic details and never send them to the mode
   const input=normalizeResume(r);assert(!JSON.stringify(modelResume(input)).includes('private-'));
   const result=applyModelResult(input,{requirements:[],suggestions:[{moduleName:'project',index:0,sourceRefs:['project:0'],bullets:['使用 JavaScript 实现编辑。']}]},'JavaScript 开发','开发');
   assert.deepEqual(result.resume.basicInfo.make,input.basicInfo.make);
+});
+
+test('basic field order keeps only known keys and falls back to the default order',()=>{
+  assert.deepEqual(normalizeBasicOrder(undefined),DEFAULT_BASIC_ORDER);
+  assert.deepEqual(normalizeBasicOrder([]),DEFAULT_BASIC_ORDER);
+  assert.deepEqual(normalizeBasicOrder(['sex','sex','不存在的键']),['sex',...DEFAULT_BASIC_ORDER.filter(key=>key!=='sex')]);
+  assert.deepEqual(moveBasicKey(DEFAULT_BASIC_ORDER,'email',0)[0],'email');
+  assert.deepEqual(moveBasicKey(DEFAULT_BASIC_ORDER,'name',3).indexOf('name'),3);
+  assert.deepEqual(moveBasicKey(DEFAULT_BASIC_ORDER,'name',99).at(-1),'name');
+  assert.equal(hasCustomBasicOrder(undefined),false,'未调整过的草稿仍按原版式渲染');
+  assert.equal(hasCustomBasicOrder(DEFAULT_BASIC_ORDER),false);
+  assert.equal(hasCustomBasicOrder(['email',...DEFAULT_BASIC_ORDER.filter(key=>key!=='email')]),true);
+});
+
+test('custom basic order survives save and drives the resume header order',()=>{
+  const r=createDefault();
+  r.basicInfo={...r.basicInfo,name:'张三',sex:1,birthday:'1990-01',mobile:'13800000000',email:'hi@example.com',minzu:'汉族'};
+  const before=renderByTpl(r);
+  assert(before.indexOf('hi@example.com')>0);
+  const order=['email','mobile','sex','birthday','name','photo','workYears','hunyin','height','minzu','jiguan','zhengzhi'];
+  r.setData.basicOrder=order;
+  const html=renderByTpl(r);
+  assert(html.indexOf('hi@example.com')>0&&html.indexOf('13800000000')>0,'联系方式仍会展示');
+  assert(html.indexOf('hi@example.com')<html.indexOf('13800000000'),'邮箱按设置排在手机号之前');
+  assert.equal((html.match(/id="myname"/g)||[]).length,1,'姓名仍是唯一的标题锚点');
+  const saved=normalizeResume(r);
+  assert.deepEqual(saved.setData.basicOrder,order,'云端保存后顺序不丢失');
+  assert.deepEqual(normalizeResume(JSON.parse(JSON.stringify(saved))),saved);
 });

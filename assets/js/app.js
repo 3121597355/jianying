@@ -21,10 +21,23 @@ import {chooseTemplate} from './template-choice.js';
 import {hasResumeContent,isTemplateSample} from './template-samples.js';
 import {setupEditorGuide} from './editor-guide.js';
 import {MOBILE_EDITOR_MEDIA} from './mobile-layout.js';
+import { bindBasicFieldDrag } from './basic-drag.js?v=20261118-basic-order';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/** 基本信息排序：拖动或方向键调整后写回 setData.basicOrder，并把焦点还给原来的手柄。 */
+function renderFormWithBasicOrder(host) {
+  if (!host) return;
+  renderForm(host);
+  const list = host.querySelector('[data-basic-list]');
+  if (!list) return;
+  bindBasicFieldDrag(list, (key, next) => {
+    set(rr => { rr.setData.basicOrder = next; }, { structural: true });
+    requestAnimationFrame(() => document.querySelector(`#formHost [data-basic-key="${key}"] [data-basic-grip]`)?.focus({ preventScroll: true }));
+  });
+}
 
 /** 编辑器样式使用作用域选择器（[data-v-xxxx]），动态插入的节点必须补上对应作用域属性才能命中。
  *  编辑区涉及 4 个组件作用域：主页面 236d5b80、经历布局 271b76ba、73ef5012、AI 面板 bc933204。 */
@@ -827,7 +840,7 @@ export function bootEditor() {
   }
   $$('.set_list > li').forEach(item=>{const nav=WORKSPACE_NAV.find(nav=>nav.id===item.dataset.set),icon=item.querySelector('.set_btn > i,.click_btn > i');if(icon&&nav) {icon.className='';icon.innerHTML=`<svg ${nav.id==='portrait'?'class="portrait-icon"':''} viewBox="0 0 24 24" aria-hidden="true">${nav.icon}</svg>`;}});
   renderTabs();
-  renderForm($('#formHost'));
+  renderFormWithBasicOrder($('#formHost'));
   renderPreview();
   // Finalize entry after all draft/template initialization. A history-restored
   // page must also expose the form instead of reviving a folded blank preview.
@@ -844,7 +857,7 @@ export function bootEditor() {
     if (opts && opts.structural) {
       renderTabs();
       const host = $('#formHost');
-      if (host) { disposeEditors(); renderForm(host); }
+      if (host) { disposeEditors(); renderFormWithBasicOrder(host); }
     } else if (opts && opts.tabs) {
       renderTabs();
     }
