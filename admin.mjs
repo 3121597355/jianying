@@ -78,6 +78,28 @@ export function buildSummary({events=[],visits=[],settings,range,scope='all'}){
     const series=[];for(let time=Date.parse(range.from);time<=Date.parse(range.to);time+=86400000){const date=new Date(time).toISOString().slice(0,10),dayEvents=selected.filter(e=>e.day===date);series.push({date,views:dayEvents.filter(e=>e.type==='page_view').length,actions:dayEvents.filter(e=>e.type!=='page_view'&&!e.type.endsWith('_error')).length});}
     return {range,requestedRange,scope:clean?'clean':'all',collection,enabled:settings.analytics.enabled,engagement,product,acquisition:buildAcquisition(selected),metrics:{views:views.length,visitors:new Set(views.filter(e=>e.visitor).map(e=>e.visitor)).size,exports:actions.filter(e=>['resume_export','portrait_export'].includes(e.type)).length,actions:actions.length},series,pages:Object.entries(routes).map(([route,name])=>({route,name,views:views.filter(e=>e.path===route).length,actions:actions.filter(e=>e.path===route).length})),actions:count(actions,'type').map(item=>({...item,name:ACTIONS[item.label]})),sources:count(views,'source'),devices:count(views,'device').map(item=>({...item,name:({desktop:'电脑',mobile:'手机',tablet:'平板'})[item.label]})),templates:settings.templates.map(t=>({id:t.id,name:t.name,uses:actions.filter(e=>e.type==='template_select'&&e.templateId===t.id).length})),recent:actions.slice(-15).reverse().map(({time,type,path,templateId})=>({time,type,name:ACTIONS[type],path,templateId})),updatedAt:new Date().toISOString()};
   }
+// 每份导出的 CSV 都带一段周期摘要：周期起止、天数、各项日均和上一期对比。
+// 这样导出的文件自己就能说明是哪一期、好不好，复盘时不必回头再翻后台。
+export function periodSummaryRows({range,scope,metrics,product}){
+    const dayCount=Math.round((Date.parse(range.to)-Date.parse(range.from))/86400000)+1,
+      perDay=value=>(value/dayCount).toFixed(1),
+      day=offset=>new Date(offset).toISOString().slice(0,10),
+      rows=[
+        ['统计周期',`${range.from} 至 ${range.to}（${dayCount} 天）`],
+        ['页面访问',`${metrics.views} 次（日均 ${perDay(metrics.views)}）`],
+        ['独立访客',`${metrics.visitors} 位（日均 ${perDay(metrics.visitors)}）`],
+        ['功能操作',`${metrics.actions} 次（日均 ${perDay(metrics.actions)}）`],
+        ['完成导出',`${metrics.exports} 次（日均 ${perDay(metrics.exports)}）`]
+      ];
+    if(scope!=='clean'&&product?.previous&&product?.metrics){
+      const start=Date.parse(range.from);
+      rows.push(['上一期对比',`${day(start-dayCount*86400000)} 至 ${day(start-86400000)}：访问会话 ${product.previous.sessions} → ${product.metrics.sessions}，完成导出 ${product.previous.completed} → ${product.metrics.completed}`]);
+    }else rows.push(['上一期对比','干净口径从分界当天开始，暂无可比的上期']);
+    return [[],['周期摘要',''],...rows];
+  }
+export function exportFileName(kind,{range,scope}){
+    return `jianying-${kind}-${range.from}_${range.to}${scope==='clean'?'-clean':''}.csv`;
+  }
 export function renderHomepageDocument(html,settings){
     const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const site=settings.site,featured=settings.templates.filter(t=>t.enabled&&t.featured).slice(0,4);
@@ -142,7 +164,7 @@ export function createAdministration({root,dataDir=path.join(root,'private','adm
       if(url.pathname==='/api/analytics/visit'&&req.method==='POST'){recordVisit(req,await body(req,2048));res.writeHead(204,{'Cache-Control':'no-store'}).end();return true;}
       if(url.pathname==='/api/admin/engagement/export'&&req.method==='GET'){
         auth.requireSession(req);const result=summary(url.searchParams),data=result.engagement,cell=value=>'"'+String(value??'').replaceAll('"','""')+'"';
-        const rows=[['按页面统计','可测访问','结束页面','平均可见秒数','中位秒数','退出会话','未完成短停留','任务完成后退出'],...data.pages.map(p=>[p.name,p.visits,p.completedPages,p.averageMs===null?'':p.averageMs/1000,p.medianMs===null?'':p.medianMs/1000,p.exits,p.quickUnfinished,p.successfulExits]),[],['小时（UTC+8）','进入会话','退出会话','该时段进入且已结束','该时段未完成短停留'],...data.hours.map(h=>[h.hour,h.entries,h.exits,h.completedEntries,h.quickUnfinished]),...analyticsCsvNotes(result.collection)];res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="jianying-engagement.csv"','Cache-Control':'no-store'}).end('\uFEFF'+rows.map(row=>row.map(cell).join(',')).join('\r\n'));return true;
+        const rows=[['按页面统计','可测访问','结束页面','平均可见秒数','中位秒数','退出会话','未完成短停留','任务完成后退出'],...data.pages.map(p=>[p.name,p.visits,p.completedPages,p.averageMs===null?'':p.averageMs/1000,p.medianMs===null?'':p.medianMs/1000,p.exits,p.quickUnfinished,p.successfulExits]),[],['小时（UTC+8）','进入会话','退出会话','该时段进入且已结束','该时段未完成短停留'],...data.hours.map(h=>[h.hour,h.entries,h.exits,h.completedEntries,h.quickUnfinished]),...analyticsCsvNotes(result.collection),...periodSummaryRows(result)];res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="'+exportFileName('engagement',result)+'"','Cache-Control':'no-store'}).end('\uFEFF'+rows.map(row=>row.map(cell).join(',')).join('\r\n'));return true;
       }
       if(url.pathname==='/api/auth/status'&&req.method==='GET'){const current=auth.session(req);json(res,200,current?sessionStatus(current):{authenticated:false,configured:auth.configured()});return true;}
       if(url.pathname==='/api/auth/setup'){json(res,410,{error:'网页创建管理员已停用，请使用管理员账户和密码登录。'});return true;}
@@ -176,7 +198,7 @@ export function createAdministration({root,dataDir=path.join(root,'private','adm
       if(url.pathname==='/api/admin/resume-ai'&&req.method==='PUT'){if(!updateMemberConfiguration)throw fail('AI 服务未连接。',503);json(res,200,await updateMemberConfiguration(await body(req)));return true;}
       if(url.pathname==='/api/admin/settings'&&req.method==='GET'){json(res,200,result());return true;}
       if(url.pathname==='/api/admin/settings'&&req.method==='PUT'){const input=await body(req);if(input.revision!==revision())throw fail('设置已在其他窗口更新。请刷新后重新编辑。',409);const next=normalizeSettings(input.settings);atomic(settingsFile,JSON.stringify(next,null,2));settings=next;json(res,200,result());return true;}
-      if(url.pathname==='/api/admin/export'&&req.method==='GET'){const s=summary(url.searchParams),rows=url.searchParams.get('view')==='product'?productAnalyticsCsvRows(s.product):url.searchParams.get('view')==='acquisition'?productAcquisitionCsvRows(s.product):[['日期','页面访问','功能操作'],...s.series.map(e=>[e.date,e.views,e.actions]),...analyticsCsvNotes(s.collection)];res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="jianying-analytics.csv"','Cache-Control':'no-store'}).end('\uFEFF'+rows.map(row=>row.map(value=>'"'+String(value??'').replaceAll('"','""')+'"').join(',')).join('\r\n'));return true;}
+      if(url.pathname==='/api/admin/export'&&req.method==='GET'){const s=summary(url.searchParams),rows=url.searchParams.get('view')==='product'?productAnalyticsCsvRows(s.product):url.searchParams.get('view')==='acquisition'?productAcquisitionCsvRows(s.product):[['日期','页面访问','功能操作'],...s.series.map(e=>[e.date,e.views,e.actions]),...analyticsCsvNotes(s.collection)];rows.push(...periodSummaryRows(s));res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="'+exportFileName('analytics',s)+'"','Cache-Control':'no-store'}).end('\uFEFF'+rows.map(row=>row.map(value=>'"'+String(value??'').replaceAll('"','""')+'"').join(',')).join('\r\n'));return true;}
       if(url.pathname==='/api/admin/backup'&&req.method==='GET'){res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="jianying-site-settings.json"','Cache-Control':'no-store'}).end(JSON.stringify({version:1,settings},null,2));return true;}
       if(url.pathname==='/api/admin/keys'&&req.method==='GET'){json(res,200,{keys:auth.keys()});return true;}
       if(url.pathname==='/api/admin/keys'&&req.method==='POST'){json(res,201,auth.createKey((await body(req,8192)).name));return true;}

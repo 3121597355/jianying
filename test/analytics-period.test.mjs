@@ -5,7 +5,7 @@ import {once} from 'node:events';
 import os from 'node:os';
 import path from 'node:path';
 import {ANALYTICS_CLEAN_SINCE as boundary,analyticsScope,selectAnalyticsPeriod,analyticsWindowStart,ANALYTICS_RETENTION_DAYS} from '../analytics-period.mjs';
-import {buildSummary,defaults} from '../admin.mjs';
+import {buildSummary,defaults,periodSummaryRows,exportFileName} from '../admin.mjs';
 import {productAudience,productTrend} from '../assets/js/admin-product.js';
 import {createResumeServer} from '../serve.mjs';
 
@@ -35,6 +35,18 @@ test('干净口径只统计分界之后的记录，并从分界当天开始算',
   assert.equal(summary.product.previous,null);assert.equal(summary.series.length,2);
   assert.equal(selectAnalyticsPeriod({range,events,visits,scope:'clean'}).events.length,2);
   assert.equal(selectAnalyticsPeriod({range,events,visits,scope:'all'}).events.length,3);
+});
+test('每份导出的文件自带周期、日均和上一期对比，文件名也标明周期与口径',()=>{
+  const at=(date,type='page_view',visitor='export-'+date+type)=>({time:Date.parse(date+'T10:00:00+08:00'),day:date,type,path:'/resume/',visitor,device:'desktop',attribution:null});
+  const events=[at('2026-11-09'),at('2026-11-10'),at('2026-11-10','resume_export'),at('2026-11-11'),at('2026-11-11','resume_export')];
+  const summary=buildSummary({events,visits:[],settings:defaults(),range:{from:'2026-11-10',to:'2026-11-11'}}),rows=periodSummaryRows(summary).map(row=>row.join('|'));
+  assert.match(rows.join('\n'),/统计周期\|2026-11-10 至 2026-11-11（2 天）/);
+  assert.match(rows.join('\n'),/页面访问\|2 次（日均 1\.0）/);
+  assert.match(rows.join('\n'),/完成导出\|2 次（日均 1\.0）/);
+  assert.match(rows.join('\n'),/上一期对比\|2026-11-08 至 2026-11-09：访问会话 \d+ → \d+，完成导出 0 → 2/);
+  assert.match(periodSummaryRows({...summary,scope:'clean'}).map(row=>row.join('|')).join('\n'),/干净口径从分界当天开始，暂无可比的上期/);
+  assert.equal(exportFileName('analytics',summary),'jianying-analytics-2026-11-10_2026-11-11.csv');
+  assert.equal(exportFileName('engagement',{...summary,scope:'clean'}),'jianying-engagement-2026-11-10_2026-11-11-clean.csv');
 });
 test('requested dates without records keep an empty series instead of a fabricated chart',()=>{
   const summary=buildSummary({events:[event(1)],visits:[visit(2)],settings:defaults(),range:{from:'2026-11-01',to:'2026-11-02'}});
