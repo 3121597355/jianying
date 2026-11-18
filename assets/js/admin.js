@@ -22,10 +22,12 @@ let changelogData;
 let usersQuery={q:'',sort:'recent',page:1,days:30};
 // 默认看近 7 天：数据量还小，7 天窗口才看得到每天的起伏。
 let csrf='',username='',panel='overview',days=7,custom=null,settings,revision='',summary,dirty=false,requestId=0,toastTimer;
+// 干净口径：只统计清洁分界之后的记录，把早期本人访问和调试流量排除掉。
+let cleanOnly=false;
 // 同一天区间的概览只取一次；切栏目直接用缓存渲染，要最新数据点「刷新」。
 const summaryCache=new Map();let paintedPanel='';
 const isAnalyticsPanel=()=>['overview','features','audience','engagement'].includes(panel);
-const params=()=>new URLSearchParams(custom||{days}).toString();
+const params=()=>{const query=new URLSearchParams(custom||{days});if(cleanOnly)query.set('scope','clean');return query.toString();};
 function applySummaryMeta(){if(!summary?.range)return;$('#date-from').value=summary.range.from;$('#date-to').value=summary.range.to;showAnalyticsPeriod(summary.collection);$('#analytics-period-notice').hidden=false;}
 const panelMarkup=()=>({overview,features,audience,engagement:engagementView})[panel]();
 function showAnalyticsPeriod(collection){
@@ -146,6 +148,7 @@ window.addEventListener('hashchange',()=>void navigate(location.hash.slice(1)));
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
 $('#refresh-data').addEventListener('click',()=>{if(!dirty||confirm('刷新会放弃尚未保存的修改，确定刷新？')){summaryCache.clear();void load();}});
 $$('[data-days]').forEach(button=>button.addEventListener('click',()=>{days=Number(button.dataset.days);custom=null;$$('[data-days]').forEach(b=>b.classList.toggle('active',b===button));void load();}));
+$('#clean-scope').addEventListener('click',event=>{cleanOnly=!cleanOnly;event.currentTarget.setAttribute('aria-pressed',String(cleanOnly));void load();});
 $('#date-form').addEventListener('submit',event=>{event.preventDefault();custom={from:$('#date-from').value,to:$('#date-to').value};$$('[data-days]').forEach(b=>b.classList.remove('active'));void load();});
 $('#logout').addEventListener('click',async()=>{if(dirty&&!confirm('有尚未保存的修改，确定退出？'))return;try{await api('/api/auth/logout','POST');showLogin(false);}catch(error){showError(error.message);}});
 let dark=false;try{dark=JSON.parse(localStorage.getItem('qmj-clone:ui')||'{}').theme==='dark';}catch{}

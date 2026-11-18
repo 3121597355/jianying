@@ -24,6 +24,18 @@ test('records before and after the historical boundary form one timeline',()=>{
   assert.equal(summary.recent.length,2);assert.equal(summary.recent[0].type,'resume_export');
   assert.equal(JSON.stringify({events,visits}),before);
 });
+test('干净口径只统计分界之后的记录，并从分界当天开始算',()=>{
+  const events=[event(-200,'page_view'),event(100,'page_view'),event(200,'resume_export')],visits=[visit(-300,-250),visit(300,400)];
+  const summary=buildSummary({events,visits,range:{from:'2026-11-15',to:'2026-11-17'},settings:defaults(),scope:'clean'});
+  assert.equal(summary.collection.scope,'clean');assert.match(summary.collection.notice,/之后的记录/);
+  assert.deepEqual(summary.range,{from:'2026-11-16',to:'2026-11-17'});assert.deepEqual(summary.requestedRange,{from:'2026-11-15',to:'2026-11-17'});
+  // 分界之前的事件和访问整体排除，指标只按剩下的两天算。
+  assert.equal(summary.metrics.views,1);assert.equal(summary.metrics.exports,1);
+  assert.equal(summary.engagement.metrics.measuredVisits,1);
+  assert.equal(summary.product.previous,null);assert.equal(summary.series.length,2);
+  assert.equal(selectAnalyticsPeriod({range,events,visits,scope:'clean'}).events.length,2);
+  assert.equal(selectAnalyticsPeriod({range,events,visits,scope:'all'}).events.length,3);
+});
 test('requested dates without records keep an empty series instead of a fabricated chart',()=>{
   const summary=buildSummary({events:[event(1)],visits:[visit(2)],settings:defaults(),range:{from:'2026-11-01',to:'2026-11-02'}});
   assert.equal(summary.metrics.views,0);assert.equal(summary.product.metrics.sessions,0);assert.equal(summary.product.metrics.completionRate,null);

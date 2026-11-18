@@ -15,7 +15,7 @@ import {createSponsorship,buildSupportReport,receiptsCsv,SUPPORT_EVENTS} from '.
 import {ANALYTICS_PAGES} from './assets/js/public-pages.js';
 import {excludeAnalyticsRequest} from './analytics-policy.mjs';
 import {buildProductAnalytics,productAnalyticsCsvRows,productAcquisitionCsvRows} from './product-analytics.mjs';
-import {selectAnalyticsPeriod,analyticsCsvNotes} from './analytics-period.mjs';
+import {selectAnalyticsPeriod,analyticsCsvNotes,ANALYTICS_CLEAN_DAY} from './analytics-period.mjs';
 
 const fail = (message, status=400) => Object.assign(new Error(message), {status});
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
@@ -60,8 +60,11 @@ function normalizeSettings(input){
   return {site,templates,defaultTemplate,analytics:{enabled:input.analytics.enabled},support};
 }
 export function period(params){let from,to;if(params.has('from')||params.has('to')){from=params.get('from');to=params.get('to');}else{const days=Number(params.get('days')||30);if(![7,30,90].includes(days))throw fail('请选择 7、30 或 90 天。');to=dayOf(Date.now());from=dayOf(Date.now()-(days-1)*86400000);}const valid=value=>/^\d{4}-\d{2}-\d{2}$/.test(value||'')&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;if(!valid(from)||!valid(to)||from>to||(Date.parse(to)-Date.parse(from))/86400000>=90)throw fail('请选择不超过 90 天的有效日期范围。');return {from,to};}
-export function buildSummary({events=[],visits=[],settings,range}){
-    const requestedRange=range,periodData=selectAnalyticsPeriod({events,visits,range});
+export function buildSummary({events=[],visits=[],settings,range,scope='all'}){
+    const clean=scope==='clean',requestedRange=range;
+    // 干净口径：窗口起点抬到清洁分界日，日均、转化率和折线都只按剩下的天数算。
+    if(clean){const start=range.from<ANALYTICS_CLEAN_DAY?ANALYTICS_CLEAN_DAY:range.from;range={from:start,to:range.to<start?start:range.to};}
+    const periodData=selectAnalyticsPeriod({events,visits,range,scope});
     ({events,visits,range}=periodData);const collection=periodData.collection;
     const selected=events.filter(e=>e.day>=range.from&&e.day<=range.to),views=selected.filter(e=>e.type==='page_view'),actions=selected.filter(e=>e.type!=='page_view'&&!e.type.endsWith('_error'));
     const engagement=buildEngagement({visits,events,range});
@@ -70,10 +73,10 @@ export function buildSummary({events=[],visits=[],settings,range}){
     // Same-length window immediately before the selected one, so the overview
     // can show direction instead of a bare number.
     const span=Date.parse(range.to)-Date.parse(range.from)+86400000;
-    product.previous=range.from<=range.to?buildProductAnalytics({events,visits,range:{from:new Date(Date.parse(range.from)-span).toISOString().slice(0,10),to:new Date(Date.parse(range.from)-86400000).toISOString().slice(0,10)}}).metrics:null;
+    product.previous=!clean&&range.from<=range.to?buildProductAnalytics({events,visits,range:{from:new Date(Date.parse(range.from)-span).toISOString().slice(0,10),to:new Date(Date.parse(range.from)-86400000).toISOString().slice(0,10)}}).metrics:null;
     const count=(list,key)=>Object.entries(list.reduce((out,e)=>{const value=e[key];out[value]=(out[value]||0)+1;return out;},{})).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);
     const series=[];for(let time=Date.parse(range.from);time<=Date.parse(range.to);time+=86400000){const date=new Date(time).toISOString().slice(0,10),dayEvents=selected.filter(e=>e.day===date);series.push({date,views:dayEvents.filter(e=>e.type==='page_view').length,actions:dayEvents.filter(e=>e.type!=='page_view'&&!e.type.endsWith('_error')).length});}
-    return {range:requestedRange,collection,enabled:settings.analytics.enabled,engagement,product,acquisition:buildAcquisition(selected),metrics:{views:views.length,visitors:new Set(views.filter(e=>e.visitor).map(e=>e.visitor)).size,exports:actions.filter(e=>['resume_export','portrait_export'].includes(e.type)).length,actions:actions.length},series,pages:Object.entries(routes).map(([route,name])=>({route,name,views:views.filter(e=>e.path===route).length,actions:actions.filter(e=>e.path===route).length})),actions:count(actions,'type').map(item=>({...item,name:ACTIONS[item.label]})),sources:count(views,'source'),devices:count(views,'device').map(item=>({...item,name:({desktop:'电脑',mobile:'手机',tablet:'平板'})[item.label]})),templates:settings.templates.map(t=>({id:t.id,name:t.name,uses:actions.filter(e=>e.type==='template_select'&&e.templateId===t.id).length})),recent:actions.slice(-15).reverse().map(({time,type,path,templateId})=>({time,type,name:ACTIONS[type],path,templateId})),updatedAt:new Date().toISOString()};
+    return {range,requestedRange,scope:clean?'clean':'all',collection,enabled:settings.analytics.enabled,engagement,product,acquisition:buildAcquisition(selected),metrics:{views:views.length,visitors:new Set(views.filter(e=>e.visitor).map(e=>e.visitor)).size,exports:actions.filter(e=>['resume_export','portrait_export'].includes(e.type)).length,actions:actions.length},series,pages:Object.entries(routes).map(([route,name])=>({route,name,views:views.filter(e=>e.path===route).length,actions:actions.filter(e=>e.path===route).length})),actions:count(actions,'type').map(item=>({...item,name:ACTIONS[item.label]})),sources:count(views,'source'),devices:count(views,'device').map(item=>({...item,name:({desktop:'电脑',mobile:'手机',tablet:'平板'})[item.label]})),templates:settings.templates.map(t=>({id:t.id,name:t.name,uses:actions.filter(e=>e.type==='template_select'&&e.templateId===t.id).length})),recent:actions.slice(-15).reverse().map(({time,type,path,templateId})=>({time,type,name:ACTIONS[type],path,templateId})),updatedAt:new Date().toISOString()};
   }
 export function renderHomepageDocument(html,settings){
     const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -129,7 +132,7 @@ export function createAdministration({root,dataDir=path.join(root,'private','adm
     const item={id,visitor,path:input.path,seq:input.seq,startedAt,updatedAt:now,visibleMs:Math.max(existing?.visibleMs||0,Math.min(input.visibleMs,now-startedAt+15000)),reason:input.reason,nextPath:input.nextPath||''};
     visits.set(id,item);fs.appendFileSync(visitFile,JSON.stringify(item)+'\n',{mode:0o600});visitWrites++;if(visitWrites>=10000||visits.size>100000||now>=nextVisitPrune)compactVisits();
   }
-  function summary(params){return buildSummary({events,visits:[...visits.values()],settings,range:period(params)});}
+  function summary(params){return buildSummary({events,visits:[...visits.values()],settings,range:period(params),scope:params.get('scope')==='clean'?'clean':'all'});}
   async function handle(req,res,url){
     if(!['/api/site-config','/api/analytics/event','/api/analytics/visit','/api/analytics/summary'].includes(url.pathname)&&!url.pathname.startsWith('/api/auth/')&&!url.pathname.startsWith('/api/admin/'))return false;
     try{

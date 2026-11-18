@@ -3,15 +3,27 @@
 // 所以只在说明和 CSV 里标注，不用它来宣称真实用户量。
 export const ANALYTICS_CLEAN_SINCE = Date.parse('2026-11-15T19:11:00.000Z');
 export const ANALYTICS_CLEAN_LABEL = '2026-11-16 03:11（北京时间）';
+/** 清洁分界所在的北京日期，干净口径从这里开始取数。 */
+export const ANALYTICS_CLEAN_DAY = new Date(ANALYTICS_CLEAN_SINCE + 8 * 3600000).toISOString().slice(0, 10);
 const validTime = value => Number.isFinite(value);
 export function analyticsScope() {
   return 'all';
 }
-export function selectAnalyticsPeriod({events=[],visits=[],range}) {
-  const selectedEvents = events.filter(event=>validTime(event.time));
+export function selectAnalyticsPeriod({events=[],visits=[],range,scope='all'}) {
+  // scope=clean：只保留清洁分界之后的记录，把早期本人访问、调试与自动化流量整体排除。
+  const clean = scope === 'clean';
+  const after = time => validTime(time) && (!clean || time >= ANALYTICS_CLEAN_SINCE);
+  const selectedEvents = events.filter(event=>after(event.time));
   // 时长快照无法在分界处准确切分，过去会被两侧排除；现在整段都保留。
-  const selectedVisits = visits.filter(visit=>validTime(visit.startedAt)&&validTime(visit.updatedAt));
-  const collection = {
+  const selectedVisits = visits.filter(visit=>validTime(visit.startedAt)&&validTime(visit.updatedAt)&&(!clean||visit.startedAt>=ANALYTICS_CLEAN_SINCE));
+  const collection = clean ? {
+    scope:'clean',
+    label:'干净记录',
+    cleanSince:ANALYTICS_CLEAN_LABEL,
+    range,
+    notice:`只统计 ${ANALYTICS_CLEAN_LABEL} 之后的记录，之前的本人访问、调试与自动化流量已排除。天数变少，日均和转化率对单日波动更敏感。`,
+    durationNotice:'页面停留按每次访问快照统计，跨零点不切分。'
+  } : {
     scope:'all',
     label:'全部记录',
     cleanSince:ANALYTICS_CLEAN_LABEL,

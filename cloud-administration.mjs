@@ -8,7 +8,7 @@ import {ACTIONS,catalog,defaults,normalizeSettings,upgradeTemplateCatalog,dayOf,
 import {buildSupportReport,mutateReceipts,receiptsCsv} from './sponsorship.mjs';
 import {normalizeChangelog} from './changelog.mjs';
 import {upgradeSiteBrand} from './site-brand.mjs';
-import {analyticsWindowStart} from './analytics-period.mjs';
+import {analyticsWindowStart,ANALYTICS_CLEAN_SINCE} from './analytics-period.mjs';
 import {sanitizeAttribution} from './assets/js/attribution.js';
 import {acquisitionCsvRows} from './acquisition.mjs';
 import {ANALYTICS_PAGES} from './assets/js/public-pages.js';
@@ -97,14 +97,16 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
   // 取数窗口只盖住「所选区间 + 等长上一期」，不再一律读 90 天；timing 传进来时顺便带回
   // settings/revision，前台一次请求就能渲染，也把数据库耗时写进 Server-Timing 便于定位慢在哪。
   async function summary(params,timing){
-    const range=period(params),cutoff=analyticsWindowStart(range),started=Date.now();
+    const scope=params.get('scope')==='clean'?'clean':'all',range=period(params);
+    // 干净口径直接把取数起点抬到清洁分界，少读几天也少算几天。
+    const cutoff=scope==='clean'?Math.max(analyticsWindowStart(range),ANALYTICS_CLEAN_SINCE):analyticsWindowStart(range),started=Date.now();
     const [settings,events,visits]=await Promise.all([
       settingsState(),
       q(`SELECT data FROM ${table('events')} WHERE time>=$1 ORDER BY time DESC,id DESC LIMIT 100000`,[cutoff]),
       q(`SELECT * FROM ${table('visits')} WHERE updated>=$1 ORDER BY updated DESC LIMIT 100000`,[cutoff]),
     ]);
     const dbMs=Date.now()-started,eventRows=events.rows.reverse(),visitRows=visits.rows;
-    const value=buildSummary({settings,events:eventRows.map(e=>e.data),visits:visitRows.map(v=>({id:v.id,path:v.path,seq:Number(v.seq),startedAt:Number(v.started),updatedAt:Number(v.updated),visibleMs:Number(v.visible),...v.data})),range});
+    const value=buildSummary({settings,events:eventRows.map(e=>e.data),visits:visitRows.map(v=>({id:v.id,path:v.path,seq:Number(v.seq),startedAt:Number(v.started),updatedAt:Number(v.updated),visibleMs:Number(v.visible),...v.data})),range,scope});
     if(timing){
       Object.assign(timing,{dbMs,buildMs:Date.now()-started-dbMs,events:eventRows.length,visits:visitRows.length,windowDays:Math.round((Date.now()-cutoff)/86400000)});
       value.adminSettings={settings,revision:revision(settings)};

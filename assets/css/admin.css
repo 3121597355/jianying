@@ -132,3 +132,11 @@
   .sidebar nav::-webkit-scrollbar-track{background:transparent}
 }
 @media(max-width:800px){.sidebar nav{flex:none;min-height:0;overflow:visible;padding-right:0}}
+.date-controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.scope-toggle{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--muted);padding:8px 12px;font-size:10px;transition:background .2s,border-color .2s,color .2s}
+.scope-toggle:hover{background:var(--soft)}
+.scope-toggle span{display:none}
+.scope-toggle[aria-pressed=true]{background:#e1e7d6;border-color:#d3ddc4;color:#3e5330}
+.scope-toggle[aria-pressed=true] span{display:inline}
+:root[data-theme=dark] .scope-toggle[aria-pressed=true]{background:#303c27;border-color:#3f4b34;color:#d2e5b8}
+@media(max-width:480px){.scope-toggle{padding:7px 9px;font-size:9px}}
