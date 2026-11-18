@@ -209,20 +209,26 @@
   font:inherit; cursor:pointer; text-decoration:underline; text-underline-offset:2px;
 }
 #resumeEditorPanel #formHost .info_list > li > .basic-field-grip {
-  flex:0 0 15px; width:15px; height:26px; padding:0; display:inline-flex; align-items:center; justify-content:center;
+  flex:0 0 18px; width:18px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;
   border:0; border-radius:4px; background:none; color:var(--ui-muted); opacity:.4; cursor:grab;
   touch-action:none; transition:opacity .15s ease, background .15s ease;
 }
 #resumeEditorPanel #formHost .info_list > li > .basic-field-grip:hover { opacity:.95; background:var(--ui-soft); }
 #resumeEditorPanel #formHost .info_list > li > .basic-field-grip:focus-visible { opacity:.95; outline:2px solid var(--ui-accent); outline-offset:1px; }
 #resumeEditorPanel #formHost .info_list > li > .basic-field-grip:active { cursor:grabbing; }
-#resumeEditorPanel #formHost .info_list > li > .basic-field-grip svg { width:13px; height:13px; fill:currentColor; }
-#resumeEditorPanel #formHost .info_list > li.is-basic-source { opacity:.45; }
-#resumeEditorPanel #formHost .info_list.is-basic-sorting > li.is-basic-drop { border-radius:8px; box-shadow:inset 0 0 0 1px var(--ui-accent); }
+#resumeEditorPanel #formHost .info_list > li > .basic-field-grip svg { width:14px; height:14px; fill:currentColor; }
+#resumeEditorPanel #formHost .info_list > li > .basic-field-grip:active { background:var(--ui-accent-soft); color:var(--ui-accent); }
+html.basic-dragging #formHost .info_list { user-select:none; }
+/* 拖动中的原位置留白，其它行做 FLIP 位移动画 */
+#resumeEditorPanel #formHost .info_list > li.is-basic-source { opacity:.28; }
+html.basic-dragging { cursor:grabbing; }
+html.basic-dragging #formHost .info_list > li:not(.is-basic-source) { will-change:transform; }
 .basic-drag-ghost {
-  position:fixed; z-index:9999; pointer-events:none; padding:8px 12px; border-radius:8px;
+  position:fixed; z-index:9999; box-sizing:border-box; pointer-events:none;
+  display:flex; align-items:center; padding:0 12px 0 6px; border-radius:8px;
   background:var(--ui-surface); color:var(--ui-text); border:1px solid var(--ui-accent);
-  box-shadow:0 12px 32px #0003; font:13px/1.4 "Segoe UI","Microsoft YaHei",sans-serif;
+  box-shadow:0 14px 34px #0000002e, 0 2px 6px #00000014;
+  font:13px/1.4 "Segoe UI","Microsoft YaHei",sans-serif; will-change:transform;
 }
 @media (hover:none) {
   #resumeEditorPanel #formHost .info_list > li > .basic-field-grip { opacity:.75; }

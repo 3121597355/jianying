@@ -21,7 +21,7 @@ import {chooseTemplate} from './template-choice.js';
 import {hasResumeContent,isTemplateSample} from './template-samples.js';
 import {setupEditorGuide} from './editor-guide.js';
 import {MOBILE_EDITOR_MEDIA} from './mobile-layout.js';
-import { bindBasicFieldDrag } from './basic-drag.js?v=20261118-basic-order';
+import { bindBasicFieldDrag } from './basic-drag.js?v=20261118-basic-smooth';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
