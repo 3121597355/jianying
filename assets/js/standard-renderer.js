@@ -1,7 +1,7 @@
 import {FONTS,SEX,MARRIAGE,POLITICS,WORK_YEARS,optionalLabel,degreeLabel} from './dict.js';
 import {getModuleOrder} from './module-order.js';
 import {renderProjectBody,projectWebsiteLink} from './project-fields.js';
-import {visibleBasicFields,normalizeBasicOrder,hasCustomBasicOrder} from './basic-fields.js';
+import {visibleBasicFields,normalizeBasicOrder,normalizeBasicFields,hasCustomBasicOrder,isCustomBasicKey,customBasicIndex} from './basic-fields.js';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const number=(value,min,max,fallback)=>Math.min(max,Math.max(min,Number(value)||fallback));
@@ -23,6 +23,8 @@ export function renderStandard(resume,{layout}={}){
   const color=/^#[\da-f]{6}$/i.test(settings.skin||'')?settings.skin:'#284967';
   const order=getModuleOrder(resume),modules=new Map((resume.moduleData||[]).map(mod=>[mod.moduleName,mod]));
   const basicOrder=normalizeBasicOrder(settings.basicOrder),orderedBasic=hasCustomBasicOrder(settings.basicOrder);
+  // 自定义信息按 make:序号 参与排序；不展示或空内容的条目直接跳过。
+  const customItems=normalizeBasicFields(basic.make).map(item=>item.visible&&item.value.trim()?item:null);
   const intent=modules.get('yixiang'),merged=!bands&&order.indexOf('yixiang')===order.indexOf('basic')+1;
   const channels=color.slice(1).match(/../g).map(value=>parseInt(value,16)).join(',');
   const heading=label=>`<div class="module_tit" style="font-size:${size+3}px;color:${color};border-color:${color}${bands?`;background:rgba(${channels},.12)`:''}">${bands?`<b>${escape(label)}</b>`:escape(label)}</div>`;
@@ -59,10 +61,14 @@ export function renderStandard(resume,{layout}={}){
       // 基本信息按用户设置的顺序输出；身高体重共用一个排序键，仍分两行展示。
       for(const key of basicOrder){
         if(key==='photo')continue;
+        if(isCustomBasicKey(key)){
+          const item=customItems[customBasicIndex(key)];
+          if(item)fields.push([item.keyValue.trim(),item.value.trim(),true]);
+          continue;
+        }
         if(key==='height'){fields.push(['身高',basicValue('height')],['体重',basicValue('weight')]);continue;}
         if(labels[key])fields.push([labels[key],basicValue(key)]);
       }
-      fields.push(...visibleBasicFields(basic.make).map(item=>[item.keyValue.trim(),item.value.trim(),true]));
       const rows=fields.filter(([,value])=>value!==''&&value!==null&&value!==undefined).map(([label,value,custom])=>`<dd${custom?' class="profile-custom-field"':''}>${label?`<span class="profile-label">${escape(label)}</span>`:''}<span${label==='姓名'&&!custom?' id="myname"':''}>${escape(value)}</span></dd>`).join('');
       const photo=basic.photoShow?`<div class="photo_box${basic.photo?'':' is-default'}" data-photo-slot title="点击更换照片">${basic.photo?`<img src="${escape(basic.photo)}" alt="照片">`:'<span class="standard-photo-placeholder">添加照片</span>'}</div>`:'';
       return `<section id="basicInfo" class="resume_content standard-basic" style="margin-top:${gap}px">${heading('基本信息')}<div class="basic_info_box${basic.photoShow?' has-photo':''}"><dl class="basic_info_grid">${rows}</dl>${photo}</div></section>`;
@@ -70,7 +76,9 @@ export function renderStandard(resume,{layout}={}){
     const extra=visibleBasicFields(basic.make).map(item=>`${item.keyValue.trim()?item.keyValue.trim()+'：':''}${item.value.trim()}`);
     // 调整过顺序后按用户顺序排；没调整过的老简历保持原来的版式不变。
     const profile=orderedBasic
-      ?[...basicOrder.filter(key=>!['name','photo'].includes(key)).map(basicValue).filter(Boolean),...extra]
+      ?[...basicOrder.filter(key=>!['name','photo'].includes(key)).map(key=>isCustomBasicKey(key)
+        ?(customItems[customBasicIndex(key)]?`${customItems[customBasicIndex(key)].keyValue.trim()?customItems[customBasicIndex(key)].keyValue.trim()+'：':''}${customItems[customBasicIndex(key)].value.trim()}`:'')
+        :basicValue(key)).filter(Boolean)]
       :[basic.isAge===false?basic.birthday:age(basic.birthday),optionalLabel(SEX,basic.sex),basic.minzu,optionalLabel(MARRIAGE,basic.hunyin),basic.height?`${basic.height}cm`:'',basic.weight?`${basic.weight}kg`:'',optionalLabel(POLITICS,basic.zhengzhi),basic.jiguan,Number(basic.workYears)>=0?WORK_YEARS[Number(basic.workYears)+1]:'',...extra];
     const goal=merged&&intent?.visible?intent.data||{}:{};
     const photo=basic.photoShow?`<div class="photo_box${basic.photo?'':' is-default'}" data-photo-slot title="点击更换照片" style="right:${padding}px">${basic.photo?`<img src="${escape(basic.photo)}" alt="照片">`:'<span class="standard-photo-placeholder">添加照片</span>'}</div>`:'';

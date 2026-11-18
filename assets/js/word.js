@@ -10,7 +10,7 @@ import {getResume} from './store.js';
 import {getModuleOrder} from './module-order.js';
 import {SEX, MARRIAGE, POLITICS, WORK_YEARS, optionalLabel, degreeLabel} from './dict.js';
 import {normalizeProjectDetails, projectFieldShown, safeProjectUrl} from './project-fields.js';
-import {visibleBasicFields, normalizeBasicOrder, hasCustomBasicOrder} from './basic-fields.js';
+import {visibleBasicFields, normalizeBasicFields, normalizeBasicOrder, hasCustomBasicOrder, isCustomBasicKey, customBasicIndex} from './basic-fields.js';
 
 const FONT = '微软雅黑';
 const BRAND = '284967';
@@ -201,7 +201,9 @@ export async function buildResumeWordBlob(opts = {}) {
   );
 
   // ---- 页眉：姓名、标题、资料、联系方式，右侧照片 ----
-  const customFields = visibleBasicFields(basic.make).map(item => `${clean(item.keyValue)}${clean(item.keyValue) ? '：' : ''}${clean(item.value)}`);
+  // 自定义信息也参与排序，空内容或隐藏的条目留空由后面的 filter 去掉。
+  const customFields = normalizeBasicFields(basic.make).map(item => item.visible && item.value.trim()
+    ? `${clean(item.keyValue)}${clean(item.keyValue) ? '：' : ''}${clean(item.value)}` : '');
   const basicValue = key => ({
     sex: optionalLabel(SEX, basic.sex),
     birthday: basic.isAge === false ? basic.birthday : age(basic.birthday),
@@ -216,8 +218,12 @@ export async function buildResumeWordBlob(opts = {}) {
     zhengzhi: optionalLabel(POLITICS, basic.zhengzhi),
   })[key] || '';
   // 调整过顺序时按用户顺序输出；未调整的仍沿用原来的资料行。
-  const profile = (hasCustomBasicOrder(settings.basicOrder)
-    ? normalizeBasicOrder(settings.basicOrder).filter(key => !['name', 'photo'].includes(key)).map(basicValue).filter(Boolean)
+  const custom=hasCustomBasicOrder(settings.basicOrder);
+  const profile = (custom
+    ? normalizeBasicOrder(settings.basicOrder)
+      .filter(key => !['name', 'photo'].includes(key))
+      .map(key => isCustomBasicKey(key) ? customFields[customBasicIndex(key)] || '' : basicValue(key))
+      .filter(Boolean)
     : [
       basic.isAge === false ? basic.birthday : age(basic.birthday),
       optionalLabel(SEX, basic.sex),
@@ -228,7 +234,8 @@ export async function buildResumeWordBlob(opts = {}) {
       optionalLabel(POLITICS, basic.zhengzhi),
       clean(basic.jiguan),
       Number(basic.workYears) >= 0 ? WORK_YEARS[Number(basic.workYears) + 1] : '',
-    ]).concat(customFields).map(clean).filter(Boolean);
+      ...customFields,
+    ]).map(clean).filter(Boolean);
 
   const headLeft = [
     paragraph(run(clean(basic.name) || '你的姓名', {bold: true, size: 40}), {spacing: {after: 60}}),
@@ -236,7 +243,7 @@ export async function buildResumeWordBlob(opts = {}) {
       ? paragraph(run([title, clean(settings.slogan)].filter(Boolean).join(' · '), {size: 18, color: '666666'}), {spacing: {after: 80}})
       : null,
     profile.length ? paragraph(run(profile.join(' ｜ '), {size: 19}), {spacing: {after: 40}, line: 280}) : null,
-    !hasCustomBasicOrder(settings.basicOrder) && [clean(basic.mobile), clean(basic.email)].filter(Boolean).length
+    !custom && [clean(basic.mobile), clean(basic.email)].filter(Boolean).length
       ? paragraph(run([clean(basic.mobile), clean(basic.email)].filter(Boolean).join(' ｜ '), {size: 19}), {spacing: {after: 0}, line: 280})
       : null,
   ].filter(Boolean);

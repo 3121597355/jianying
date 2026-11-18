@@ -1,7 +1,7 @@
 import sanitizeHtml from './sanitizer.mjs';
 import {TEMPLATES,DEFAULT_TPL} from './assets/js/templates.js';
 import {normalizeProjectDetails,projectModelContent} from './assets/js/project-fields.js';
-import {normalizeBasicFields,normalizeBasicOrder,BASIC_FIELD_KEYS} from './assets/js/basic-fields.js';
+import {normalizeBasicFields,normalizeBasicOrder} from './assets/js/basic-fields.js';
 
 export const invalid=(message,status=400)=>Object.assign(new Error(message),{status});
 export const text=(value,max=300)=>typeof value==='string'?value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').slice(0,max):'';
@@ -21,9 +21,11 @@ export function normalizeResume(input) {
   if(Buffer.byteLength(JSON.stringify(input))>2200000)throw invalid('简历超过 2 MB，请缩小照片后再保存。',413);
   const settings=input.setData,basic=input.basicInfo;
   const photo=text(basic.photo,1900000);
+  // 自定义信息以 make:序号 参与排序，序号上限取实际条目数。
+  const makeCount=normalizeBasicFields(basic.make).length;
   if(photo&&photo!=='/assets/img/landing/portrait-demo.webp'&&!/^data:image\/(png|jpeg|webp);base64,[a-zA-Z0-9+/=]+$/.test(photo))throw invalid('云端简历仅支持 PNG、JPG 或 WebP 照片。');
   const result={
-    setData:{...strings(settings,['title','slogan','language']),skin:/^#[a-fA-F0-9]{6}$/.test(settings.skin)?settings.skin:'#284967',tplId:TEMPLATES.some(t=>t.id===Number(settings.tplId))?Number(settings.tplId):DEFAULT_TPL,coverId:'',coverShow:0,mm:numeric(settings.mm,24,0,80),pp:numeric(settings.pp,52,0,100),font:numeric(settings.font,1,1,8),fontSize:numeric(settings.fontSize,14,10,24),lineHeight:numeric(settings.lineHeight,1.7,1,3),visitType:1,visitPass:'',zpType:numeric(settings.zpType,0,0,3),basicOrder:Array.isArray(settings.basicOrder)?normalizeBasicOrder(settings.basicOrder).filter(key=>BASIC_FIELD_KEYS.includes(key)):[],moduleSort:Array.isArray(settings.moduleSort)?[...new Set(settings.moduleSort.filter(n=>n==='basic'||moduleNames.includes(n)))]:[]},
+    setData:{...strings(settings,['title','slogan','language']),skin:/^#[a-fA-F0-9]{6}$/.test(settings.skin)?settings.skin:'#284967',tplId:TEMPLATES.some(t=>t.id===Number(settings.tplId))?Number(settings.tplId):DEFAULT_TPL,coverId:'',coverShow:0,mm:numeric(settings.mm,24,0,80),pp:numeric(settings.pp,52,0,100),font:numeric(settings.font,1,1,8),fontSize:numeric(settings.fontSize,14,10,24),lineHeight:numeric(settings.lineHeight,1.7,1,3),visitType:1,visitPass:'',zpType:numeric(settings.zpType,0,0,3),basicOrder:[],moduleSort:Array.isArray(settings.moduleSort)?[...new Set(settings.moduleSort.filter(n=>n==='basic'||moduleNames.includes(n)))]:[]},
     basicInfo:{...strings(basic,['name','birthday','email','mobile','minzu','zhengzhi','jiguan','height','weight','inShort']),sex:numeric(basic.sex,0,0,2),isAge:basic.isAge!==false,workYears:numeric(basic.workYears,-1,-1,60),hunyin:numeric(basic.hunyin,0,0,3),photo,photoShow:basic.photoShow!==false,make:normalizeBasicFields(basic.make)},
     coverData:strings(input.coverData,['name','job','school','mobile','email']),
     zijianData:{visible:input.zijianData?.visible?1:0,content:rich(input.zijianData?.content)},
@@ -31,7 +33,7 @@ export function normalizeResume(input) {
   };
   // 基本信息顺序只在用户调整过时保存，空数组代表沿用默认版式。
   result.setData.basicOrder=Array.isArray(settings.basicOrder)&&settings.basicOrder.length
-    ?normalizeBasicOrder(settings.basicOrder).filter(key=>BASIC_FIELD_KEYS.includes(key)):[];
+    ?normalizeBasicOrder(settings.basicOrder,makeCount):[];
   for(const name of moduleNames){
     const source=input.moduleData.find(module=>module?.moduleName===name);if(!source)continue;
     const module={moduleName:name,moduleValue:text(source.moduleValue,40),visible:source.visible===true};

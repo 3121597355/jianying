@@ -7,7 +7,7 @@ import { getResume, getUi, getModule, set, commit, blankItem } from './store.js'
 import { animateIn, animateDisclosure } from './motion.js';
 import {PROJECT_FIELDS,PROJECT_SPACING,projectSpacing,normalizeProjectDetails,projectFieldShown,safeProjectUrl} from './project-fields.js';
 import {bulletProjectContributions,setupProjectEditor} from './project-layout.js';
-import {normalizeBasicFields,normalizeBasicOrder,hasCustomBasicOrder,MAX_BASIC_FIELDS,BASIC_FIELD_NAME_LIMIT,BASIC_FIELD_VALUE_LIMIT} from './basic-fields.js';
+import {normalizeBasicFields,normalizeBasicOrder,hasCustomBasicOrder,isCustomBasicKey,customBasicKey,customBasicIndex,MAX_BASIC_FIELDS,BASIC_FIELD_NAME_LIMIT,BASIC_FIELD_VALUE_LIMIT} from './basic-fields.js';
 import {
   SEX, MARRIAGE, POLITICS, DEGREE, WORK_YEARS, MODULES,
   HOT_CITIES, JOB_LIST, MONTH_OPTIONS, optionalLabel, degreeLabel,
@@ -40,19 +40,6 @@ export function disposeEditors() {
 const opt = (v, label, cur) => `<option value="${esc(v)}"${String(v) === String(cur) ? ' selected' : ''}>${esc(label)}</option>`;
 
 /* ------------------------------- 基本信息 ------------------------------- */
-
-function basicCustomFields(input){
-  const rows=normalizeBasicFields(input);
-  return `<section class="basic-custom-fields" aria-label="自定义基本信息">
-    <div class="basic-custom-heading"><strong>自定义信息</strong><span>${rows.length} / ${MAX_BASIC_FIELDS}</span></div>
-    <p class="basic-custom-note">如：个人网站、微信、作品集。内容留空或关闭展示后不会出现在简历里。</p>
-    <div class="basic-custom-list">${rows.map((item,index)=>`<div class="basic-custom-row" data-basic-index="${index}">
-      <div class="basic-custom-row-heading"><span>信息 ${index+1}</span><label><input type="checkbox" data-basic-field="visible" aria-label="展示第${index+1}项自定义信息" ${item.visible?'checked':''}>展示在简历</label><button type="button" data-basic-remove="${index}" aria-label="删除第${index+1}项自定义信息" title="删除此项"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></div>
-      <div class="basic-custom-inputs"><label><span>名称</span><input class="input" data-basic-field="keyValue" aria-label="第${index+1}项自定义名称" maxlength="${BASIC_FIELD_NAME_LIMIT}" placeholder="如：个人网站" value="${esc(item.keyValue)}"></label><label><span>内容</span><input class="input" data-basic-field="value" aria-label="第${index+1}项自定义内容" maxlength="${BASIC_FIELD_VALUE_LIMIT}" placeholder="填写对应内容" value="${esc(item.value)}"></label></div>
-    </div>`).join('')}</div>
-    <button type="button" class="basic-custom-add" data-basic-add ${rows.length>=MAX_BASIC_FIELDS?'disabled':''}>＋ 添加自定义信息</button>
-  </section>`;
-}
 
 function formBasic(r) {
   const b = r.basicInfo;
@@ -90,13 +77,25 @@ function formBasic(r) {
     jiguan: () => row('jiguan', { label: '籍　贯', control: `<input class="input" data-k="basicInfo.jiguan" maxlength="49" placeholder="如：浙江杭州" value="${esc(b.jiguan)}">` }, 'more-item'),
     zhengzhi: () => row('zhengzhi', { label: '政治面貌', control: `<select class="input" data-k="basicInfo.zhengzhi">${POLITICS.map((t, i) => opt(i, t, Math.max(0, POLITICS.indexOf(optionalLabel(POLITICS, b.zhengzhi))))).join('')}</select>` }, 'more-item'),
   };
-  const list = normalizeBasicOrder(r.setData?.basicOrder).map(key => rows[key] ? rows[key]() : '').join('');
+  const customs = normalizeBasicFields(b.make);
+  const customRow = (item, index) => `<li data-basic-key="${customBasicKey(index)}" data-basic-row="${index}" class="basic-custom-row">${grip}
+    <input class="input basic-custom-name" data-basic-field="keyValue" aria-label="第${index + 1}项自定义名称" maxlength="${BASIC_FIELD_NAME_LIMIT}" placeholder="名称" value="${esc(item.keyValue)}">
+    <input class="input basic-custom-value" data-basic-field="value" aria-label="第${index + 1}项自定义内容" maxlength="${BASIC_FIELD_VALUE_LIMIT}" placeholder="内容" value="${esc(item.value)}">
+    <label class="el-checkbox basic-custom-visible" title="展示在简历"><input type="checkbox" data-basic-field="visible" aria-label="展示第${index + 1}项自定义信息" ${item.visible ? 'checked' : ''}><span>展示</span></label>
+    <button type="button" class="basic-custom-remove" data-basic-remove="${index}" aria-label="删除第${index + 1}项自定义信息" title="删除此项"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+  </li>`;
+  const list = normalizeBasicOrder(r.setData?.basicOrder).map(key => {
+    if (isCustomBasicKey(key)) { const index = customBasicIndex(key); return customs[index] ? customRow(customs[index], index) : ''; }
+    return rows[key] ? rows[key]() : '';
+  }).join('');
   return `<div class="edit_b_list active_full">
   <p class="info_tip"><i class="el-icon-info"></i>填写的信息会自动排版在简历上，不需要的信息可以选择不填或删除内容。</p>
-  <p class="basic-sort-hint">拖动左侧圆点调整显示顺序，也可以聚焦后按 ↑ ↓ 移动。${hasCustomBasicOrder(r.setData?.basicOrder) ? '<button type="button" class="basic-sort-reset" data-basic-sort-reset>恢复默认顺序</button>' : ''}</p>
-  <ul class="info_list clearfix hide_more" data-basic-list>${list}</ul>
+  <p class="basic-sort-hint">拖动左侧圆点调整显示顺序，自定义信息也能一起拖；聚焦圆点后按 ↑ ↓ 也能移动。${hasCustomBasicOrder(r.setData?.basicOrder) ? '<button type="button" class="basic-sort-reset" data-basic-sort-reset>恢复默认顺序</button>' : ''}</p>
+  <div class="basic-field-list-wrap" data-basic-fields>
+    <ul class="info_list clearfix hide_more" data-basic-list>${list}</ul>
+    <button type="button" class="basic-custom-add" data-basic-add ${customs.length >= MAX_BASIC_FIELDS ? 'disabled' : ''}>＋ 添加自定义信息</button>
+  </div>
   <div class="line_box mb10"><span class="btn_more" data-act="toggleMore">展开更多信息 <i class="webfont webicon-jiantoudown"></i></span></div>
-  ${basicCustomFields(b.make)}
 </div>`;
 }
 
@@ -384,21 +383,21 @@ function delCurrent(def, index) {
 }
 
 function bindBasicCustomFields(host){
-    const section=host.querySelector('.basic-custom-fields');
-    const refreshCustomFields=focusIndex=>{
-      host.querySelector('.basic-custom-fields').outerHTML=basicCustomFields(getResume().basicInfo.make);
-      const section=host.querySelector('.basic-custom-fields');
-      window.__markScope?.(section);
-      bindBasicCustomFields(host);
-      const target=section.querySelector(`[data-basic-index="${focusIndex}"] [data-basic-field="keyValue"]`)||section.querySelector('[data-basic-add]');
-      target.focus({preventScroll:true});
-      target.scrollIntoView({block:'nearest'});
-    };
+    // 自定义信息和内置字段共用同一条列表，一起拖动排序；容器随每次渲染重建，监听不会重复叠加。
+    const section=host.querySelector('[data-basic-fields]');
+    if(!section)return;
+    const focusCustom=index=>requestAnimationFrame(()=>{
+      const target=host.querySelector(`[data-basic-key="make:${index}"] [data-basic-field="keyValue"]`)||host.querySelector('[data-basic-add]');
+      target?.focus({preventScroll:true});
+      target?.scrollIntoView({block:'nearest'});
+    });
     const updateField=event=>{
       const input=event.target.closest('[data-basic-field]');
       if(!input||!section.contains(input))return;
       if((input.type==='checkbox')!==(event.type==='change'))return;
-      const index=Number(input.closest('[data-basic-index]').dataset.basicIndex),key=input.dataset.basicField;
+      const row=input.closest('[data-basic-row]');
+      if(!row)return;
+      const index=Number(row.dataset.basicRow),key=input.dataset.basicField;
       set(rr=>{rr.basicInfo.make=normalizeBasicFields(rr.basicInfo.make);if(rr.basicInfo.make[index])rr.basicInfo.make[index][key]=input.type==='checkbox'?input.checked:input.value;});
     };
     section.addEventListener('input',updateField);
@@ -408,12 +407,20 @@ function bindBasicCustomFields(host){
       if(add){
         const rows=normalizeBasicFields(getResume().basicInfo.make);
         if(rows.length>=MAX_BASIC_FIELDS)return;
-        set(rr=>{rr.basicInfo.make=[...rows,{keyValue:'',value:'',visible:true}];});
-        refreshCustomFields(rows.length);
+        set(rr=>{rr.basicInfo.make=[...normalizeBasicFields(rr.basicInfo.make),{keyValue:'',value:'',visible:true}];},{structural:true});
+        focusCustom(rows.length);
       }else if(remove){
         const index=Number(remove.dataset.basicRemove);
-        set(rr=>{rr.basicInfo.make=normalizeBasicFields(rr.basicInfo.make);rr.basicInfo.make.splice(index,1);});
-        refreshCustomFields(Math.min(index,getResume().basicInfo.make.length-1));
+        set(rr=>{
+          rr.basicInfo.make=normalizeBasicFields(rr.basicInfo.make);
+          rr.basicInfo.make.splice(index,1);
+          // 删除后序号前移，顺序表里的 make:序号 也要跟着重排，保持其它行位置不变。
+          if(Array.isArray(rr.setData.basicOrder)&&rr.setData.basicOrder.length){
+            rr.setData.basicOrder=normalizeBasicOrder(rr.setData.basicOrder)
+              .filter(key=>key!==customBasicKey(index))
+              .map(key=>{const i=customBasicIndex(key);return i>index?customBasicKey(i-1):key;});
+          }
+        },{structural:true});
       }
     });
 }

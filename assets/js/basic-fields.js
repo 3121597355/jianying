@@ -16,21 +16,33 @@ export const visibleBasicFields=input=>normalizeBasicFields(input).filter(item=>
 /** 基本信息可排序字段。身高体重共用一行，以 height 作为该行的键。 */
 export const BASIC_FIELD_KEYS=['name','sex','birthday','photo','workYears','mobile','email','hunyin','height','minzu','jiguan','zhengzhi'];
 export const DEFAULT_BASIC_ORDER=[...BASIC_FIELD_KEYS];
+/** 自定义信息用 make:序号 作为排序键，和内置字段共用一个顺序表。 */
+const CUSTOM_KEY=/^make:(\d+)$/;
+export const isCustomBasicKey=key=>CUSTOM_KEY.test(String(key||''));
+export const customBasicKey=index=>'make:'+index;
+export const customBasicIndex=key=>{const match=CUSTOM_KEY.exec(String(key||''));return match?Number(match[1]):-1;};
 
 /** 只保留认识的键，缺失的按默认顺序补在末尾，避免旧草稿或外部写入打乱表单。 */
-export function normalizeBasicOrder(input){
+export function normalizeBasicOrder(input,customCount=MAX_BASIC_FIELDS){
   const seen=new Set(),out=[];
   for(const key of Array.isArray(input)?input:[]){
-    if(!BASIC_FIELD_KEYS.includes(key)||seen.has(key))continue;
+    const custom=isCustomBasicKey(key);
+    if(custom?customBasicIndex(key)>=customCount:!BASIC_FIELD_KEYS.includes(key))continue;
+    if(seen.has(key))continue;
     seen.add(key);out.push(key);
   }
   for(const key of DEFAULT_BASIC_ORDER)if(!seen.has(key))out.push(key);
+  for(let index=0;index<customCount;index+=1){const key=customBasicKey(index);if(!seen.has(key))out.push(key);}
   return out;
 }
 
-export function hasCustomBasicOrder(input){
-  return Array.isArray(input)&&input.some(key=>BASIC_FIELD_KEYS.includes(key))
-    &&normalizeBasicOrder(input).join()!==DEFAULT_BASIC_ORDER.join();
+export function defaultBasicOrder(customCount=MAX_BASIC_FIELDS){
+  return [...DEFAULT_BASIC_ORDER,...Array.from({length:customCount},(_,index)=>customBasicKey(index))];
+}
+
+export function hasCustomBasicOrder(input,customCount=MAX_BASIC_FIELDS){
+  if(!Array.isArray(input)||!input.length)return false;
+  return normalizeBasicOrder(input,customCount).join()!==defaultBasicOrder(customCount).join();
 }
 
 export function moveBasicKey(order,key,index){
