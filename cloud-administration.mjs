@@ -8,6 +8,7 @@ import {ACTIONS,catalog,defaults,normalizeSettings,upgradeTemplateCatalog,dayOf,
 import {buildSupportReport,mutateReceipts,receiptsCsv} from './sponsorship.mjs';
 import {normalizeChangelog} from './changelog.mjs';
 import {upgradeSiteBrand} from './site-brand.mjs';
+import {analyticsWindowStart} from './analytics-period.mjs';
 import {sanitizeAttribution} from './assets/js/attribution.js';
 import {acquisitionCsvRows} from './acquisition.mjs';
 import {ANALYTICS_PAGES} from './assets/js/public-pages.js';
@@ -54,8 +55,16 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
     if(initializationError){await pool.end();throw initializationError;}
   }
   const state=async key=>(await q(`SELECT data FROM ${table('state')} WHERE key=$1`,[key])).rows[0].data;
+  // 站点设置几乎不变化，10 秒内复用一次读取，省掉每个后台请求和每条统计数据都要多走一次数据库往返。
+  // 保存设置时立刻失效（见 mutate），所以改完设置马上生效。
+  let settingsCache=null,settingsCacheAt=0;
+  async function settingsState(){
+    const nowMs=Date.now();
+    if(settingsCache&&nowMs-settingsCacheAt<10000)return settingsCache;
+    settingsCache=await state('settings');settingsCacheAt=nowMs;return settingsCache;
+  }
   const salt=(await state('salt')).value;
-  async function mutate(key,operation){const client=await pool.connect();try{await client.query('BEGIN');const current=(await client.query(`SELECT data FROM ${table('state')} WHERE key=$1 FOR UPDATE`,[key])).rows[0].data;const result=await operation(current,client);await client.query(`UPDATE ${table('state')} SET data=$2 WHERE key=$1`,[key,JSON.stringify(current)]);await client.query('COMMIT');return result;}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}}
+  async function mutate(key,operation){const client=await pool.connect();try{await client.query('BEGIN');const current=(await client.query(`SELECT data FROM ${table('state')} WHERE key=$1 FOR UPDATE`,[key])).rows[0].data;const result=await operation(current,client);await client.query(`UPDATE ${table('state')} SET data=$2 WHERE key=$1`,[key,JSON.stringify(current)]);await client.query('COMMIT');if(key==='settings'){settingsCache=null;settingsCacheAt=0;}return result;}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}}
   // Server-side initialization is serialized, and never replaces an existing account.
   if(initialAdmin?.username!==undefined||initialAdmin?.password!==undefined){
     try{await mutate('auth',async auth=>{
@@ -79,13 +88,29 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
   async function makeSession(req,res,admin,client=pool){const token=crypto.randomBytes(32).toString('hex'),entry={username:admin.username,csrf:crypto.randomBytes(32).toString('hex'),expires:Date.now()+12*3600000};await client.query(`INSERT INTO ${table('sessions')} (id,expires,data) VALUES ($1,$2,$3)`,[hash('session'+salt+token),entry.expires,JSON.stringify(entry)]);res.setHeader('Set-Cookie',`jianying_admin=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=43200${publicOrigin.startsWith('https://')||process.env.VERCEL?'; Secure':''}`);return status(entry);}
   function validate(req){const port=typeof hostPort==='function'?hostPort():hostPort,localOrigins=Number.isInteger(port)&&port>0?[`http://127.0.0.1:${port}`,`http://localhost:${port}`]:[],origins=[...localOrigins,publicOrigin,...allowedOrigins].filter(Boolean);if(!origins.some(origin=>new URL(origin).host===req.headers.host)||req.headers.origin&&!origins.includes(req.headers.origin)||req.headers['sec-fetch-site']==='cross-site')throw fail('不允许跨站请求。',403);}
   async function budget(req,kind='analytics',max=120,window=60000){const address=process.env.VERCEL?String(req.headers['x-forwarded-for']||'').split(',')[0].trim():req.socket.remoteAddress||'local';const id=hash(salt+kind+address),now=Date.now();const result=await q(`INSERT INTO ${table('limits')} (id,count,expires) VALUES ($1,1,$2) ON CONFLICT(id) DO UPDATE SET count=CASE WHEN ${table('limits')}.expires<$3 THEN 1 ELSE ${table('limits')}.count+1 END,expires=CASE WHEN ${table('limits')}.expires<$3 THEN $2 ELSE ${table('limits')}.expires END RETURNING count`,[id,now+window,now]);if(result.rows[0].count>max)throw fail(kind==='login'?'尝试次数较多，请 15 分钟后再试。':'操作较频繁，请稍后再试。',429);}
-  async function record(req,input){const settings=await state('settings');if(!settings.analytics.enabled||excludeAnalyticsRequest(req,{allowLocal:analyticsTestMode})||await session(req))return;if(!Object.hasOwn(ACTIONS,input.type)||!routes.has(input.path))throw fail('未知的统计事件。');await budget(req);const now=Date.now(),day=dayOf(now);let source='直接访问';if(typeof input.referrer==='string'&&input.referrer.length<=300)try{const address=new URL(input.referrer);if(['http:','https:'].includes(address.protocol)&&address.host!==req.headers.host)source=address.hostname.slice(0,100);}catch{}
+  async function record(req,input){const settings=await settingsState();if(!settings.analytics.enabled||excludeAnalyticsRequest(req,{allowLocal:analyticsTestMode})||await session(req))return;if(!Object.hasOwn(ACTIONS,input.type)||!routes.has(input.path))throw fail('未知的统计事件。');await budget(req);const now=Date.now(),day=dayOf(now);let source='直接访问';if(typeof input.referrer==='string'&&input.referrer.length<=300)try{const address=new URL(input.referrer);if(['http:','https:'].includes(address.protocol)&&address.host!==req.headers.host)source=address.hostname.slice(0,100);}catch{}
     const event={time:now,day,type:input.type,path:input.path,visitor:entryId(input.visitor)?hash(salt+day+input.visitor).slice(0,24):'',source,attribution:sanitizeAttribution(input.attribution),device:['desktop','mobile','tablet'].includes(input.device)?input.device:'desktop',signedIn:/(?:^|;\s*)yizhi_member=[a-f0-9]{64}(?:;|$)/.test(req.headers.cookie||''),templateId:catalog.some(t=>t.id===Number(input.templateId))?Number(input.templateId):null};const visitId=entryId(input.visitId);if(visitId)event.visitId=visitId;await q(`INSERT INTO ${table('events')} (time,data) VALUES ($1,$2)`,[now,JSON.stringify(event)]);
   }
-  async function recordVisit(req,input){const settings=await state('settings');if(!settings.analytics.enabled||excludeAnalyticsRequest(req,{allowLocal:analyticsTestMode})||await session(req))return;const id=entryId(input.visitId);if(!id||!routes.has(input.path)||!Number.isSafeInteger(input.seq)||input.seq<1||input.seq>1000000||!Number.isSafeInteger(input.visibleMs)||input.visibleMs<0||input.visibleMs>86400000||!['checkpoint','hidden','end'].includes(input.reason)||input.nextPath&&!routes.has(input.nextPath))throw fail('停留统计参数不正确。');await budget(req);const now=Date.now(),data={visitor:entryId(input.visitor)?hash(salt+dayOf(now)+input.visitor).slice(0,24):'',reason:input.reason,nextPath:input.nextPath||''};
+  async function recordVisit(req,input){const settings=await settingsState();if(!settings.analytics.enabled||excludeAnalyticsRequest(req,{allowLocal:analyticsTestMode})||await session(req))return;const id=entryId(input.visitId);if(!id||!routes.has(input.path)||!Number.isSafeInteger(input.seq)||input.seq<1||input.seq>1000000||!Number.isSafeInteger(input.visibleMs)||input.visibleMs<0||input.visibleMs>86400000||!['checkpoint','hidden','end'].includes(input.reason)||input.nextPath&&!routes.has(input.nextPath))throw fail('停留统计参数不正确。');await budget(req);const now=Date.now(),data={visitor:entryId(input.visitor)?hash(salt+dayOf(now)+input.visitor).slice(0,24):'',reason:input.reason,nextPath:input.nextPath||''};
     await q(`INSERT INTO ${table('visits')} AS v (id,seq,path,started,updated,visible,data) VALUES ($1,$2,$3,$4,$4,$5,$6) ON CONFLICT(id) DO UPDATE SET seq=EXCLUDED.seq,updated=EXCLUDED.updated,visible=GREATEST(v.visible,LEAST($7,EXCLUDED.updated-v.started+15000)),data=jsonb_set(EXCLUDED.data,'{visitor}',v.data->'visitor') WHERE EXCLUDED.seq>v.seq AND EXCLUDED.path=v.path`,[id,input.seq,input.path,now,Math.min(input.visibleMs,15000),JSON.stringify(data),input.visibleMs]);
   }
-  async function summary(params){const range=period(params),cutoff=Date.now()-90*86400000;const [settings,events,visits]=await Promise.all([state('settings'),q(`SELECT data FROM ${table('events')} WHERE time>=$1 ORDER BY time DESC,id DESC LIMIT 100000`,[cutoff]),q(`SELECT * FROM ${table('visits')} WHERE updated>=$1 ORDER BY updated DESC LIMIT 100000`,[cutoff])]);return buildSummary({settings,events:events.rows.reverse().map(e=>e.data),visits:visits.rows.map(v=>({id:v.id,path:v.path,seq:Number(v.seq),startedAt:Number(v.started),updatedAt:Number(v.updated),visibleMs:Number(v.visible),...v.data})),range});}
+  // 取数窗口只盖住「所选区间 + 等长上一期」，不再一律读 90 天；timing 传进来时顺便带回
+  // settings/revision，前台一次请求就能渲染，也把数据库耗时写进 Server-Timing 便于定位慢在哪。
+  async function summary(params,timing){
+    const range=period(params),cutoff=analyticsWindowStart(range),started=Date.now();
+    const [settings,events,visits]=await Promise.all([
+      settingsState(),
+      q(`SELECT data FROM ${table('events')} WHERE time>=$1 ORDER BY time DESC,id DESC LIMIT 100000`,[cutoff]),
+      q(`SELECT * FROM ${table('visits')} WHERE updated>=$1 ORDER BY updated DESC LIMIT 100000`,[cutoff]),
+    ]);
+    const dbMs=Date.now()-started,eventRows=events.rows.reverse(),visitRows=visits.rows;
+    const value=buildSummary({settings,events:eventRows.map(e=>e.data),visits:visitRows.map(v=>({id:v.id,path:v.path,seq:Number(v.seq),startedAt:Number(v.started),updatedAt:Number(v.updated),visibleMs:Number(v.visible),...v.data})),range});
+    if(timing){
+      Object.assign(timing,{dbMs,buildMs:Date.now()-started-dbMs,events:eventRows.length,visits:visitRows.length,windowDays:Math.round((Date.now()-cutoff)/86400000)});
+      value.adminSettings={settings,revision:revision(settings)};
+    }
+    return value;
+  }
   const logsResult=entries=>({entries:[...entries].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt)||String(b.version).localeCompare(String(a.version))),revision:revision(entries)});
   const seedLogs=(()=>{try{const list=JSON.parse(fs.readFileSync(path.join(root,'changelog-seed.json'),'utf8'));return Array.isArray(list)?list:[];}catch{return [];}})();
   /** 部署后把仓库里新增的更新日志补进站点数据库，按版本去重；后台删过的版本不复活。 */
@@ -111,7 +136,7 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
   async function handle(req,res,url){
     if(!['/api/site-config','/api/analytics/event','/api/analytics/visit','/api/analytics/summary'].includes(url.pathname)&&!url.pathname.startsWith('/api/auth/')&&!url.pathname.startsWith('/api/admin/'))return false;
     try{validate(req);await cleanup();const route=url.pathname;
-      if(route==='/api/site-config'&&req.method==='GET'){json(res,200,await state('settings'));return true;}
+      if(route==='/api/site-config'&&req.method==='GET'){json(res,200,await settingsState());return true;}
       if(route==='/api/analytics/event'&&req.method==='POST'){await record(req,await body(req,2048));res.writeHead(204,{'Cache-Control':'no-store'}).end();return true;}
       if(route==='/api/analytics/visit'&&req.method==='POST'){await recordVisit(req,await body(req,2048));res.writeHead(204,{'Cache-Control':'no-store'}).end();return true;}
       if(route==='/api/auth/status'&&req.method==='GET'){const current=await session(req);json(res,200,current?status(current):{authenticated:false,configured:Boolean((await state('auth')).admin)});return true;}
@@ -127,7 +152,7 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
       const current=await requireSession(req);if(!['GET','HEAD'].includes(req.method))await requireCsrf(req);
       if(route==='/api/auth/logout'&&req.method==='POST'){await q(`DELETE FROM ${table('sessions')} WHERE id=$1`,[sessionKey(req)]);res.setHeader('Set-Cookie','jianying_admin=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0'+(publicOrigin.startsWith('https://')||process.env.VERCEL?'; Secure':''));json(res,200,{ok:true});return true;}
       if(route==='/api/auth/password'&&req.method==='POST'){await budget(req,'login',8,15*60000);const input=await body(req,8192);await mutate('auth',async(auth,client)=>{if(!await matches(input.currentPassword,auth.admin))throw fail('当前密码不正确。',403);Object.assign(auth.admin,await password(input.password),{changedAt:new Date().toISOString()});await client.query(`DELETE FROM ${table('sessions')} WHERE id<>$1`,[sessionKey(req)]);});json(res,200,{ok:true});return true;}
-      if(route==='/api/admin/summary'&&req.method==='GET'){json(res,200,await summary(url.searchParams));return true;}
+      if(route==='/api/admin/summary'&&req.method==='GET'){const timing={};const value=await summary(url.searchParams,timing);res.setHeader('Server-Timing',`db;dur=${timing.dbMs}, build;dur=${timing.buildMs}, events;desc="${timing.events} rows", window;desc="${timing.windowDays} days"`);json(res,200,value);return true;}
       if(route==='/api/admin/members'&&req.method==='GET'){json(res,200,memberSummary?await memberSummary(url.searchParams):{unavailable:true});return true;}
       if(route==='/api/admin/accounts'&&req.method==='GET'){json(res,200,memberAccounts?await memberAccounts(url.searchParams):{unavailable:true});return true;}
       if(route==='/api/admin/accounts/export'&&req.method==='GET'){
@@ -137,7 +162,7 @@ export async function createCloudAdministration({root,databaseUrl=process.env.DA
       }
       if(route==='/api/admin/resume-ai'&&req.method==='GET'){json(res,200,memberConfiguration?await memberConfiguration():{unavailable:true});return true;}
       if(route==='/api/admin/resume-ai'&&req.method==='PUT'){if(!updateMemberConfiguration)throw fail('AI 服务未连接。',503);json(res,200,await updateMemberConfiguration(await body(req)));return true;}
-      if(route==='/api/admin/settings'&&req.method==='GET'){const settings=await state('settings');json(res,200,{settings,revision:revision(settings)});return true;}
+      if(route==='/api/admin/settings'&&req.method==='GET'){const settings=await settingsState();json(res,200,{settings,revision:revision(settings)});return true;}
       if(route==='/api/admin/settings'&&req.method==='PUT'){const input=await body(req);const result=await mutate('settings',settings=>{if(input.revision!==revision(settings))throw fail('设置已在其他窗口更新。请刷新后重新编辑。',409);const next=normalizeSettings(input.settings);for(const key of Object.keys(settings))delete settings[key];Object.assign(settings,next);return {settings,revision:revision(settings)};});json(res,200,result);return true;}
       if(route==='/api/admin/sponsorship'&&req.method==='GET'){
         const cutoff=Date.now()-90*86400000,[entries,events,settings]=await Promise.all([state('sponsorship'),q(`SELECT data FROM ${table('events')} WHERE time>=$1 ORDER BY time DESC,id DESC LIMIT 100000`,[cutoff]),state('settings')]);

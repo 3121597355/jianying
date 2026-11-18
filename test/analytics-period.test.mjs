@@ -4,7 +4,7 @@ import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
 import {once} from 'node:events';
 import os from 'node:os';
 import path from 'node:path';
-import {ANALYTICS_CLEAN_SINCE as boundary,analyticsScope,selectAnalyticsPeriod} from '../analytics-period.mjs';
+import {ANALYTICS_CLEAN_SINCE as boundary,analyticsScope,selectAnalyticsPeriod,analyticsWindowStart,ANALYTICS_RETENTION_DAYS} from '../analytics-period.mjs';
 import {buildSummary,defaults} from '../admin.mjs';
 import {productAudience,productTrend} from '../assets/js/admin-product.js';
 import {createResumeServer} from '../serve.mjs';
@@ -60,4 +60,14 @@ test('authenticated HTTP summaries and all CSV exports use the same merged perio
     const csv=await(await get(route+separator+query)).text();assert.match(csv,/全部记录/);assert.match(csv,/2026-11-16 03:11/);assert.match(csv,/不能直接当作真实用户量/);
   }
   const stored=(await readFile(rawPath,'utf8')).trim().split('\n').map(JSON.parse);assert.deepEqual(stored,raw);
+});
+
+test('后台概览只读「所选区间 + 等长上一期」，并封顶在 90 天保留期',()=>{
+  const now=Date.parse('2026-11-18T02:00:00Z');
+  const iso=value=>new Date(value).toISOString();
+  assert.equal(iso(analyticsWindowStart({from:'2026-11-12',to:'2026-11-18'},now)),'2026-11-05T00:00:00.000Z','7 天视图只往前读 14 天');
+  assert.equal(iso(analyticsWindowStart({from:'2026-10-20',to:'2026-11-18'},now)),'2026-09-20T00:00:00.000Z','30 天视图只往前读 60 天');
+  assert.equal(analyticsWindowStart({from:'2026-01-01',to:'2026-11-18'},now),now-ANALYTICS_RETENTION_DAYS*86400000,'更早的区间回落到 90 天保留期');
+  assert.equal(analyticsWindowStart({from:'2026-12-30',to:'2026-12-31'},now),now,'未来日期不会把窗口推到当前时间之后');
+  assert.ok(Number.isFinite(analyticsWindowStart({},now)),'参数缺失时退回 30 天口径，不抛异常');
 });

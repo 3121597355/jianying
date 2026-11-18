@@ -22,8 +22,12 @@ let changelogData;
 let usersQuery={q:'',sort:'recent',page:1,days:30};
 // 默认看近 7 天：数据量还小，7 天窗口才看得到每天的起伏。
 let csrf='',username='',panel='overview',days=7,custom=null,settings,revision='',summary,dirty=false,requestId=0,toastTimer;
+// 同一天区间的概览只取一次；切栏目直接用缓存渲染，要最新数据点「刷新」。
+const summaryCache=new Map();let paintedPanel='';
 const isAnalyticsPanel=()=>['overview','features','audience','engagement'].includes(panel);
 const params=()=>new URLSearchParams(custom||{days}).toString();
+function applySummaryMeta(){if(!summary?.range)return;$('#date-from').value=summary.range.from;$('#date-to').value=summary.range.to;showAnalyticsPeriod(summary.collection);$('#analytics-period-notice').hidden=false;}
+const panelMarkup=()=>({overview,features,audience,engagement:engagementView})[panel]();
 function showAnalyticsPeriod(collection){
   const dates=collection.range?`统计日期：${collection.range.from} 至 ${collection.range.to}。`:'所选日期没有记录。';
   const notice=$('#analytics-period-notice');notice.classList.remove('is-history');notice.textContent=`${collection.label} · ${dates} ${collection.notice}`;
@@ -84,11 +88,27 @@ function security(){return `<div class="settings-layout">${panelBox('管理员�
 async function load(){
   const id=++requestId;dirty=false;showError('');$$('[data-panel]').forEach(b=>{b.classList.toggle('active',b.dataset.panel===panel);b.setAttribute('aria-current',b.dataset.panel===panel?'page':'false');});
   const analytics=isAnalyticsPanel();$('#analytics-period-notice').hidden=true;
-  $('#page-title').textContent=panels[panel][0];$('#page-description').textContent=panels[panel][1];$('#breadcrumb').textContent='网站 / '+panels[panel][0];const stats=['overview','features','audience','engagement'].includes(panel);$('#date-toolbar').hidden=!stats&&!['members','sponsorship'].includes(panel);$('#export-data').hidden=!stats&&panel!=='sponsorship';$('#page-eyebrow').textContent=stats?'网站数据':'网站管理';$('#export-data').href=panel==='sponsorship'?'/api/admin/sponsorship/export':(panel==='engagement'?'/api/admin/engagement/export?':'/api/admin/export?')+params()+(panel==='audience'?'&view=acquisition':panel==='overview'||panel==='features'?'&view=product':'');$('#dashboard-content').innerHTML='<div class="loading" role="status">正在读取…</div>';
+  $('#page-title').textContent=panels[panel][0];$('#page-description').textContent=panels[panel][1];$('#breadcrumb').textContent='网站 / '+panels[panel][0];const stats=['overview','features','audience','engagement'].includes(panel);$('#date-toolbar').hidden=!stats&&!['members','sponsorship'].includes(panel);$('#export-data').hidden=!stats&&panel!=='sponsorship';$('#page-eyebrow').textContent=stats?'网站数据':'网站管理';$('#export-data').href=panel==='sponsorship'?'/api/admin/sponsorship/export':(panel==='engagement'?'/api/admin/engagement/export?':'/api/admin/export?')+params()+(panel==='audience'?'&view=acquisition':panel==='overview'||panel==='features'?'&view=product':'');const painted=paintedPanel===panel&&Boolean($('#dashboard-content').firstElementChild)&&!$('#dashboard-content').querySelector('.loading');if(painted)$('#updated-at').textContent='更新中…';else $('#dashboard-content').innerHTML='<div class="loading" role="status">正在读取…</div>';
   try{
+    let markup;
+    if(stats){
+      const key=params(),cached=summaryCache.get(key);
+      if(cached){
+        summary=cached.summary;applySummaryMeta();$('#dashboard-content').innerHTML=panelMarkup();$('#updated-at').textContent='更新于 '+time(cached.at);bindForms();paintedPanel=panel;
+        // 45 秒内直接复用缓存，切栏目不再重复算一遍；要最新数据点「刷新」。
+        if(Date.now()-cached.at<45000)return;
+      }
+      const fresh=await api('/api/admin/summary?'+key);if(id!==requestId)return;
+      summary=fresh;
+      if(fresh.adminSettings){settings=fresh.adminSettings.settings;revision=fresh.adminSettings.revision;}
+      else{const loaded=await api('/api/admin/settings');if(id!==requestId)return;settings=loaded.settings;revision=loaded.revision;}
+      summaryCache.set(key,{at:Date.now(),summary:fresh});while(summaryCache.size>6)summaryCache.delete(summaryCache.keys().next().value);
+      applySummaryMeta();markup=panelMarkup();
+    }else{
     const loaded=await api('/api/admin/settings');if(id!==requestId)return;settings=loaded.settings;revision=loaded.revision;
-    let markup;if(stats){summary=await api('/api/admin/summary?'+params());if(id!==requestId)return;$('#date-from').value=summary.range.from;$('#date-to').value=summary.range.to;showAnalyticsPeriod(summary.collection);$('#analytics-period-notice').hidden=false;markup=({overview,features,audience,engagement:engagementView})[panel]();}else if(panel==='members'){const data=await api('/api/admin/members?'+params());if(id!==requestId)return;const connection=await api('/api/admin/resume-ai');if(id!==requestId)return;$('#date-from').value=data.range.from;$('#date-to').value=data.range.to;markup=membersView(data)+resumeAiView(connection);}else if(panel==='users'){const query=new URLSearchParams({sort:usersQuery.sort,page:String(usersQuery.page),days:String(usersQuery.days||30)});if(usersQuery.q)query.set('q',usersQuery.q);const data=await api('/api/admin/accounts?'+query.toString());if(id!==requestId)return;if(data&&data.page&&Number(data.page)!==usersQuery.page)usersQuery={...usersQuery,page:Number(data.page)};const productSummary=await api('/api/admin/summary?'+new URLSearchParams({days:String(usersQuery.days||30),scope:'current'}).toString());if(id!==requestId)return;markup=usersView(data,productSummary&&productSummary.product);}else if(panel==='sponsorship'){sponsorshipData=await api('/api/admin/sponsorship?'+params());if(id!==requestId)return;$('#date-from').value=sponsorshipData.range.from;$('#date-to').value=sponsorshipData.range.to;markup=sponsorshipView(sponsorshipData);}else if(panel==='integration'){const {keys}=await api('/api/admin/keys');if(id!==requestId)return;markup=integration(keys);}else if(panel==='changelog'){changelogData=await api('/api/admin/changelog');if(id!==requestId)return;markup=changelogView(changelogData);}else markup=({templates,content,security})[panel]();
-    $('#dashboard-content').innerHTML=markup;$('#updated-at').textContent='更新于 '+time(Date.now());bindForms();
+    if(panel==='members'){const [data,connection]=await Promise.all([api('/api/admin/members?'+params()),api('/api/admin/resume-ai')]);if(id!==requestId)return;$('#date-from').value=data.range.from;$('#date-to').value=data.range.to;markup=membersView(data)+resumeAiView(connection);}else if(panel==='users'){const query=new URLSearchParams({sort:usersQuery.sort,page:String(usersQuery.page),days:String(usersQuery.days||30)});if(usersQuery.q)query.set('q',usersQuery.q);const [data,productSummary]=await Promise.all([api('/api/admin/accounts?'+query.toString()),api('/api/admin/summary?'+new URLSearchParams({days:String(usersQuery.days||30),scope:'current'}).toString())]);if(id!==requestId)return;if(data&&data.page&&Number(data.page)!==usersQuery.page)usersQuery={...usersQuery,page:Number(data.page)};markup=usersView(data,productSummary&&productSummary.product);}else if(panel==='sponsorship'){sponsorshipData=await api('/api/admin/sponsorship?'+params());if(id!==requestId)return;$('#date-from').value=sponsorshipData.range.from;$('#date-to').value=sponsorshipData.range.to;markup=sponsorshipView(sponsorshipData);}else if(panel==='integration'){const {keys}=await api('/api/admin/keys');if(id!==requestId)return;markup=integration(keys);}else if(panel==='changelog'){changelogData=await api('/api/admin/changelog');if(id!==requestId)return;markup=changelogView(changelogData);}else markup=({templates,content,security})[panel]();
+    }
+    $('#dashboard-content').innerHTML=markup;paintedPanel=panel;$('#updated-at').textContent='更新于 '+time(Date.now());bindForms();
   }catch(error){if(id===requestId){$('#dashboard-content').replaceChildren();showError(error.message);}}
 }
 async function save(form,next){const button=form.querySelector('[type=submit]');button.disabled=true;showError('');try{const saved=await api('/api/admin/settings','PUT',{settings:next,revision});settings=saved.settings;revision=saved.revision;if(form.id==='templates-form')$('#template-rows').innerHTML=templateRows();dirty=false;notify('已保存，网站设置已同步');$('#updated-at').textContent='更新于 '+time(Date.now());}catch(error){showError(error.message);}finally{button.disabled=false;}}
@@ -124,7 +144,7 @@ $$('[data-panel]').forEach(button=>button.addEventListener('click',()=>void navi
 })));
 window.addEventListener('hashchange',()=>void navigate(location.hash.slice(1)));
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
-$('#refresh-data').addEventListener('click',()=>{if(!dirty||confirm('刷新会放弃尚未保存的修改，确定刷新？'))void load();});
+$('#refresh-data').addEventListener('click',()=>{if(!dirty||confirm('刷新会放弃尚未保存的修改，确定刷新？')){summaryCache.clear();void load();}});
 $$('[data-days]').forEach(button=>button.addEventListener('click',()=>{days=Number(button.dataset.days);custom=null;$$('[data-days]').forEach(b=>b.classList.toggle('active',b===button));void load();}));
 $('#date-form').addEventListener('submit',event=>{event.preventDefault();custom={from:$('#date-from').value,to:$('#date-to').value};$$('[data-days]').forEach(b=>b.classList.remove('active'));void load();});
 $('#logout').addEventListener('click',async()=>{if(dirty&&!confirm('有尚未保存的修改，确定退出？'))return;try{await api('/api/auth/logout','POST');showLogin(false);}catch(error){showError(error.message);}});
