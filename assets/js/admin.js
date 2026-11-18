@@ -26,7 +26,7 @@ let usersQuery={q:'',sort:'recent',page:1,days:30};
 // 默认看近 7 天：数据量还小，7 天窗口才看得到每天的起伏。
 let csrf='',username='',panel='overview',days=7,custom=null,settings,revision='',summary,dirty=false,requestId=0,toastTimer;
 // 干净口径：只统计清洁分界之后的记录，把早期本人访问和调试流量排除掉。
-let cleanOnly=false;
+let cleanOnly=true;
 // 同一天区间的概览只取一次；切栏目直接用缓存渲染，要最新数据点「刷新」。
 const summaryCache=new Map();let paintedPanel='';
 const isAnalyticsPanel=()=>['overview','features','audience','engagement'].includes(panel);
@@ -93,7 +93,7 @@ function security(){return `<div class="settings-layout">${panelBox('管理员�
 async function load(){
   const id=++requestId;dirty=false;showError('');$$('[data-panel]').forEach(b=>{b.classList.toggle('active',b.dataset.panel===panel);b.setAttribute('aria-current',b.dataset.panel===panel?'page':'false');});
   const analytics=isAnalyticsPanel();$('#analytics-period-notice').hidden=true;
-  $('#page-title').textContent=panels[panel][0];$('#page-description').textContent=panels[panel][1];$('#breadcrumb').textContent='网站 / '+panels[panel][0];const stats=['overview','features','audience','engagement'].includes(panel);$('#date-toolbar').hidden=!stats&&!['members','sponsorship','weekly'].includes(panel);$('#date-toolbar').dataset.mode=panel==='weekly'?'weekly':'';$('#export-data').hidden=!stats&&panel!=='sponsorship';$('#page-eyebrow').textContent=stats?'网站数据':'网站管理';$('#export-data').href=panel==='sponsorship'?'/api/admin/sponsorship/export':(panel==='engagement'?'/api/admin/engagement/export?':'/api/admin/export?')+params()+(panel==='audience'?'&view=acquisition':panel==='overview'||panel==='features'?'&view=product':'');const painted=paintedPanel===panel&&Boolean($('#dashboard-content').firstElementChild)&&!$('#dashboard-content').querySelector('.loading');if(painted)$('#updated-at').textContent='更新中…';else $('#dashboard-content').innerHTML='<div class="loading" role="status">正在读取…</div>';
+  $('#page-title').textContent=panels[panel][0];$('#page-description').textContent=panels[panel][1];$('#breadcrumb').textContent='网站 / '+panels[panel][0];const stats=['overview','features','audience','engagement'].includes(panel);$('#date-toolbar').hidden=!stats&&!['members','sponsorship','weekly'].includes(panel);$('#date-toolbar').dataset.mode=panel==='weekly'?'weekly':'';$('#clean-scope').setAttribute('aria-pressed',String(cleanOnly));$('#export-data').hidden=!stats&&panel!=='sponsorship';$('#page-eyebrow').textContent=stats?'网站数据':'网站管理';$('#export-data').href=panel==='sponsorship'?'/api/admin/sponsorship/export':(panel==='engagement'?'/api/admin/engagement/export?':'/api/admin/export?')+params()+(panel==='audience'?'&view=acquisition':panel==='overview'||panel==='features'?'&view=product':'');const painted=paintedPanel===panel&&Boolean($('#dashboard-content').firstElementChild)&&!$('#dashboard-content').querySelector('.loading');if(painted)$('#updated-at').textContent='更新中…';else $('#dashboard-content').innerHTML='<div class="loading" role="status">正在读取…</div>';
   try{
     let markup;
     if(stats){

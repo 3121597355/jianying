@@ -7,7 +7,7 @@
   <link rel="shortcut icon" href="/favicon.ico?v=20261112-favicon">
 <link rel="icon" type="image/png" sizes="64x64" href="/assets/img/brand/favicon.png?v=20261112-favicon">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=20261112-favicon">
-  <link rel="stylesheet" href="/assets/css/admin.css?v=20261118-weekly"><script type="module" src="/assets/js/admin.js?v=20261118-weekly"></script>
+  <link rel="stylesheet" href="/assets/css/admin.css?v=20261118-clean-default"><script type="module" src="/assets/js/admin.js?v=20261118-clean-default"></script>
 <link rel="stylesheet" href="/assets/css/mobile.css?v=20261116-mobile"></head>
 <body>
   <div id="loading" class="loading" role="status">正在连接网站后台…</div>
@@ -49,8 +49,8 @@
     <div class="workspace">
       <header class="topbar"><span id="breadcrumb">网站 / 数据概览</span><div><span class="protected"><i></i>管理员访问</span><button id="theme-toggle" class="theme-button" aria-label="切换深色模式">◐</button><a href="/?adminPreview=1" target="_blank" rel="noopener">查看网站 <span aria-hidden="true">↗</span></a></div></header>
       <main id="dashboard-main">
-        <div class="page-heading"><div><p class="eyebrow" id="page-eyebrow">网站数据</p><h1 id="page-title">数据概览</h1><p id="page-description" class="muted">了解简历与证件照的使用情况。</p></div><div class="heading-actions"><button id="refresh-data" class="secondary">刷新</button><a id="export-data" class="secondary" href="/api/admin/export?days=7" title="导出当前统计周期，文件名带周期与数据口径">导出 CSV <span aria-hidden="true">↓</span></a></div></div>
-        <div id="date-toolbar" class="date-toolbar"><div class="date-controls"><div class="date-presets" role="group" aria-label="统计日期范围"><button data-days="7" class="active">近 7 天</button><button data-days="30">近 30 天</button><button data-days="90">近 90 天</button></div><button type="button" id="clean-scope" class="scope-toggle" aria-pressed="false"><span aria-hidden="true">✓</span>只看干净记录</button></div><form id="date-form"><label class="sr-only" for="date-from">开始日期</label><input id="date-from" type="date" required><span>—</span><label class="sr-only" for="date-to">结束日期</label><input id="date-to" type="date" required><button class="date-query" type="submit">查询</button></form></div>
+        <div class="page-heading"><div><p class="eyebrow" id="page-eyebrow">网站数据</p><h1 id="page-title">数据概览</h1><p id="page-description" class="muted">了解简历与证件照的使用情况。</p></div><div class="heading-actions"><button id="refresh-data" class="secondary">刷新</button><a id="export-data" class="secondary" href="/api/admin/export?days=7&scope=clean" title="导出当前统计周期，文件名带周期与数据口径">导出 CSV <span aria-hidden="true">↓</span></a></div></div>
+        <div id="date-toolbar" class="date-toolbar"><div class="date-controls"><div class="date-presets" role="group" aria-label="统计日期范围"><button data-days="7" class="active">近 7 天</button><button data-days="30">近 30 天</button><button data-days="90">近 90 天</button></div><button type="button" id="clean-scope" class="scope-toggle" aria-pressed="true"><span aria-hidden="true">✓</span>只看干净记录</button></div><form id="date-form"><label class="sr-only" for="date-from">开始日期</label><input id="date-from" type="date" required><span>—</span><label class="sr-only" for="date-to">结束日期</label><input id="date-to" type="date" required><button class="date-query" type="submit">查询</button></form></div>
         <div id="analytics-period-notice" class="analytics-period-notice" hidden role="status"></div>
         <div id="dashboard-error" class="error-banner" role="alert" hidden></div>
         <section id="dashboard-content" aria-live="polite"></section>
