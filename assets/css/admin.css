@@ -102,7 +102,7 @@
 .source-table .bar-cell{justify-content:flex-end}
 .bar-track{width:64px;height:6px;border-radius:4px;background:var(--soft);overflow:hidden;flex:0 0 auto}
 .bar-track i{display:block;height:100%;border-radius:4px;background:#a4b48f;min-width:3px}
-.bar-value{color:var(--ink)}
+.bar-value{color:var(--ink)}.source-table .bar-value{display:grid;justify-items:end;gap:2px;line-height:1.15}.source-table .bar-value b{font-weight:600}.source-table .bar-value small{font-size:10px;color:var(--muted);white-space:nowrap}
 .failure-list{display:grid}
 .failure-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 0;border-bottom:1px solid var(--line);font-size:12px}
 .failure-row:first-child{padding-top:0}
