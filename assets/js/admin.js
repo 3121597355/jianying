@@ -5,7 +5,7 @@ import {acquisitionView,bindAcquisition} from './admin-acquisition.js?v=20261118
 import {resumeAiView,bindResumeAi} from './admin-members.js';
 import {usersView,bindUsers} from './admin-users.js';
 import {MOBILE_ADMIN_MEDIA} from './mobile-layout.js';
-import {productOverview,productFeatures,productAudience} from './admin-product.js?v=20261117-merged';
+import {productOverview,productFeatures,productAudience} from './admin-product.js?v=20261119-pct';
 import {setAnalyticsExclusion} from './analytics-policy.js';
 import {weeklyView} from './admin-weekly.js?v=20261118-weekly';
 function excludeThisBrowser(){let storage,session;try{storage=window.localStorage;}catch{}try{session=window.sessionStorage;}catch{}setAnalyticsExclusion(true,{document,storage,session});}
