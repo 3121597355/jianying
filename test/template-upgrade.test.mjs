@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {defaults,normalizeSettings,upgradeTemplateCatalog} from '../admin.mjs';
 import {EXTENDED_TEMPLATES} from '../assets/js/tpl-extended.js';
-import {applyTemplate,renderByTpl} from '../assets/js/templates.js';
+import {applyTemplate,renderByTpl,TEMPLATES} from '../assets/js/templates.js';
 
 test('four-template site settings upgrade without resetting custom content, order or switches',()=>{
   const original=defaults();original.templates=original.templates.slice(0,4).reverse();
@@ -10,7 +10,7 @@ test('four-template site settings upgrade without resetting custom content, orde
   original.templates[0].name='管理员命名';original.templates[2].enabled=false;original.templates[2].featured=false;
   const before=structuredClone(original),upgraded=upgradeTemplateCatalog(original);
   assert.deepEqual(original,before);
-  assert.equal(upgraded.templates.length,10);
+  assert.equal(upgraded.templates.length,TEMPLATES.length);
   assert.deepEqual(upgraded.templates.slice(0,4),before.templates);
   assert.deepEqual(upgraded.site,before.site);
   assert.equal(upgraded.defaultTemplate,2003);

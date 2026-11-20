@@ -1,0 +1,109 @@
+/* 双栏 / 网格版式：所有颜色都属于文档本身，不跟随站点主题。 */
+.premium-resume{--p-ink:#242c34;--p-ink2:#5f6b77;--p-line:#e4e9ee;--p-accent:var(--standard-accent,#22405c);}
+.premium-resume .resume_box{width:820px;min-height:1160px;padding:0;background:#fff;color:var(--p-ink);font-size:var(--standard-font);line-height:var(--standard-line);}
+
+/* 项目字段沿用单栏模板的结构类名，这里给出双栏下的排版 */
+.premium-resume .resume-project-field{margin:0 0 2px;}
+.premium-resume .resume-project-contribution{margin:0 0 2px;}
+.premium-resume .resume-project-body>:is(.resume-project-field,.resume-project-contribution){margin:0;}
+.premium-resume .resume-project-body>*+:is(.resume-project-field,.resume-project-contribution){margin-top:4px;}
+.premium-resume .resume-project-label{display:block;margin-bottom:3px;font-weight:600;color:#303b48;}
+.premium-resume .resume-project-field>strong{font-weight:600;color:#303b48;}
+.premium-resume .resume-project-content>:is(p,ul,ol,blockquote){margin:0;}
+.premium-resume .resume-project-content>:nth-child(n+2),
+.premium-resume .resume-project-content :is(ul,ol)>li+li{margin-top:3px;}
+.premium-resume .resume-project-link{overflow-wrap:anywhere;}
+.premium-resume .resume-project-address-label{color:#68727e;}
+.premium-resume .resume-project-heading-link a{color:#4b5563;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere;}
+
+/* 小节标题：左侧强调色 + 右侧发丝线 */
+.premium-resume .p-title{display:flex;align-items:center;gap:10px;margin:0 0 9px;font-size:14.5px;font-weight:700;letter-spacing:.04em;line-height:1.4;color:var(--p-accent);}
+.premium-resume .p-title::after{content:'';flex:1 1 auto;height:1px;background:var(--p-line);}
+.premium-resume .p-section:first-child{margin-top:0 !important;}
+.premium-resume .p-main>.p-section:first-child,
+.premium-resume .p-col-main>:first-child,
+.premium-resume .p-col-side>:first-child{margin-top:0 !important;}
+
+/* 经历条目 */
+.premium-resume .p-item+.p-item{margin-top:11px;}
+.premium-resume .p-item-head{display:flex;align-items:baseline;justify-content:space-between;gap:18px;}
+.premium-resume .p-item-name{min-width:0;font-weight:700;color:#2a323a;overflow-wrap:anywhere;}
+.premium-resume .p-item-name i{font-style:normal;margin:0 8px;color:#a2aab3;font-weight:400;}
+.premium-resume .p-item-date{flex:0 0 auto;color:#6b7681;font-size:.9em;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.premium-resume .p-body{margin-top:5px;color:#4a545e;}
+.premium-resume .p-body li{margin-top:3px;}
+/* 求职意向等以 span 并列的信息，需要显式间距 */
+.premium-resume .p-section>span{display:inline-block;margin:0 16px 3px 0;color:#3d4852;}
+.premium-resume .p-link{margin-left:10px;font-weight:400;color:#4b5563;}
+.premium-resume .p-link i{margin-right:6px;color:#a2aab3;font-style:normal;}
+.premium-resume .p-link-label{color:#68727e;}
+.premium-resume .p-link a{color:inherit;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere;}
+
+/* 技能 / 标签 / 表格 */
+.premium-resume .p-skills{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+.premium-resume .p-skills li{padding:2px 10px;border:1px solid var(--p-line);border-radius:4px;color:#3d4852;font-size:.95em;line-height:1.6;}
+.premium-resume .p-tags{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:7px;color:#4b5563;}
+.premium-resume .p-table{width:100%;margin-top:8px;border-collapse:collapse;}
+.premium-resume .p-table caption{caption-side:bottom;padding-top:6px;color:#68727e;}
+.premium-resume .p-table :is(th,td){border:1px solid #d7dee5;padding:5px 6px;text-align:center;}
+
+/* 照片 */
+.premium-resume .p-photo{display:flex;align-items:center;justify-content:center;overflow:hidden;background:#eef2f5;color:#8b97a3;font-size:12px;line-height:1.4;}
+.premium-resume .p-photo img{display:block;width:100%;height:100%;object-fit:cover;}
+
+/* ===== 侧栏版式（双栏墨蓝 / 双栏素白） ===== */
+.premium-sidebar .premium-box,
+.premium-sidebar-light .premium-box{display:flex;align-items:stretch;}
+.premium-resume .p-rail{flex:0 0 272px;width:272px;padding:34px 26px 34px;color:#fff;}
+.premium-sidebar .p-rail{background:linear-gradient(165deg,var(--p-accent) 0%,var(--p-accent) 46%,rgba(8,20,32,.55) 100%);}
+.premium-sidebar-light .p-rail{background:#f4f7f9;border-right:1px solid #e2e8ee;color:var(--p-ink);}
+.premium-resume .p-rail-name{margin-top:18px;font-size:25px;font-weight:700;letter-spacing:.04em;line-height:1.3;}
+.premium-resume .p-rail-role{margin-top:6px;font-size:12px;letter-spacing:.06em;opacity:.86;}
+.premium-resume .p-contacts{margin-top:14px;font-size:12.5px;line-height:1.85;overflow-wrap:anywhere;opacity:.94;}
+.premium-resume .p-contacts i{margin:0 6px;font-style:normal;opacity:.55;}
+.premium-resume .p-rail-block{margin-top:22px;}
+.premium-resume .p-rail-tit{margin:0 0 8px;padding-bottom:5px;font-size:11px;font-weight:700;letter-spacing:.16em;line-height:1.6;border-bottom:1px solid rgba(255,255,255,.24);}
+.premium-sidebar-light .p-rail-tit{color:var(--p-accent);border-bottom-color:#dbe3e9;}
+.premium-resume .p-facts{margin-top:8px;font-size:12.5px;line-height:1.9;}
+.premium-resume .p-facts dd{display:flex;gap:8px;}
+.premium-resume .p-facts .p-fact-label{flex:0 0 auto;opacity:.74;}
+.premium-resume .p-facts .p-fact-label::after{content:'：';}
+.premium-resume .p-fact-value{min-width:0;overflow-wrap:anywhere;}
+.premium-sidebar .p-rail .p-body,
+.premium-sidebar .p-rail .p-rich,
+.premium-sidebar .p-rail .p-tags{color:rgba(255,255,255,.88);}
+.premium-sidebar .p-rail .p-skills li{border-color:rgba(255,255,255,.32);color:rgba(255,255,255,.95);}
+.premium-sidebar-light .p-rail .p-skills li{border-color:#dbe3e9;background:#fff;}
+.premium-resume .p-rail .p-item-name{font-size:.96em;}
+.premium-resume .p-rail .p-item-date{display:block;margin-top:2px;font-size:.86em;opacity:.72;}
+.premium-resume .p-rail .p-item-head{display:block;}
+.premium-resume .p-photo-circle{width:104px;height:104px;border-radius:50%;border:2px solid rgba(255,255,255,.5);}
+.premium-sidebar-light .p-photo-circle{width:96px;height:96px;border-radius:10px;border:1px solid #dbe3e9;}
+.premium-resume .p-main{flex:1 1 auto;min-width:0;padding:36px var(--p-pad) 40px;}
+
+/* ===== 瑞士网格 ===== */
+.premium-swiss .premium-box{padding:46px var(--p-pad) 40px;}
+.premium-swiss .p-swiss-head{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;padding-bottom:16px;border-bottom:2px solid var(--p-ink);}
+.premium-swiss .p-swiss-id{min-width:0;}
+.premium-swiss h1{font-size:38px;font-weight:800;letter-spacing:.02em;line-height:1.1;color:var(--p-ink);}
+.premium-swiss .p-swiss-role{margin-top:8px;font-size:12.5px;font-weight:600;letter-spacing:.14em;color:var(--p-accent);}
+.premium-swiss .p-contacts{margin-top:10px;font-size:12px;line-height:1.7;color:var(--p-ink2);}
+.premium-resume .p-photo-square{flex:0 0 auto;width:86px;height:114px;border:1px solid #dfe5ea;border-radius:2px;}
+.premium-swiss .p-cols{display:grid;grid-template-columns:minmax(0,1fr) 214px;column-gap:34px;align-items:start;margin-top:24px;}
+.premium-swiss .p-title{display:block;margin:0 0 10px;padding-top:7px;font-size:11.5px;font-weight:700;letter-spacing:.18em;line-height:1.6;color:var(--p-ink);border-top:1px solid var(--p-ink);}
+.premium-swiss .p-title::after{display:none;}
+.premium-swiss .p-item-date{color:#6b7681;}
+.premium-resume .p-facts-grid{display:grid;gap:4px;font-size:12.5px;line-height:1.75;}
+.premium-resume .p-facts-grid dd{display:flex;gap:8px;}
+.premium-resume .p-facts-grid .p-fact-label{flex:0 0 4.6em;color:var(--p-ink2);}
+
+/* ===== 横幅双栏 ===== */
+.premium-banner .p-banner{display:flex;align-items:flex-start;justify-content:space-between;gap:26px;padding:32px var(--p-pad) 26px;color:#fff;background:linear-gradient(120deg,var(--p-accent) 0%,var(--p-accent) 58%,rgba(10,24,38,.6) 100%);}
+.premium-banner .p-banner-text{min-width:0;}
+.premium-banner h1{font-size:32px;font-weight:700;letter-spacing:.05em;line-height:1.2;color:#fff;}
+.premium-banner .p-banner-role{margin-top:8px;font-size:12.5px;letter-spacing:.1em;color:rgba(255,255,255,.88);}
+.premium-banner .p-contacts{margin-top:12px;font-size:12.5px;line-height:1.8;color:rgba(255,255,255,.92);}
+.premium-resume .p-photo-banner{flex:0 0 auto;width:92px;height:122px;border:2px solid rgba(255,255,255,.62);border-radius:3px;}
+.premium-banner .p-cols{display:grid;grid-template-columns:208px minmax(0,1fr);column-gap:32px;align-items:start;padding:28px var(--p-pad) 40px;}
+.premium-banner .p-col-side{padding-right:24px;border-right:1px solid var(--p-line);}
+.premium-banner .p-title{font-size:14px;}

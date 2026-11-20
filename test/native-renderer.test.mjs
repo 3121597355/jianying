@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {renderStandard} from '../assets/js/standard-renderer.js';
 import {DEFAULT_TPL,getTemplate,TEMPLATES} from '../assets/js/templates.js';
 
-test('public registry contains ten native templates and retains original draft IDs',()=>{
-  assert.deepEqual(TEMPLATES.map(t=>t.id),[2001,2002,2003,2004,1013,1044,1045,1002,1007,1046]);
+test('public registry contains fourteen native templates and retains original draft IDs',()=>{
+  assert.deepEqual(TEMPLATES.map(t=>t.id),[2001,2002,2003,2004,1013,1044,1045,1002,1007,1046,1051,1052,1053,1054]);
   assert.equal(getTemplate(1044).id,1044);
   assert.equal(getTemplate(9999).id,DEFAULT_TPL);
   assert.equal(getTemplate('2003').id,2003);
