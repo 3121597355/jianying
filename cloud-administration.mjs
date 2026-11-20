@@ -30,7 +30,8 @@ async function matches(value,admin){return Boolean(admin&&typeof value==='string
 export async function createCloudAdministration({root,databaseUrl=process.env.DATABASE_URL,initialAdmin={username:process.env.ADMIN_USERNAME,password:process.env.ADMIN_PASSWORD},schema='public',hostPort,publicOrigin=process.env.PUBLIC_ORIGIN||'',allowedOrigins=[],memberSummary,memberAccounts,memberConfiguration,updateMemberConfiguration,analyticsTestMode=false}){
   if(!databaseUrl)throw new Error('Cloud database is required.');
   if(!/^[a-z][a-z0-9_]{0,39}$/.test(schema))throw new Error('Invalid database schema.');
-  const connection=new URL(databaseUrl);connection.searchParams.set('sslmode','verify-full');
+  const connection=new URL(databaseUrl);
+  if(!['localhost','127.0.0.1','[::1]'].includes(connection.hostname))connection.searchParams.set('sslmode','verify-full');
   const pool=new Pool({connectionString:connection.href,max:3,connectionTimeoutMillis:10000,idleTimeoutMillis:20000,allowExitOnIdle:true});
   // Identifiers are strictly validated above. User values always use SQL parameters.
   const table=name=>`"${schema}"."jy_${name}"`,q=(sql,values=[])=>pool.query(sql,values);
