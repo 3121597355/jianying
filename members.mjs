@@ -11,7 +11,24 @@ const equal=(a,b)=>{const x=Buffer.from(String(a)),y=Buffer.from(String(b));retu
 const dayOf=now=>new Date(now+8*3600000).toISOString().slice(0,10);
 const json=(res,status,data)=>res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow'}).end(JSON.stringify(data));
 const safeUser=user=>({id:user.id,username:user.username,nickname:user.nickname,createdAt:user.createdAt});
-function username(value){if(typeof value!=='string'||!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{2,31}$/.test(value))throw invalid('用户名需要为 3～32 位字母、数字、点、横线或下划线。');return value.toLowerCase();}
+// 账号只用邮箱或手机号，方便记住；早期注册的用户名仍可登录。
+const EMAIL_PATTERN=/^[^\s@]{1,64}@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,24}$/;
+const PHONE_PATTERN=/^1[3-9]\d{9}$/;
+const LEGACY_NAME=/^[a-zA-Z0-9][a-zA-Z0-9_.-]{2,31}$/;
+function username(value){
+  if(typeof value!=='string')throw invalid('请输入注册时使用的邮箱或手机号。');
+  const raw=value.trim();
+  if(!raw||raw.length>120)throw invalid('请输入有效的邮箱或手机号。');
+  const name=raw.toLowerCase();
+  if(EMAIL_PATTERN.test(name)||PHONE_PATTERN.test(name))return name;
+  if(LEGACY_NAME.test(raw))return name;
+  throw invalid('请输入有效的邮箱或手机号，例如 you@example.com。');
+}
+/** 昵称默认取自账号：邮箱前缀，手机号中间打码。 */
+function nicknameOf(name){
+  if(PHONE_PATTERN.test(name))return name.slice(0,3)+'****'+name.slice(7);
+  return EMAIL_PATTERN.test(name)?name.split('@')[0]:name;
+}
 async function password(value){if(typeof value!=='string'||value.length<10||value.length>128)throw invalid('密码需要为 10～128 个字符。');const salt=crypto.randomBytes(16).toString('hex');return {salt,hash:(await scrypt(value,salt,64)).toString('hex')};}
 async function matches(value,user){if(typeof value!=='string'||value.length>128)return false;const salt=user?.password?.salt||'00000000000000000000000000000000';const hash=(await scrypt(value,salt,64)).toString('hex');return Boolean(user&&equal(hash,user.password.hash));}
 async function readBody(req,max=2400000){
@@ -208,15 +225,15 @@ export async function createMembers({root,directory=path.join(root,'private','me
           if(input.acceptPrivacy!==true)throw invalid('请阅读并同意隐私说明后注册。');
           const passwordHash=await password(input.password),recoveryCode='YZ-'+crypto.randomBytes(24).toString('hex').toUpperCase();
           const result=await store.transaction(async tx=>{
-            if(await tx.get('user',name))throw invalid('这个用户名已被使用，请换一个。',409);
-            const user={id:crypto.randomUUID(),username:name,nickname:text(input.nickname,40)||name,password:passwordHash,recoveryHash:digest(recoveryCode),createdAt:now(),lastLoginAt:now()};
+            if(await tx.get('user',name))throw invalid('这个邮箱或手机号已经注册过，直接登录即可。',409);
+            const user={id:crypto.randomUUID(),username:name,nickname:text(input.nickname,40)||nicknameOf(name),password:passwordHash,recoveryHash:digest(recoveryCode),createdAt:now(),lastLoginAt:now()};
             await tx.put('user',name,name,user);await event(tx,user,'register');
             return {...await makeSession(tx,res,user),recoveryCode};
           });json(res,201,result);return true;
         }
         const user=await store.transaction(tx=>tx.get('user',name));
         if(route.endsWith('recover')){
-          if(!user||typeof input.recoveryCode!=='string'||!equal(digest(input.recoveryCode.trim().toUpperCase()),user.recoveryHash))throw invalid('用户名或恢复码不正确。',401);
+          if(!user||typeof input.recoveryCode!=='string'||!equal(digest(input.recoveryCode.trim().toUpperCase()),user.recoveryHash))throw invalid('账号或恢复码不正确。',401);
           const passwordHash=await password(input.password),recoveryCode='YZ-'+crypto.randomBytes(24).toString('hex').toUpperCase();
           await store.transaction(async tx=>{
             const current=await tx.get('user',name);if(!current||!equal(current.recoveryHash,user.recoveryHash))throw invalid('恢复码已失效，请重新操作。',409);
@@ -224,7 +241,7 @@ export async function createMembers({root,directory=path.join(root,'private','me
             for(const entry of await tx.list('session',name))await tx.remove('session',entry.id);
           });setCookie(res,'',0);json(res,200,{ok:true,recoveryCode});return true;
         }
-        if(!await matches(input.password,user))throw invalid('用户名或密码不正确。',401);
+        if(!await matches(input.password,user))throw invalid('账号或密码不正确。',401);
         const result=await store.transaction(async tx=>{
           const current=await tx.get('user',name);if(!current||!equal(current.password.hash,user.password.hash))throw invalid('账户已变更，请重新登录。',401);
           current.lastLoginAt=now();await tx.put('user',name,name,current);await event(tx,current,'login');return makeSession(tx,res,current);

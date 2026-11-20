@@ -3,7 +3,7 @@ import {MODULES} from './dict.js';
 import {createProjectDetails} from './project-fields.js';
 const sample={
   setData:{skin:'#284967',font:1,fontSize:14,mm:24,pp:52,lineHeight:1.7,title:'',slogan:'',moduleSort:['basic','yixiang','work','project','jiaoyu','jineng','pingjia']},
-  basicInfo:{name:'林予安',sex:0,birthday:'',mobile:'138 0000 0000',email:'hello@example.com',workYears:6,isAge:false,photo:'/assets/img/landing/portrait-demo.webp',photoShow:true,make:[],minzu:'',zhengzhi:'',jiguan:'',hunyin:0,height:'',weight:'',inShort:''},
+  basicInfo:{name:'林予安',sex:2,birthday:'1997-06',mobile:'138 0000 0000',email:'hello@example.com',workYears:6,isAge:false,photo:'/assets/img/landing/portrait-demo.webp',photoShow:true,make:[],minzu:'汉族',zhengzhi:3,jiguan:'浙江杭州',hunyin:2,height:'',weight:'',inShort:''},
   moduleData:[
     {moduleName:'yixiang',moduleValue:'求职意向',visible:true,data:{job:'产品经理',city:'杭州',money:'',joinTime:''}},
     {moduleName:'work',moduleValue:'工作经历',visible:true,data:[
@@ -32,7 +32,7 @@ export function createTemplateSample(id,kind='professional'){
   const resume=structuredClone(sample);resume.setData.tplId=Number(id);
   if(['graduate','developer'].includes(kind)){
     const developer=kind==='developer';
-    Object.assign(resume.basicInfo,{name:'陈同学',sex:0,workYears:0,photo:'',photoShow:false,email:'student@example.com'});
+    Object.assign(resume.basicInfo,{name:'陈同学',sex:1,birthday:'2005-03',workYears:0,photo:'',photoShow:false,email:'student@example.com',minzu:'汉族',zhengzhi:3,jiguan:'江苏南京',hunyin:2});
     resume.setData.moduleSort=['basic','yixiang','jiaoyu','project','xiaoyuan','jineng'];
     const mod=name=>resume.moduleData.find(item=>item.moduleName===name);
     mod('yixiang').data={job:developer?'前端开发实习生':'产品运营实习生',city:'',money:'',joinTime:''};

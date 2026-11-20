@@ -170,3 +170,18 @@ test('personal-only mode disables legacy provider calls while preserving account
  const result=await account.request('tailor','POST',{resume:resume(),jd:'负责软件产品开发与移动端适配，处理用户反馈',jobTitle:'软件开发',requestId:crypto.randomUUID(),consent:true});assert.equal(result.status,410);assert.equal(calls,0);
  const basic=await account.request('basic','POST',{resume:resume(),jd:'负责软件产品开发与移动端适配，处理用户反馈',jobTitle:'软件开发'});assert.equal(basic.status,200);assert.equal((await basic.json()).mode,'basic');
 });
+
+test('accounts register with an email or phone number instead of a made-up username',async t=>{
+  const f=await fixture(t);
+  const signUp=async name=>{const response=await f.request('register','POST',{username:name,password,acceptPrivacy:true});assert.equal(response.status,201);return response.json();};
+  const email=await signUp(' Student@Example.COM ');
+  assert.equal(email.user.username,'student@example.com');
+  assert.equal(email.user.nickname,'student');
+  const phone=await signUp('13800001111');
+  assert.equal(phone.user.username,'13800001111');
+  assert.equal(phone.user.nickname,'138****1111');
+  assert.equal((await f.request('register','POST',{username:'张三',password,acceptPrivacy:true})).status,400);
+  assert.equal((await f.request('register','POST',{username:'student@example.com',password,acceptPrivacy:true})).status,409);
+  const login=await f.request('login','POST',{username:'STUDENT@example.com',password});
+  assert.equal(login.status,200);
+});

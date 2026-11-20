@@ -88,7 +88,7 @@ export function usersView(data,product){
   const guests=guestPanel(data.registration,product);
   const toolbar=`<div class="users-toolbar">
     <form id="users-search" class="users-search" role="search">
-      <input id="users-query" type="search" name="q" value="${esc(query)}" maxlength="40" placeholder="搜索用户名或昵称" aria-label="搜索用户名或昵称">
+      <input id="users-query" type="search" name="q" value="${esc(query)}" maxlength="40" placeholder="搜索邮箱、手机号或昵称" aria-label="搜索邮箱、手机号或昵称">
       <button class="secondary" type="submit">搜索</button>
     </form>
     <label class="users-sort">排序
@@ -97,7 +97,7 @@ export function usersView(data,product){
     <a class="secondary" href="/api/admin/accounts/export">导出 CSV <span aria-hidden="true">↓</span></a>
   </div>`;
   if(!data.total)return stats+usage+guests+toolbar+'<div class="empty"><strong>还没有注册账户</strong>有人注册后会出现在这里。</div>';
-  if(!data.matched)return stats+usage+guests+toolbar+`<div class="empty"><strong>没有匹配的账户</strong>换个用户名或昵称再试。</div>`;
+  if(!data.matched)return stats+usage+guests+toolbar+`<div class="empty"><strong>没有匹配的账户</strong>换个账号或昵称再试。</div>`;
   const rows=data.accounts.map(item=>`<tr>
     <td><strong>${esc(item.username)}</strong>${item.nickname&&item.nickname!==item.username?`<small class="muted">${esc(item.nickname)}</small>`:''}</td>
     <td><span class="usage-tag${(item.resumeCount>0||item.cloudSaves>0||item.exports>0||item.aiGenerations>0)?' used':''}">${(item.resumeCount>0||item.cloudSaves>0||item.exports>0||item.aiGenerations>0)?'已使用':'仅注册'}</span></td>

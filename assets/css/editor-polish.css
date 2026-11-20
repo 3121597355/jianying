@@ -226,3 +226,13 @@ html.basic-dragging #formHost .info_list > li:not(.is-basic-source) { will-chang
 @media (hover:none) {
   #resumeEditorPanel #formHost .info_list > li > .basic-field-grip { opacity:.75; }
 }
+
+/* 年月手填：输入框 + 一行小提示，替代手机上要滚很久的原生月份选择器 */
+#resumeEditorPanel #formHost .info_list > li > .birth-control {
+  display:flex; flex-direction:column; gap:2px; flex:1; min-width:0;
+}
+#resumeEditorPanel #formHost .birth-control > .input { width:100%; flex:none; }
+#resumeEditorPanel #formHost .birth-control > .input-hint {
+  font-size:12px; line-height:1.5; color:var(--ui-muted);
+}
+#resumeEditorPanel #formHost .input.month-input { letter-spacing:.02em; font-variant-numeric:tabular-nums; }

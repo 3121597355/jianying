@@ -8,6 +8,7 @@ import { animateIn, animateDisclosure } from './motion.js';
 import {PROJECT_FIELDS,PROJECT_SPACING,projectSpacing,normalizeProjectDetails,projectFieldShown,safeProjectUrl} from './project-fields.js';
 import {bulletProjectContributions,setupProjectEditor} from './project-layout.js';
 import {normalizeBasicFields,normalizeBasicOrder,hasCustomBasicOrder,isCustomBasicKey,customBasicKey,customBasicIndex,MAX_BASIC_FIELDS,BASIC_FIELD_NAME_LIMIT,BASIC_FIELD_VALUE_LIMIT} from './basic-fields.js';
+import {formatMonthText,monthValue,monthText} from './month-field.js';
 import {
   SEX, MARRIAGE, POLITICS, DEGREE, WORK_YEARS, MODULES,
   HOT_CITIES, JOB_LIST, MONTH_OPTIONS, optionalLabel, degreeLabel,
@@ -49,7 +50,7 @@ function formBasic(r) {
   const rows = {
     name: () => row('name', { label: '姓　名', control: `<input class="input" data-k="basicInfo.name" maxlength="49" placeholder="输入你的姓名" value="${esc(b.name)}">` }),
     sex: () => row('sex', { label: '性　别', control: `<select class="input" data-k="basicInfo.sex">${SEX.map((t, i) => opt(i, t, b.sex)).join('')}</select>` }),
-    birthday: () => row('birthday', { label: '出生年月', control: `<input class="input" type="month" data-k="basicInfo.birthday" value="${esc(b.birthday)}">` }),
+    birthday: () => row('birthday', { label: '出生年月', control: `<span class="birth-control"><input class="input month-input" type="text" inputmode="numeric" autocomplete="off" maxlength="7" data-month="1" data-k="basicInfo.birthday" placeholder="如 1998-06" value="${esc(monthText(b.birthday))}"><small class="input-hint">直接敲数字，如 199806 会自动补成 1998-06</small></span>` }),
     photo: () => row('photo', {
       label: '照片设置',
       control: `<div class="photo-controls">
@@ -215,9 +216,9 @@ function formTimeline(r, mod) {
           <li><b>${L.f2}</b><input class="input" data-k="item.${isEdu ? 'major' : 'job'}" ${isProject?'list="projectRoleList"':''} placeholder="${isProject?'如：项目负责人 / 全栈开发 / 产品负责人':L.ph2}" value="${esc(isEdu ? it.major : it.job)}">${isProject?'<datalist id="projectRoleList"><option value="项目负责人"><option value="全栈开发"><option value="产品负责人"><option value="前端开发"><option value="后端开发"><option value="增长与运营"></datalist>':''}</li>
           ${isEdu ? `<li><b>学　历</b><select class="input w122" data-k="item.xueli">${DEGREE.map(t => opt(t, t, degreeLabel(it.xueli))).join('')}</select></li>` : ''}
           <li class="ml0 timeline-dates"><b>${isEdu ? '就读时间' : '起止时间'}</b>
-            <input class="input input_time" type="month" data-k="item.timeStart" value="${esc(it.timeStart)}">
+            <input class="input input_time" type="text" inputmode="numeric" autocomplete="off" maxlength="7" data-month="1" data-k="item.timeStart" placeholder="2023-09" value="${esc(monthText(it.timeStart))}">
             <span> - </span>
-            <input class="input input_time" type="month" data-k="item.timeEnd" value="${esc(it.timeEnd)}" ${it.today ? 'disabled' : ''}>
+            <input class="input input_time" type="text" inputmode="numeric" autocomplete="off" maxlength="7" data-month="1" data-k="item.timeEnd" placeholder="2026-06" value="${esc(monthText(it.timeEnd))}" ${it.today ? 'disabled' : ''}>
             <label class="el-checkbox"><span class="el-checkbox__input ${it.today ? 'is-checked' : ''}"><span class="el-checkbox__inner"></span><input type="checkbox" class="el-checkbox__original" data-k="item.today" ${it.today ? 'checked' : ''}></span><span class="el-checkbox__label">至今</span></label>
           </li>
         </ul>
@@ -432,10 +433,19 @@ function bind(host, def) {
   // 通用输入
   host.querySelectorAll('[data-k]').forEach(node => {
     const k = node.dataset.k;
-    const h = () => {
-      const val = node.type === 'checkbox' ? node.checked
+    const h = event => {
+      let val = node.type === 'checkbox' ? node.checked
         : node.type === 'range' ? Number(node.value)
           : node.value;
+
+      // 年月输入：边打边补成 1998-06，凑满 6 位数字才写入；失焦时保留手填的半截内容。
+      if (node.dataset.month) {
+        const formatted = formatMonthText(val);
+        if (node.value !== formatted) node.value = formatted;
+        const complete = monthValue(formatted);
+        if (!complete && formatted && event.type !== 'change') return;
+        val = complete || formatted;
+      }
 
       set(rr => {
         if (k.startsWith('basicInfo.')) {
@@ -483,6 +493,7 @@ function bind(host, def) {
       }
     };
     node.addEventListener(node.tagName === 'SELECT' || node.type === 'checkbox' || node.type === 'month' ? 'change' : 'input', h);
+    if (node.dataset.month) node.addEventListener('change', h);
   });
 
   host.querySelectorAll('[data-project-visible]').forEach(node=>node.addEventListener('change',()=>{
