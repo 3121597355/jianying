@@ -7,7 +7,7 @@ import {
 } from './store.js';
 import { renderByTpl, TEMPLATES, getTemplate, applyTemplate } from './templates.js';
 import { renderForm, setQuillFactory, disposeEditors, setActiveItem } from './forms.js';
-import { setupExportPreview } from './export-preview.js?v=20261117-guide-skip';
+import { setupExportPreview } from './export-preview.js?v=20261121-cloud';
 import { MODULES, FONTS } from './dict.js';
 import { buildSettingsPanel } from './settings.js?v=20261112-settings';
 import { getModuleOrder } from './module-order.js?v=20261112-drag';
@@ -22,6 +22,10 @@ import {hasResumeContent,isTemplateSample} from './template-samples.js';
 import {setupEditorGuide} from './editor-guide.js';
 import {MOBILE_EDITOR_MEDIA} from './mobile-layout.js';
 import { bindBasicFieldDrag } from './basic-drag.js?v=20261118-basic-smooth';
+import { setupCloudPrompt } from './cloud-prompt.js';
+
+// 账户扩展按需加载；导出后的云端提示复用同一个模块实例。
+const memberModule = import('./editor-member.js?v=20261121-cloud');
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -114,6 +118,7 @@ let previewFrame = 0;
 let previewHTML = '';
 let fitPreviewLayout = () => {};
 let refreshEditorGuide = () => {};
+let paintStepBar = () => {};
 function queuePreview() {
   if (previewFrame) return;
   previewFrame = requestAnimationFrame(() => { previewFrame = 0; renderPreview(); });
@@ -277,6 +282,44 @@ function setupWorkspace() {
 
   // zoom 只作用于预览外壳；导出的离屏简历继续使用原始 820px 宽度。
   const scroller = preview.querySelector('.preview-scroll');
+
+  /* 手机端：一屏只填一栏，底部常驻「上一栏 / 当前栏目 / 下一栏 / 导出」。 */
+  const stepBar = document.createElement('div');
+  stepBar.className = 'mobile-step-bar';
+  stepBar.innerHTML = '<button type="button" class="mobile-step-arrow" data-step="prev" aria-label="上一栏">‹</button>' +
+    '<button type="button" class="mobile-step-current" data-step="list" aria-label="查看并切换栏目"><span></span><small></small></button>' +
+    '<button type="button" class="mobile-step-arrow" data-step="next" aria-label="下一栏">›</button>' +
+    '<button type="button" class="mobile-step-export" data-step="export">导出<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg></button>';
+  document.body.append(stepBar);
+  // 分步只走「基本信息 + 正在展示的栏目」，隐藏栏目从「查看全部栏目」里打开。
+  const stepOrder = () => getModuleOrder(getResume()).filter(name => MODULES.some(def => def.name === name) && (name === 'basic' || getModule(name)?.visible));
+  paintStepBar = () => {
+    const order = stepOrder();
+    const current = window.__tab || 'basic';
+    const index = Math.max(0, order.indexOf(current));
+    const name = order[index] || 'basic';
+    const label = name === 'basic' ? '基本信息' : (getModule(name)?.moduleValue || MODULES.find(def => def.name === name)?.label || '基本信息');
+    stepBar.querySelector('.mobile-step-current span').textContent = label;
+    stepBar.querySelector('.mobile-step-current small').textContent = `${index + 1} / ${order.length}`;
+    stepBar.querySelector('[data-step="prev"]').disabled = index <= 0;
+    stepBar.querySelector('[data-step="next"]').disabled = index >= order.length - 1;
+    stepBar.querySelector('.mobile-step-current').setAttribute('aria-label', `第 ${index + 1} 栏，共 ${order.length} 栏：${label}，点击查看全部栏目`);
+  };
+  stepBar.addEventListener('click', event => {
+    const button = event.target.closest('[data-step]');
+    if (!button) return;
+    const order = stepOrder();
+    const index = order.indexOf(window.__tab || 'basic');
+    if (button.dataset.step === 'prev' && index > 0) selectEditorModule(order[index - 1]);
+    else if (button.dataset.step === 'next' && index >= 0 && index < order.length - 1) selectEditorModule(order[index + 1]);
+    else if (button.dataset.step === 'export') handleDownload();
+    else if (button.dataset.step === 'list') {
+      setEditorOpen(true, {animate:false});
+      setModuleChooserOpen(true, {persist:true});
+      requestAnimationFrame(() => $('#resumeModuleChooser')?.scrollIntoView({block:'start',behavior:'smooth'}));
+    }
+  });
+
   const fit = () => {
     paper.style.zoom = String(Math.min(1, Math.max(.2, (scroller.clientWidth - 40) / 820)));
     if(!main.classList.contains('workspace-grid-moving'))alignToolbarWithPaper();
@@ -437,6 +480,7 @@ function renderTabs() {
   }).join('');
   markScope(ul);
   ul.scrollTop = scrollTop;
+  paintStepBar();
 }
 
 function selectEditorModule(name,{scroll=true}={}) {
@@ -665,9 +709,18 @@ function toast(msg) {
 /* ------------------------------ 导出 ------------------------------ */
 
 // 先看整份简历，再选择 PDF、Word 或长图；导出面板自己处理进度与错误。
+const cloudPrompt = setupCloudPrompt({
+  toast: message => toast(message),
+  onSaved: async saved => {
+    const module = await memberModule.catch(() => null);
+    module?.adoptCloudLink?.(saved);
+  },
+});
+
 const exportPreview = setupExportPreview({
   getFileName: () => getResume().basicInfo?.name || '',
   toast: message => toast(message),
+  onExported: () => cloudPrompt.afterExport(),
 });
 
 function handleDownload() {
@@ -881,7 +934,7 @@ export function bootEditor() {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); flushSave(); }
   });
   // Accounts load independently so an unavailable account service never blocks editing.
-  void import('./editor-member.js?v=20261118-coach4').then(module=>module.installEditorMember()).catch(error=>console.warn('账户扩展暂时无法加载',error));
+  void memberModule.then(module=>module.installEditorMember()).catch(error=>console.warn('账户扩展暂时无法加载',error));
 }
 
 

@@ -11,7 +11,7 @@
 <link rel="icon" type="image/png" sizes="64x64" href="/assets/img/brand/favicon.png?v=20261112-favicon">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=20261112-favicon">
 <script>try{const ui=JSON.parse(localStorage.getItem('qmj-clone:ui')||'{}');document.documentElement.dataset.theme=ui.theme==='dark'?'dark':'light';document.documentElement.dataset.motion=['soft','reduce'].includes(ui.motionMode)?ui.motionMode:'soft';}catch{document.documentElement.dataset.theme='light';document.documentElement.dataset.motion='soft';}</script>
-<link rel="stylesheet" href="/assets/css/palette.css"><link rel="stylesheet" href="/assets/css/landing.css"><script defer src="/assets/js/landing-controls.js?v=20261116-mobile"></script><script type="module" src="/assets/js/landing.js"></script>
+<link rel="stylesheet" href="/assets/css/palette.css"><link rel="stylesheet" href="/assets/css/landing.css?v=20261121-hero"><script defer src="/assets/js/landing-controls.js?v=20261116-mobile"></script><script type="module" src="/assets/js/landing.js"></script>
 <link rel="stylesheet" href="/assets/css/member.css?v=20261115-github"><link rel="stylesheet" href="/assets/css/mobile.css?v=20261116-mobile"></head>
 <body>
 <a class="skip-link" href="#main">跳到主要内容</a>
@@ -26,8 +26,14 @@
 <p class="hero-kicker">简洁 · 免费 · 无广告</p>
 <h1>简历与证件照<br><span>一站准备好</span></h1>
 <p class="hero-description">简历，是做取舍。把与岗位相关的经历，清楚地留在一页里。<br>免费编辑简历、导出 PDF、制作证件照，打开就能用。</p>
-<div class="hero-actions"><a class="entry-card resume-entry" href="/resume/" data-start><svg class="entry-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5M9 12h6m-6 4h6"/></svg><span class="entry-content"><strong class="button-label">开始编辑简历</strong><small>实时排版 · 自动保存 · PDF 导出</small></span><svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a><a class="entry-card photo-entry" href="/portrait/"><svg class="entry-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M5.5 17a3.5 3.5 0 0 1 7 0M16 9h2m-2 4h2"/></svg><span class="entry-content"><strong class="button-label">制作证件照</strong><small>快速换底 · 规格裁切 · 一键下载</small></span><svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a></div>
+<div class="hero-actions"><a class="hero-cta" href="/resume/" data-start><span class="button-label">开始编辑简历</span><svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a><a class="hero-ghost" href="/portrait/"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M5.5 17a3.5 3.5 0 0 1 7 0M16 9h2m-2 4h2"/></svg><span>做一张证件照</span></a></div>
 <p class="hero-note" id="draftNote">无需注册 · 自动保存 · 随时导出</p>
+</div>
+<div class="hero-preview">
+<a class="hero-sheet hero-sheet-front" href="/resume/" data-start aria-label="打开简历编辑器，示例排版打开就能改成自己的内容">
+<img src="/assets/img/templates/2001.png" alt="一纸简历的示例简历，右侧照片、左侧经历，打开后可直接改成自己的信息" width="820" height="1160" fetchpriority="high" decoding="async">
+</a>
+<p class="hero-preview-note">示例排版 · 打开就是你的模板</p>
 </div>
 </section>
 <section class="paper-principle section-width" aria-labelledby="paperPrincipleTitle"><div class="paper-principle-heading"><p class="paper-principle-kicker">我们的一纸原则</p><h2 id="paperPrincipleTitle">先取舍，再排版</h2><p>把篇幅留给相关经历，用具体成果证明能力，让重点先被看见。</p></div><ol class="paper-principle-steps"><li><span aria-hidden="true">01</span><div><h3>选相关的经历</h3><p>围绕目标岗位，留下最能说明匹配度的内容。</p></div></li><li><span aria-hidden="true">02</span><div><h3>写具体的证据</h3><p>讲清做了什么、怎样完成、带来什么结果。</p></div></li><li><span aria-hidden="true">03</span><div><h3>给重点留空间</h3><p>精简重复表达，让一页简历清楚、好读。</p></div></li></ol></section>

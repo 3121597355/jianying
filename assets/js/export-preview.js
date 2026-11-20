@@ -9,7 +9,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '
  * 导出面板：先看清整份简历，再选择 PDF、Word 或长图。
  * 预览与 PDF 使用同一套 A4 分页规则，所见即所得。
  */
-export function setupExportPreview({ getFileName, toast } = {}) {
+export function setupExportPreview({ getFileName, toast, onExported } = {}) {
   const modal = document.querySelector('#exportModal');
   if (!modal) return { open() {}, close() {} };
 
@@ -267,6 +267,7 @@ export function setupExportPreview({ getFileName, toast } = {}) {
         if (result) toast?.(`已下载「${result.fileName}」· ${result.pages} 页 A4`);
       }
       if (generated) setMeta(idleMeta(pagesEl.querySelectorAll('.export-page').length, lastPageCss));
+      onExported?.(format);
     } catch (error) {
       track('resume_export_error');
       console.error(error);

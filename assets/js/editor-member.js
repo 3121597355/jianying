@@ -76,6 +76,13 @@ async function saveNew({title,kind='base',jobTitle='',resume=getResume()}){
   const saved=await memberRequest('resumes','POST',{title,kind,jobTitle,resume});
   return {id:saved.id,version:saved.version,title:saved.title,owner:getMember().user.id};
 }
+/** 导出后注册并保存的那一份，直接接管为当前同步目标，后续修改继续自动同步。 */
+export function adoptCloudLink(saved){
+  const owner=getMember()?.user?.id;
+  if(!owner||!saved?.id)return;
+  link={id:saved.id,version:saved.version,title:saved.title,owner};
+  dirty=false;syncError=null;rememberLink();paintCloud('linked');
+}
 function cloudDialog(){
   const member=getMember();
   if(!member?.authenticated){dialog('保存到云端',`<p>本地草稿已自动保存。登录后可保存云端版本，在电脑和手机之间继续编辑。</p><p class="member-muted">基础编辑和 PDF 导出继续免费，无需登录。</p><div class="member-actions"><a class="member-button primary" href="${loginLink('/resume/?cloudSave=1')}">登录 / 免费注册</a><a class="member-button" href="/privacy/">了解数据去向</a></div>`);return;}
