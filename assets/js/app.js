@@ -22,7 +22,7 @@ import {hasResumeContent,isTemplateSample} from './template-samples.js';
 import {setupEditorGuide} from './editor-guide.js';
 import {MOBILE_EDITOR_MEDIA} from './mobile-layout.js';
 import { bindBasicFieldDrag } from './basic-drag.js?v=20261118-basic-smooth';
-import { setupCloudPrompt } from './cloud-prompt.js';
+import { setupCloudPrompt } from './cloud-prompt.js?v=20261121-polish';
 
 // 账户扩展按需加载；导出后的云端提示复用同一个模块实例。
 const memberModule = import('./editor-member.js?v=20261121-cloud');
@@ -286,6 +286,7 @@ function setupWorkspace() {
   /* 手机端：一屏只填一栏，底部常驻「上一栏 / 当前栏目 / 下一栏 / 导出」。 */
   const stepBar = document.createElement('div');
   stepBar.className = 'mobile-step-bar';
+  document.documentElement.classList.add('has-mobile-step-bar');
   stepBar.innerHTML = '<button type="button" class="mobile-step-arrow" data-step="prev" aria-label="上一栏">‹</button>' +
     '<button type="button" class="mobile-step-current" data-step="list" aria-label="查看并切换栏目"><span></span><small></small></button>' +
     '<button type="button" class="mobile-step-arrow" data-step="next" aria-label="下一栏">›</button>' +

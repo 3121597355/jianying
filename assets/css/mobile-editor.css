@@ -67,6 +67,9 @@
   .edit_resume { padding-bottom:calc(78px + env(safe-area-inset-bottom)); }
   .editor-footer { padding-bottom:calc(88px + env(safe-area-inset-bottom)); }
   .qm-toast { bottom:calc(88px + env(safe-area-inset-bottom)) !important; }
+  html.has-mobile-step-bar .source-survey { bottom:calc(76px + env(safe-area-inset-bottom)) !important; }
+  html.mobile-keyboard-open.has-mobile-step-bar .source-survey,
+  html.has-mobile-step-bar body.export-open .source-survey { bottom:calc(8px + env(safe-area-inset-bottom)) !important; }
   html.mobile-keyboard-open .mobile-step-bar, body.export-open .mobile-step-bar { display:none; }
 }
   html.editor-guide-active .mobile-step-bar { display:none; }
